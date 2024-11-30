@@ -18,7 +18,7 @@ public class MigsMazeBenchmarkRunner : BaseMazeBenchmarkRunner
         base.Init(maze);
         _agent = new Agent();
 
-        _pathfinder = new Pathfinder(_maze);
+        _pathfinder = new Pathfinder(_maze.Cells);
     }
 
     public override void FindPath((int x, int y) start, (int x, int y) destination)

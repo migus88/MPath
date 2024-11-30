@@ -1,8 +1,4 @@
 using System.Runtime.CompilerServices;
-using Migs.Pathfinding.Core.Interfaces;
-using Migs.Pathfinding.Core.Data;
-using Migs.Pathfinding.Core.Helpers;
-using Migs.Pathfinding.Core.Internal;
 
 namespace Migs.Pathfinding.Core.Data
 {

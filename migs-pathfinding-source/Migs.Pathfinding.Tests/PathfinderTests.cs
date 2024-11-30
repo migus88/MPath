@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Reflection;
 using Migs.Pathfinding.Core;
 using Migs.Pathfinding.Core.Data;
 using Migs.Pathfinding.Core.Interfaces;
@@ -19,7 +20,7 @@ namespace Migs.Pathfinding.Tests
             var destination = maze.Destination;
             var agent = new Agent { Size = 2 };
 
-            var aStar = new Pathfinder(maze);
+            var aStar = new Pathfinder(maze.Cells);
             
 
             var result = aStar.GetPath(agent, start, destination);
@@ -44,7 +45,7 @@ namespace Migs.Pathfinding.Tests
             maze.SetDestination(destination);
             var agent = new Agent { Size = 1 };
             
-            var aStar = new Pathfinder(maze);
+            var aStar = new Pathfinder(maze.Cells);
             
             //Jitting for more accurate stopwatch result
             aStar.GetPath(agent, start, destination);
@@ -55,6 +56,21 @@ namespace Migs.Pathfinding.Tests
             sw.Stop();
 
             Console.WriteLine($"Elapsed: {sw.ElapsedMilliseconds} ms");
+            
+            var closedCount = 0;
+            
+            var propertyInfo = typeof(Cell).GetProperty("IsClosed", BindingFlags.NonPublic | BindingFlags.Instance);
+            
+            foreach (var cell in maze.Cells)
+            {
+                if ((bool)(propertyInfo?.GetValue(cell) ?? false))
+                {
+                    closedCount++;
+                    maze.SetClosed(cell.Coordinate);
+                }
+            }
+
+            Console.WriteLine($"Closed count: {closedCount}");
             
             if(result.IsPathFound)
             {

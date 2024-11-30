@@ -9,7 +9,7 @@ using SkiaSharp;
 
 namespace Migs.Pathfinding.Tools
 {
-    public unsafe class Maze : ICellProvider
+    public unsafe class Maze
     {
         public int Width { get; }
 
@@ -63,9 +63,9 @@ namespace Migs.Pathfinding.Tools
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Cell* GetCellPointer(int x, int y)
+        public Cell GetCellPointer(int x, int y)
         {
-            return _cellsPtr + (x * Height) + y;
+            return _cellsPtr[x * Height + y];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -151,9 +151,9 @@ namespace Migs.Pathfinding.Tools
 
             var bitmap = new SKBitmap(Width * sizeMultiplier, Height * sizeMultiplier);
 
-            for (int x = 0; x < Width; x++)
+            for (var x = 0; x < Width; x++)
             {
-                for (int y = 0; y < Height; y++)
+                for (var y = 0; y < Height; y++)
                 {
                     var color = _bitmap.GetPixel(x, y);
 
