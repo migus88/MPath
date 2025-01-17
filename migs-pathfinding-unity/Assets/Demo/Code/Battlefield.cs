@@ -38,8 +38,8 @@ namespace Demo
 
         private void Start()
         {
-            Pathfinder = new Pathfinder(this, _settings);
             Array.Sort(_fieldCells, Utils.FieldCellComparison);
+            Pathfinder = new Pathfinder(_fieldCells, _fieldSize.x, _fieldSize.y, _settings);
             
             foreach (var fieldCell in _fieldCells)
             {
@@ -87,7 +87,7 @@ namespace Demo
 
         private void OnCellClicked(FieldCell clickedCell)
         {
-            CellClicked?.Invoke(clickedCell.Cell);
+            CellClicked?.Invoke(clickedCell.CellData);
         }  
 
         private void OnDestroy()

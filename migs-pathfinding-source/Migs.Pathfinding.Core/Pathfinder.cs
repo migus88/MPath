@@ -227,9 +227,22 @@ namespace Migs.Pathfinding.Core
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void InitializeCellsArray()
         {
+            TryInitializingCellsArrayFromCellsArray();
             TryInitializingCellsArrayFromCellHolders();
             TryInitializingCellsArrayFromCellsMatrix();
             TryInitializingCellsArrayFromCellHoldersMatrix();
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void TryInitializingCellsArrayFromCellsArray()
+        {
+            if (_initializationMode != InitializationMode.CellsArray)
+            {
+                return;
+            }
+            
+            // sort the array based on the coordinate
+            Array.Sort(_cells, Utils.CellsComparison);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -239,10 +252,11 @@ namespace Migs.Pathfinding.Core
             {
                 return;
             }
-            
-            for (var i = 0; i < Size; i++)
+
+            foreach (var cellHolder in _cellHolders)
             {
-                _cells[i] = _cellHolders[i].CellData;
+                var coordinate = cellHolder.CellData.Coordinate;
+                _cells[coordinate.X * Height + coordinate.Y] = cellHolder.CellData;
             }
         }
         
@@ -254,12 +268,9 @@ namespace Migs.Pathfinding.Core
                 return;
             }
             
-            for (var x = 0; x < Width; x++)
+            foreach (var cell in _cellsMatrix)
             {
-                for (var y = 0; y < Height; y++)
-                {
-                    _cells[x * Height + y] = _cellsMatrix[x, y];
-                }
+                _cells[cell.Coordinate.X * Height + cell.Coordinate.Y] = cell;
             }
         }
         
@@ -270,13 +281,11 @@ namespace Migs.Pathfinding.Core
             {
                 return;
             }
-            
-            for (var x = 0; x < Width; x++)
+
+            foreach (var cellHolder in _cellHoldersMatrix)
             {
-                for (var y = 0; y < Height; y++)
-                {
-                    _cells[x * Height + y] = _cellHoldersMatrix[x, y].CellData;
-                }
+                var coordinate = cellHolder.CellData.Coordinate;
+                _cells[coordinate.X * Height + coordinate.Y] = cellHolder.CellData;
             }
         }
 

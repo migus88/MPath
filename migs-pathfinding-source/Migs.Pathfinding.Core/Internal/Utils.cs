@@ -18,4 +18,10 @@ internal static class Utils
             return new Span<T>(ptr, matrix.Length);
         }
     }
+    
+    internal static int CellsComparison(Cell a, Cell b)
+    {
+        var result = a.Coordinate.Y.CompareTo(b.Coordinate.Y);
+        return result == 0 ? a.Coordinate.X.CompareTo(b.Coordinate.X) : result;
+    }
 }

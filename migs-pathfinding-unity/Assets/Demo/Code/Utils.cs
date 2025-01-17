@@ -4,8 +4,8 @@ namespace Demo
     {
         public static int FieldCellComparison(FieldCell a, FieldCell b)
         {
-            var result = a.Cell.Coordinate.Y.CompareTo(b.Cell.Coordinate.Y);
-            return result == 0 ? a.Cell.Coordinate.X.CompareTo(b.Cell.Coordinate.X) : result;
+            var result = a.CellData.Coordinate.Y.CompareTo(b.CellData.Coordinate.Y);
+            return result == 0 ? a.CellData.Coordinate.X.CompareTo(b.CellData.Coordinate.X) : result;
         }
     }
 }

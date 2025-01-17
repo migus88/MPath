@@ -58,7 +58,7 @@ namespace Demo
                 }
 
                 transform.position = waypoint;
-                Coordinate = cell.Cell.Coordinate;
+                Coordinate = cell.CellData.Coordinate;
             }
 
             _isMoving = false;

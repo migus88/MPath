@@ -1,13 +1,13 @@
 using System;
 using Migs.Pathfinding.Core.Data;
+using Migs.Pathfinding.Core.Interfaces;
 using UnityEngine;
 
 namespace Demo
 {
-    public class FieldCell : MonoBehaviour
+    public class FieldCell : MonoBehaviour, ICellHolder
     {
-        // Notice that this is a field and not a property in order to grab its pointer.
-        public Cell Cell;
+        public Cell CellData { get; private set; }
         
         public event Action<FieldCell> CellClicked;
 
@@ -22,7 +22,7 @@ namespace Demo
 
         private void Awake()
         {
-            Cell = new Cell
+            CellData = new Cell
             {
                 Coordinate = new Coordinate(_position.x, _position.y),
                 IsWalkable = _isWalkable,
