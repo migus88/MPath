@@ -6,12 +6,6 @@ namespace Migs.Pathfinding.Core.Internal;
 
 internal static class Utils
 {
-    internal static int FieldCellComparison(ICellHolder a, ICellHolder b)
-    {
-        var result = a.Cell.Coordinate.X.CompareTo(b.Cell.Coordinate.X);
-        return result == 0 ? a.Cell.Coordinate.Y.CompareTo(b.Cell.Coordinate.Y) : result;
-    }
-    
     internal static unsafe Span<T> ToSpan<T>(this T[,] matrix) where T : unmanaged
     {
         if (matrix == null)

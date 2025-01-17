@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using BenchmarkDotNet.Attributes;
 using Migs.Pathfinding.Core;
 using Migs.Pathfinding.Core.Data;
@@ -25,7 +26,16 @@ public class InternalBenchmarkRunner
     }
 
     [Benchmark]
-    public void PathFinding() => FindPath((10, 10), (502, 374));
+    public void FindLongPath()
+    {
+        using var result = FindPath((10, 10), (502, 374));
+    }
+
+    [Benchmark]
+    public void FindShortPath()
+    {
+        using var result = FindPath((10, 10), (10, 11));
+    }
     
     public PathResult FindPath((int x, int y) start, (int x, int y) destination)
     {

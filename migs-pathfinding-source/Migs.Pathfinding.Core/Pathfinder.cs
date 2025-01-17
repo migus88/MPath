@@ -16,41 +16,25 @@ namespace Migs.Pathfinding.Core
 
         private readonly FastPathfinderSettings _settings;
         private readonly UnsafePriorityQueue _openSet;
-        private readonly ICellHolder[] _cellHolders;
         private readonly Cell[] _cells;
         private readonly Cell[,] _cellMatrix;
         private readonly int _width;
         private readonly int _height;
         private readonly int _size;
-
+        
         public Pathfinder(Cell[,] cells, IPathfinderSettings settings = null) 
-            : this(default(ICellHolder[]), cells.GetLength(0), cells.GetLength(1), settings)
+            : this((Cell[]) null, cells.GetLength(0), cells.GetLength(1), settings)
         {
             _cellMatrix = cells;
         }
         
         public Pathfinder(Cell[] cells, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null) 
-            : this(default(ICellHolder[]), fieldWidth, fieldHeight, settings)
         {
             _cells = cells;
-        }
-        
-        public Pathfinder(ICellHolder[] cellHolders, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
-        {
-            if(cellHolders != null)
-            {
-                _cellHolders = cellHolders;
-                Array.Sort(_cellHolders, Utils.FieldCellComparison);
-            }
             
             _width = fieldWidth;
             _height = fieldHeight;
             _size = _width * _height;
-            
-            if(cellHolders != null && cellHolders.Length != _size)
-            {
-                throw new Exception("Invalid cell holders length");
-            }
             
             _settings = FastPathfinderSettings.FromSettings(settings ?? new PathfinderSettings());
             
@@ -73,18 +57,13 @@ namespace Migs.Pathfinding.Core
             {
                 return _cells;
             }
+            
             if(_cellMatrix != null)
             {
                 return _cellMatrix.ToSpan();
             }
-            
-            Span<Cell> cells = stackalloc Cell[_size];
-            for (var i = 0; i < _cellHolders.Length; i++)
-            {
-                cells[i] = _cellHolders[i].Cell;
-            }
 
-            return cells;
+            return null;
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -97,7 +76,9 @@ namespace Migs.Pathfinding.Core
         public PathResult GetPath(IAgent agent, Coordinate from, Coordinate to)
         {
             if (!IsPositionValid(to.X, to.Y))
+            {
                 throw new Exception("Destination is not valid");
+            }
             
             var cells = GetCells();
             fixed (Cell* ptr = &MemoryMarshal.GetReference(cells))
@@ -112,7 +93,7 @@ namespace Migs.Pathfinding.Core
                 
                 _openSet.Enqueue(current, scoreH); //ScoreF set by the queue
 
-                var neighbors = new Cell*[MaxNeighbors];
+                var neighbors = stackalloc Cell*[MaxNeighbors];
                 var agentSize = agent.Size;
 
                 while (_openSet.Count > 0)
@@ -128,9 +109,10 @@ namespace Migs.Pathfinding.Core
 
                     PopulateNeighbors(ptr, current, agentSize, neighbors);
 
-                    foreach (var neighborPtr in neighbors)
+                    //foreach (var neighborPtr in neighbors) 
+                    for (var n = 0; n < MaxNeighbors; n++)
                     {
-                        var neighbor = neighborPtr;
+                        var neighbor = neighbors[n];
                         if (neighbor == null || neighbor->IsClosed)
                         {
                             continue;
@@ -167,19 +149,16 @@ namespace Migs.Pathfinding.Core
                     }
                 }
 
-                var result = new PathResult();
-
                 if (current->Coordinate != to)
                 {
-                    return result;
+                    return PathResult.Failure();
                 }
 
                 var last = current;
                 var depth = last->Depth;
 
-                // Rent an array from the pool
-                var pathArray = ArrayPool<Coordinate>.Shared.Rent(depth);
-                Span<Coordinate> path = pathArray;
+                var path = ArrayPool<Coordinate>.Shared.Rent(depth);
+                Array.Clear(path, 0, path.Length);
 
                 for (var i = depth - 1; i >= 0; i--)
                 {
@@ -188,13 +167,7 @@ namespace Migs.Pathfinding.Core
                     last = GetCell(ptr, parentCoord.X, parentCoord.Y);
                 }
 
-                // Construct the result using the span
-                result.Path = path[..depth];
-
-                // Return the array to the pool
-                ArrayPool<Coordinate>.Shared.Return(pathArray);
-
-                return result;
+                return PathResult.Success(path, depth);
             }
         }
 
@@ -214,7 +187,7 @@ namespace Migs.Pathfinding.Core
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void PopulateNeighbors(Cell* cells, Cell* current, int agentSize, Cell*[] neighbors)
+        private void PopulateNeighbors(Cell* cells, Cell* current, int agentSize, Cell** neighbors)
         {
             var position = current->Coordinate;
 
@@ -225,7 +198,7 @@ namespace Migs.Pathfinding.Core
 
             if (!_settings.IsDiagonalMovementEnabled)
             {
-                for (var i = DiagonalStart; i < neighbors.Length; i++)
+                for (var i = DiagonalStart; i < MaxNeighbors; i++)
                 {
                     neighbors[i] = null;
                 }
@@ -250,7 +223,7 @@ namespace Migs.Pathfinding.Core
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void PopulateNeighbor(Cell* cells, int x, int y, int agentSize, Cell*[] neighbors,
+        private void PopulateNeighbor(Cell* cells, int x, int y, int agentSize, Cell** neighbors,
             int neighborIndex, bool shouldPopulate = true)
         {
             if (!shouldPopulate)

@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using Migs.Pathfinding.Core.Data;
-using Migs.Pathfinding.Core.Helpers;
 using Migs.Pathfinding.Core.Interfaces;
 using UnityEngine;
 
@@ -17,12 +16,6 @@ namespace Demo
         [SerializeField, Range(1,2)] private int _size = 1;
         
         private bool _isMoving;
-        
-        // This is a hacky way to reduce allocations.
-        // Instead of allocating a new collection, we're using pointers,
-        // and in order to use asynchronous code with pointers, we cast it to IntPtr.
-        private IntPtr _path;
-        private int _pathLength;
 
         private void Start()
         {
@@ -41,20 +34,19 @@ namespace Demo
             
             if(result.IsPathFound)
             {
-                _path = (IntPtr)result.Path.ToCoordinateArrayPointer();
-                _pathLength = result.Path.Length;
-                StartCoroutine(MoveToPoint());
+                StartCoroutine(MoveToPoint(result));
             }
         }
         
         
-        private IEnumerator MoveToPoint()
+        private IEnumerator MoveToPoint(PathResult result)
         {
             _isMoving = true;
 
-            for (var i = 0; i < _pathLength; i++)
+            // Notice that Path is IEnumerable. This means that we don't want to cast it to an array or a list
+            // to reduce the amount of allocations
+            foreach (var coordinate in result.Path)
             {
-                var coordinate = GetCoordinate(i);
                 var cell = Battlefield.Instance.GetFieldCell(coordinate.X, coordinate.Y);
                 var waypoint = cell.transform.position;
 
@@ -71,8 +63,6 @@ namespace Demo
 
             _isMoving = false;
         }
-        
-        private unsafe Coordinate GetCoordinate(int index) => ((Coordinate*)_path)![index];
 
         private void OnDestroy()
         {

@@ -1,15 +1,13 @@
 using System;
-using System.Collections;
 using Migs.Pathfinding.Core;
 using Migs.Pathfinding.Core.Data;
-using Migs.Pathfinding.Core.Interfaces;
 using Code.Settings;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
 namespace Demo
 {
-    public class Battlefield : MonoBehaviour, ICellProvider
+    public class Battlefield : MonoBehaviour
     {
         // In a real project, please use a DI container to manage the dependencies and not this...
         // I'm using a singleton here in order to not add 3rd party dependencies to the project
@@ -86,34 +84,6 @@ namespace Demo
             var index = GetFieldIndex(x, y);
             return _fieldCells[index];
         }
-        
-        
-        // Basically here's the magic happens. This will allow the pathfinder to do its thing.
-        // Everything else is just a demo setup.
-        #region ICellProvider implementation
-        
-        public int Width => _fieldSize.x;
-        public int Height => _fieldSize.y;
-        
-        public unsafe Cell* GetCellPointer(int x, int y)
-        {
-            var index = GetFieldIndex(x, y);
-            fixed (Cell* cellPtr = &_fieldCells[index].Cell)
-            {
-                return cellPtr;
-            }
-        }
-
-        public void ResetCells()
-        {
-            foreach (var fieldCell in _fieldCells)
-            {
-                fieldCell.Cell.Reset();
-            }
-        }
-
-
-        #endregion
 
         private void OnCellClicked(FieldCell clickedCell)
         {

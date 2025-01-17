@@ -8,7 +8,7 @@ using BenchmarkDotNet.Running;
 using Perfolizer.Horology;
 
 var config = ManualConfig.CreateMinimumViable()
-    .WithSummaryStyle(SummaryStyle.Default.WithTimeUnit(TimeUnit.GetBestTimeUnit()));
+    .WithSummaryStyle(SummaryStyle.Default.WithTimeUnit(TimeUnit.Millisecond));
 
 if (args.Length > 0 && args[0] == "profile")
 {
