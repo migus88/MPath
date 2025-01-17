@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Migs.Pathfinding.Core.Data;
@@ -36,9 +37,9 @@ namespace Migs.Pathfinding.Tools
 
             _bitmap = new SKBitmap(Width, Height);
 
-            for (int y = 0; y < Height; y++)
+            for (var y = 0; y < Height; y++)
             {
-                for (int x = 0; x < Width; x++)
+                for (var x = 0; x < Width; x++)
                 {
                     _bitmap.SetPixel(x, y, bitmap.GetPixel(x, y));
                 }
@@ -60,22 +61,6 @@ namespace Migs.Pathfinding.Tools
             _size = Width * Height;
 
             CreateBitmap();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Cell GetCellPointer(int x, int y)
-        {
-            return _cellsPtr[x * Height + y];
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ResetCells()
-        {
-            Span<Cell> span = MemoryMarshal.CreateSpan(ref _cells[0, 0], _size);
-            foreach (ref var cell in span)
-            {
-                cell.Reset();
-            }
         }
 
         private void CreateBitmap()

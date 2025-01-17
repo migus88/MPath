@@ -9,67 +9,117 @@ using static Migs.Pathfinding.Core.Internal.DirectionIndexes;
 
 namespace Migs.Pathfinding.Core
 {
-    public sealed unsafe class Pathfinder
+    public sealed unsafe class Pathfinder : IDisposable
     {
         private const int MaxNeighbors = 8;
         private const int SingleCellAgentSize = 1;
 
+        private int Width { get; }
+        private int Height { get; }
+        private int Size { get; }
+
         private readonly FastPathfinderSettings _settings;
         private readonly UnsafePriorityQueue _openSet;
+        
+        private readonly InitializationMode _initializationMode;
+        private readonly ICellHolder[] _cellHolders;
+        private readonly ICellHolder[,] _cellHoldersMatrix;
         private readonly Cell[] _cells;
-        private readonly Cell[,] _cellMatrix;
-        private readonly int _width;
-        private readonly int _height;
-        private readonly int _size;
-        
-        public Pathfinder(Cell[,] cells, IPathfinderSettings settings = null) 
-            : this((Cell[]) null, cells.GetLength(0), cells.GetLength(1), settings)
+        private readonly Cell[,] _cellsMatrix;
+
+        /// <summary>
+        /// The less allocating version of the Pathfinder. <br/>
+        /// With this constructor no collection of cells will be created internally. <br/>
+        /// This is the preferred way to use the Pathfinder.
+        /// </summary>
+        /// <param name="cells">Array of Cells</param>
+        /// <param name="fieldWidth">The width of the field</param>
+        /// <param name="fieldHeight">The height of the field</param>
+        /// <param name="settings">Pathfinder Settings</param>
+        public Pathfinder(Cell[] cells, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
+            : this(fieldWidth, fieldHeight, settings)
         {
-            _cellMatrix = cells;
-        }
-        
-        public Pathfinder(Cell[] cells, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null) 
-        {
+            _initializationMode = InitializationMode.CellsArray;
             _cells = cells;
-            
-            _width = fieldWidth;
-            _height = fieldHeight;
-            _size = _width * _height;
-            
+        }
+
+        /// <summary>
+        /// With this constructor the Pathfinder will borrow a collection of cells from the pool <br/>
+        /// and will return it to the pool when disposed. <br/>
+        /// Note that the allocation is possible, but as long as the Pathfinder is disposed <br/>
+        /// the GC will not have to collect it. In case you want the GC to collect it, <br/>
+        /// do not dispose the Pathfinder.
+        /// </summary>
+        /// <param name="holders">Array of Cell Holders</param>
+        /// <param name="fieldWidth">The width of the field</param>
+        /// <param name="fieldHeight">The height of the field</param>
+        /// <param name="settings">Pathfinder Settings</param>
+        public Pathfinder(ICellHolder[] holders, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
+            : this(fieldWidth, fieldHeight, settings)
+        {
+            _cellHolders = holders;
+            _cells = ArrayPool<Cell>.Shared.Rent(Size);
+            _initializationMode = InitializationMode.CellHoldersArray;
+        }
+
+        /// <summary>
+        /// With this constructor the Pathfinder will borrow a collection of cells from the pool <br/>
+        /// and will return it to the pool when disposed. <br/>
+        /// Note that the allocation is possible, but as long as the Pathfinder is disposed <br/>
+        /// the GC will not have to collect it. In case you want the GC to collect it, <br/>
+        /// do not dispose the Pathfinder.
+        /// </summary>
+        /// <param name="cellsMatrix">Matrix of Cells</param>
+        /// <param name="settings">Pathfinder Settings</param>
+        public Pathfinder(Cell[,] cellsMatrix, IPathfinderSettings settings = null)
+            : this(cellsMatrix.GetLength(0), cellsMatrix.GetLength(1), settings)
+        {
+            _cellsMatrix = cellsMatrix;
+            _cells = ArrayPool<Cell>.Shared.Rent(Size);
+            _initializationMode = InitializationMode.CellsMatrix;
+        }
+
+
+        /// <summary>
+        /// With this constructor the Pathfinder will borrow a collection of cells from the pool <br/>
+        /// and will return it to the pool when disposed. <br/>
+        /// Note that the allocation is possible, but as long as the Pathfinder is disposed <br/>
+        /// the GC will not have to collect it. In case you want the GC to collect it, <br/>
+        /// do not dispose the Pathfinder.
+        /// </summary>
+        /// <param name="cellHoldersMatrix">Matrix of Cell Holders</param>
+        /// <param name="settings">Pathfinder Settings</param>
+        public Pathfinder(ICellHolder[,] cellHoldersMatrix, IPathfinderSettings settings = null)
+            : this(cellHoldersMatrix.GetLength(0), cellHoldersMatrix.GetLength(1), settings)
+        {
+            _cellHoldersMatrix = cellHoldersMatrix;
+            _cells = ArrayPool<Cell>.Shared.Rent(Size);
+            _initializationMode = InitializationMode.CellHoldersMatrix;
+        }
+
+        private Pathfinder(int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
+        {
+            Width = fieldWidth;
+            Height = fieldHeight;
+            Size = Width * Height;
+
             _settings = FastPathfinderSettings.FromSettings(settings ?? new PathfinderSettings());
-            
             _openSet = new UnsafePriorityQueue(settings?.InitialBufferSize);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ResetCells(Cell* cells)
         {
-            for (var i = 0; i < _size; i++)
+            for (var i = 0; i < Size; i++)
             {
                 (cells + i)->Reset();
             }
         }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Span<Cell> GetCells()
-        {
-            if(_cells != null)
-            {
-                return _cells;
-            }
-            
-            if(_cellMatrix != null)
-            {
-                return _cellMatrix.ToSpan();
-            }
 
-            return null;
-        }
-        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Cell* GetCell(Cell* cells, int x, int y)
         {
-            return cells + (x * _height + y);
+            return cells + (x * Height + y);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -79,8 +129,11 @@ namespace Migs.Pathfinding.Core
             {
                 throw new Exception("Destination is not valid");
             }
-            
-            var cells = GetCells();
+
+            InitializeCellsArray();
+
+            var cells = new Span<Cell>(_cells, 0, Size);
+
             fixed (Cell* ptr = &MemoryMarshal.GetReference(cells))
             {
                 ResetCells(ptr);
@@ -90,7 +143,7 @@ namespace Migs.Pathfinding.Core
                 var scoreH = GetH(from.X, from.Y, to.X, to.Y);
 
                 var current = GetCell(ptr, from.X, from.Y);
-                
+
                 _openSet.Enqueue(current, scoreH); //ScoreF set by the queue
 
                 var neighbors = stackalloc Cell*[MaxNeighbors];
@@ -171,6 +224,61 @@ namespace Migs.Pathfinding.Core
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void InitializeCellsArray()
+        {
+            TryInitializingCellsArrayFromCellHolders();
+            TryInitializingCellsArrayFromCellsMatrix();
+            TryInitializingCellsArrayFromCellHoldersMatrix();
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void TryInitializingCellsArrayFromCellHolders()
+        {
+            if (_initializationMode != InitializationMode.CellHoldersArray)
+            {
+                return;
+            }
+            
+            for (var i = 0; i < Size; i++)
+            {
+                _cells[i] = _cellHolders[i].CellData;
+            }
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void TryInitializingCellsArrayFromCellsMatrix()
+        {
+            if (_initializationMode != InitializationMode.CellsMatrix)
+            {
+                return;
+            }
+            
+            for (var x = 0; x < Width; x++)
+            {
+                for (var y = 0; y < Height; y++)
+                {
+                    _cells[x * Height + y] = _cellsMatrix[x, y];
+                }
+            }
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void TryInitializingCellsArrayFromCellHoldersMatrix()
+        {
+            if (_initializationMode != InitializationMode.CellHoldersMatrix)
+            {
+                return;
+            }
+            
+            for (var x = 0; x < Width; x++)
+            {
+                for (var y = 0; y < Height; y++)
+                {
+                    _cells[x * Height + y] = _cellHoldersMatrix[x, y].CellData;
+                }
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private float GetNeighborTravelWeightMultiplier(int startX, int startY, int destX, int destY)
@@ -270,7 +378,7 @@ namespace Migs.Pathfinding.Core
                 {
                     if (!IsPositionValid(x + nX, y + nY))
                         return null;
-                    
+
                     var neighbor = GetWalkableLocation(cells, x + nX, y + nY);
 
                     if (neighbor == null)
@@ -286,7 +394,7 @@ namespace Migs.Pathfinding.Core
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool IsPositionValid(int x, int y)
         {
-            return x >= 0 && x < _width && y >= 0 && y < _height;
+            return x >= 0 && x < Width && y >= 0 && y < Height;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -299,6 +407,22 @@ namespace Migs.Pathfinding.Core
         private bool IsDiagonalMovement(int startX, int startY, int destX, int destY)
         {
             return startX != destX && startY != destY;
+        }
+
+        public void Dispose()
+        {
+            if(_initializationMode != InitializationMode.CellsArray)
+            {
+                ArrayPool<Cell>.Shared.Return(_cells);
+            }
+        }
+
+        private enum InitializationMode
+        {
+            CellsArray,
+            CellHoldersArray,
+            CellsMatrix,
+            CellHoldersMatrix
         }
     }
 }

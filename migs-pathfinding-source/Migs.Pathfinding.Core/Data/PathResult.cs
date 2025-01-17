@@ -30,13 +30,8 @@ namespace Migs.Pathfinding.Core.Data
         
         private static readonly PathResult _failureResult = new(null);
 
-        private PathResult(Coordinate[] path, int lenght = -1)
+        private PathResult(Coordinate[] path, int lenght = 0)
         {
-            if (path == null || path.Length < lenght || lenght <= 0)
-            {
-                throw new ArgumentException("Invalid path");
-            }
-            
             _path = path;
             Length = lenght;
         }

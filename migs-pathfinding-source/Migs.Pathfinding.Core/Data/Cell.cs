@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Migs.Pathfinding.Core.Interfaces;
 
 namespace Migs.Pathfinding.Core.Data
 {
@@ -27,5 +28,6 @@ namespace Migs.Pathfinding.Core.Data
             Depth = 0;
             ParentCoordinate.Reset();
         }
+
     }
 }

@@ -4,5 +4,5 @@ namespace Migs.Pathfinding.Core.Interfaces;
 
 public interface ICellHolder
 {
-    Cell Cell { get; }
+    Cell CellData { get; }
 }

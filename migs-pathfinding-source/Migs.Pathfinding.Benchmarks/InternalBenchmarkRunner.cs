@@ -8,33 +8,59 @@ using Migs.Pathfinding.Tools;
 namespace Migs.Pathfinding.Benchmarks;
 
 [MemoryDiagnoser]
-public class InternalBenchmarkRunner
+public class InternalBenchmarkRunner : IDisposable
 {
     private readonly Maze _maze = new("cavern.gif");
     private readonly IAgent _agent = new Agent();
-    private Pathfinder _pathfinder;
+    private readonly Pathfinder _pathfinder;
+    private readonly Cell[] _cellsArray;
 
     public InternalBenchmarkRunner()
     {
         _pathfinder = new Pathfinder(_maze.Cells);
+        _cellsArray = _maze.Cells.Cast<Cell>().ToArray();
     }
 
     [Benchmark]
-    public void MatrixInitialization()
+    public void ArrayInitialization()
     {
-        var pathfinder = new Pathfinder(_maze.Cells);
+        var pathfinder = new Pathfinder(_cellsArray, _maze.Width, _maze.Height);
     }
 
     [Benchmark]
-    public void FindLongPath()
+    public void MatrixInitialization_WithUsing()
+    {
+        using var pathfinder = new Pathfinder(_maze.Cells);
+    }
+
+    [Benchmark]
+    public void FindLongPath_WithUsing()
     {
         using var result = FindPath((10, 10), (502, 374));
     }
 
     [Benchmark]
-    public void FindShortPath()
+    public void FindShortPath_WithUsing()
     {
         using var result = FindPath((10, 10), (10, 11));
+    }
+
+    [Benchmark]
+    public void MatrixInitialization_NoUsing()
+    {
+        var pathfinder = new Pathfinder(_maze.Cells);
+    }
+
+    [Benchmark]
+    public void FindLongPath_NoUsing()
+    {
+        var result = FindPath((10, 10), (502, 374));
+    }
+
+    [Benchmark]
+    public void FindShortPath_NoUsing()
+    {
+        var result = FindPath((10, 10), (10, 11));
     }
     
     public PathResult FindPath((int x, int y) start, (int x, int y) destination)
@@ -52,5 +78,10 @@ public class InternalBenchmarkRunner
         }
 
         return result;
+    }
+
+    public void Dispose()
+    {
+        _pathfinder?.Dispose();
     }
 }
