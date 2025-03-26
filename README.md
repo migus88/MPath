@@ -33,7 +33,36 @@ A high-performance A* implementation for 2D grid navigation, optimized for speed
 <details>
 <summary>Unity (via OpenUPM) - Recommended</summary>
 
-[OpenUPM](https://openupm.com/) package name coming soon.
+### Option 1: Using OpenUPM CLI
+
+1. Install the [OpenUPM CLI](https://openupm.com/docs/getting-started.html#installing-openupm-cli)
+2. Run the following command in your Unity project folder:
+   ```
+   openupm add com.migsweb.mpath
+   ```
+
+### Option 2: Manual Installation via manifest.json
+
+1. Open your Unity project's `Packages/manifest.json` file
+2. Add the OpenUPM registry and the package to the file:
+   ```json
+   {
+     "scopedRegistries": [
+       {
+         "name": "OpenUPM",
+         "url": "https://package.openupm.com",
+         "scopes": [
+           "com.migsweb.mpath"
+         ]
+       }
+     ],
+     "dependencies": {
+       "com.migsweb.mpath": "1.0.0",
+       // ... other dependencies
+     }
+   }
+   ```
+3. Save the file and Unity will automatically download and install the package
 </details>
 
 <details>
@@ -64,8 +93,17 @@ To use a specific version, append a tag with version (e.g `1.0.0`) to the URL:
 <details>
 <summary>.NET Projects (via NuGet)</summary>
 
-NuGet package name coming soon.
-</details>
+### Option 1: Using Package Manager Console (Visual Studio)
+
+```powershell
+Install-Package Migs.MPath
+```
+
+### Option 2: Using .NET CLI
+
+```bash
+dotnet add package Migs.MPath
+```
 
 ## Quick Start
 
@@ -229,4 +267,4 @@ Benchmark results will be added here.
 
 ## License
 
-MPath is licensed under the MIT License. See [LICENSE](LICENSE) for details. 
+MPath is licensed under the MIT License. See [LICENSE](LICENSE) for details.
