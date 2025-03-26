@@ -9,7 +9,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="AStarLite" Version="1.3.0-beta.1" />
       <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+      <PackageReference Include="linq-to-astar" Version="1.2.1" />
       <PackageReference Include="RoyT.AStar" Version="3.0.2" />
     </ItemGroup>
 

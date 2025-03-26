@@ -25,6 +25,13 @@ else if (args.Length > 0 && args[0] == "internal")
 {
     BenchmarkRunner.Run<InternalBenchmarkRunner>(config);
 }
+else if (args.Length > 0 && args[0] == "render")
+{
+    Console.WriteLine("Rendering all paths for visual comparison...");
+    var runner = new MazeBenchmarkRunner();
+    runner.PrintAllResults();
+    Console.WriteLine("All paths rendered successfully. Check the Results directory for output images.");
+}
 else
 {
     BenchmarkRunner.Run<MazeBenchmarkRunner>(config);
