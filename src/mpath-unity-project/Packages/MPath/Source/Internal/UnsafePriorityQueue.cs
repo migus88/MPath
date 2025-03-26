@@ -5,13 +5,26 @@ using Migs.MPath.Core.Data;
 
 namespace Migs.MPath.Core.Internal
 {
+    /// <summary>
+    /// A high-performance, unsafe implementation of a priority queue specifically optimized
+    /// for the A* pathfinding algorithm. This queue manages pointers to Cell structures
+    /// and efficiently orders them by priority (F-score).
+    /// </summary>
     internal unsafe class UnsafePriorityQueue
     {
         private const int DefaultCollectionSize = 11;
         
+        /// <summary>
+        /// Gets the current number of items in the queue.
+        /// </summary>
         public int Count;
+        
         private readonly List<IntPtr> _collection;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UnsafePriorityQueue"/> class.
+        /// </summary>
+        /// <param name="bufferSize">Optional initial buffer size. If null, a default size will be used.</param>
         public UnsafePriorityQueue(int? bufferSize = null)
         {
             Count = 0;
@@ -22,9 +35,18 @@ namespace Migs.MPath.Core.Internal
             };
         }
 
+        /// <summary>
+        /// Adds a cell to the queue with the specified priority.
+        /// </summary>
+        /// <param name="item">Pointer to the cell to add.</param>
+        /// <param name="priority">Priority value (lower values have higher priority).</param>
+        /// <exception cref="ArgumentNullException">Thrown when item is null.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Enqueue(Cell* item, float priority)
         {
+            if (item == null)
+                throw new ArgumentNullException(nameof(item));
+                
             item->ScoreF = priority;
             Count++;
 
@@ -42,6 +64,11 @@ namespace Migs.MPath.Core.Internal
             CascadeUp(item);
         }
 
+        /// <summary>
+        /// Removes and returns the cell with the highest priority from the queue.
+        /// </summary>
+        /// <returns>A pointer to the highest priority cell.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the queue is empty.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Cell* Dequeue()
         {
@@ -70,12 +97,23 @@ namespace Migs.MPath.Core.Internal
             return result;
         }
 
+        /// <summary>
+        /// Determines whether the queue contains the specified cell.
+        /// </summary>
+        /// <param name="item">Pointer to the cell to locate.</param>
+        /// <returns>true if the queue contains the cell; otherwise, false.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Contains(Cell* item)
         {
+            if (item == null)
+                return false;
+                
             return item->QueueIndex <= Count && _collection[item->QueueIndex] == (IntPtr)item;
         }
 
+        /// <summary>
+        /// Removes all items from the queue.
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Clear()
         {
@@ -86,9 +124,16 @@ namespace Migs.MPath.Core.Internal
             Count = 0;
         }
 
+        /// <summary>
+        /// Moves a cell up the binary heap to restore heap property after insertion.
+        /// </summary>
+        /// <param name="item">Pointer to the cell to move.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void CascadeUp(Cell* item)
         {
+            if (item == null)
+                return;
+                
             while (item->QueueIndex > 1)
             {
                 var parentIndex = item->QueueIndex >> 1;
@@ -106,9 +151,16 @@ namespace Migs.MPath.Core.Internal
             _collection[item->QueueIndex] = (IntPtr)item;
         }
 
+        /// <summary>
+        /// Moves a cell down the binary heap to restore heap property after removal.
+        /// </summary>
+        /// <param name="item">Pointer to the cell to move.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void CascadeDown(Cell* item)
         {
+            if (item == null)
+                return;
+                
             var finalQueueIndex = item->QueueIndex;
 
             while (true)
@@ -152,12 +204,38 @@ namespace Migs.MPath.Core.Internal
             _collection[finalQueueIndex] = (IntPtr)item;
         }
 
+        /// <summary>
+        /// Determines whether the first cell has higher priority than the second cell.
+        /// </summary>
+        /// <param name="higher">Pointer to the first cell.</param>
+        /// <param name="lower">Pointer to the second cell.</param>
+        /// <returns>true if the first cell has higher priority; otherwise, false.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool HasHigherPriority(Cell* higher, Cell* lower) =>
-            higher->ScoreF < lower->ScoreF;
+        private static bool HasHigherPriority(Cell* higher, Cell* lower)
+        {
+            if (higher == null)
+                return false;
+            if (lower == null)
+                return true;
+                
+            return higher->ScoreF < lower->ScoreF;
+        }
 
+        /// <summary>
+        /// Determines whether the first cell has higher or equal priority to the second cell.
+        /// </summary>
+        /// <param name="higher">Pointer to the first cell.</param>
+        /// <param name="lower">Pointer to the second cell.</param>
+        /// <returns>true if the first cell has higher or equal priority; otherwise, false.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool HasHigherOrEqualPriority(Cell* higher, Cell* lower) =>
-            higher->ScoreF <= lower->ScoreF;
+        private static bool HasHigherOrEqualPriority(Cell* higher, Cell* lower)
+        {
+            if (higher == null)
+                return false;
+            if (lower == null)
+                return true;
+                
+            return higher->ScoreF <= lower->ScoreF;
+        }
     }
 }

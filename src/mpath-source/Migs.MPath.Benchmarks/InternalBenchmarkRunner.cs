@@ -71,7 +71,7 @@ public class InternalBenchmarkRunner : IDisposable
         
         var result = _pathfinder.GetPath(_agent, (Coordinate)start, (Coordinate)destination);
 
-        if (!result.IsPathFound)
+        if (!result.IsSuccess)
         {
             throw new Exception("Path not found");
         }

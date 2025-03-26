@@ -9,7 +9,7 @@ using Migs.MPath.Tools;
 namespace Migs.MPath.Tests
 {
     [TestFixture]
-    public unsafe class TerrainPathfinderTests
+    public class TerrainPathfinderTests
     {
         [Test]
         public void SingleAgent_AgentSize_Success_Test()
@@ -72,7 +72,7 @@ namespace Migs.MPath.Tests
 
             Console.WriteLine($"Closed count: {closedCount}");
             
-            if(result.IsPathFound)
+            if(result.IsSuccess)
             {
                 maze.AddPath(result.Path.ToArray());
             }
@@ -84,7 +84,7 @@ namespace Migs.MPath.Tests
             
             maze.SaveImage("Results/000.png", 4);
             
-            Assert.IsTrue(result.IsPathFound);
+            Assert.IsTrue(result.IsSuccess);
         }
     }
 }
