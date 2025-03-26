@@ -16,17 +16,28 @@ A high-performance A* implementation for 2D grid navigation, optimized for speed
 
 > ⚠️ **Note:** MPath is not yet thread-safe and should not be used across multiple threads.
 
-## Project Structure
+## Benchmarks
 
-- **docs** - Usage documentation and guides
-- **src/mpath-unity-project** - Unity project
-  - **Assets/Examples** - Unity usage examples
-  - **Packages/MPath** - The Unity package
-- **src/mpath-source** - Non-Unity .NET solution
-  - **Migs.MPath.Benchmarks** - Performance benchmarks
-  - **Migs.MPath.Core** - Core functionality wrapped for standalone .NET usage
-  - **Migs.MPath.Tests** - Unit tests
-  - **Migs.MPath.Tools** - Utilities for tests and benchmarks
+### Complex Maze Pathfinding
+
+<details>
+<summary>🖼️ View Benchmark Maze</summary>
+
+![Benchmark Maze](src/mpath-source/Migs.MPath.Benchmarks/cavern.gif)
+
+*The complex maze used for benchmarking*
+</details>
+
+The following benchmark was run on a complex maze to test pathfinding performance. The test involved finding a path from coordinates (10, 10) to (502, 374) through a maze with narrow passages and dead ends. All benchmarks were implemented using [BenchmarkDotNet](https://benchmarkdotnet.org/).
+
+| Implementation | Mean      | Error     | StdDev    | Allocated   |
+|--------------- |----------:|----------:|----------:|------------:|
+| MPath          |  5.040 ms | 0.0245 ms | 0.0217 ms |    24.06 KB |
+| RoyT.AStar     | 58.127 ms | 1.1515 ms | 2.5991 ms | 12592.34 KB |
+
+These results highlight MPath's optimization for both speed and memory efficiency. Memory allocation in MPath is required only for the initial pathfinder creation and for the final path result creation, with no GC pressure during the pathfinding algorithm execution. 
+
+More comparison benchmarks with other popular pathfinding libraries will be added in future updates.
 
 ## Installation
 
@@ -259,12 +270,6 @@ if (result.IsSuccess)
 ## Documentation
 
 For detailed usage instructions and API reference, see the [documentation](docs/README.md).
-
-## Benchmarks
-
-```
-Benchmark results will be added here.
-```
 
 ## License
 
