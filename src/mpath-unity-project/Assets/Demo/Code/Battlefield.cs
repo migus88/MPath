@@ -1,6 +1,6 @@
 using System;
-using Migs.Pathfinding.Core;
-using Migs.Pathfinding.Core.Data;
+using Migs.MPath.Core;
+using Migs.MPath.Core.Data;
 using Code.Settings;
 using UnityEngine;
 using Random = UnityEngine.Random;

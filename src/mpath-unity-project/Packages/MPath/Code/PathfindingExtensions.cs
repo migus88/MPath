@@ -1,4 +1,4 @@
-using Migs.Pathfinding.Core.Data;
+using Migs.MPath.Core.Data;
 using UnityEngine;
 
 namespace Code

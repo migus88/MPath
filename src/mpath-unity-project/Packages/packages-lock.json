@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "com.migsweb.pathfinding": {
-      "version": "file:Migs.Pathfinding",
+      "version": "file:MPath",
       "depth": 0,
       "source": "embedded",
       "dependencies": {}

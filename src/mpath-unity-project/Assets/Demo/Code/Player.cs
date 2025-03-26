@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
-using Migs.Pathfinding.Core.Data;
-using Migs.Pathfinding.Core.Interfaces;
+using Migs.MPath.Core.Data;
+using Migs.MPath.Core.Interfaces;
 using UnityEngine;
 
 namespace Demo

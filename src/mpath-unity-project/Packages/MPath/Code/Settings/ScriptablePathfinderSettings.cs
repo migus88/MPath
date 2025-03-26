@@ -1,4 +1,4 @@
-using Migs.Pathfinding.Core.Interfaces;
+using Migs.MPath.Core.Interfaces;
 using UnityEngine;
 
 namespace Code.Settings
