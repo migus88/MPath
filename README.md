@@ -37,11 +37,26 @@ The following benchmark was run on a complex maze to test pathfinding performanc
 | [RoyTAStar](https://github.com/roy-t/AStar) | 59.028 ms | 12592.34 KB |
 | [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,532.7 ms | 108.13 MB |
 
+<details>
+<summary>Specs</summary>
+
+```
+BenchmarkDotNet v0.14.0, macOS Sequoia 15.3.2 (24D81) [Darwin 24.3.0]
+Apple M1 Max, 1 CPU, 10 logical and 10 physical cores
+.NET SDK 7.0.100
+  [Host]     : .NET 7.0.0 (7.0.22.61201), Arm64 RyuJIT AdvSIMD
+  DefaultJob : .NET 7.0.0 (7.0.22.61201), Arm64 RyuJIT AdvSIMD
+```
+</details>
+<details>
+<summary>Legend</summary>
+
 ```
 Mean      : Arithmetic mean of all measurements
 Allocated : Allocated memory per single operation (managed only, inclusive, 1KB = 1024B)
 1 ms      : 1 Millisecond (0.001 sec)
 ```
+</details>
 
 These results highlight MPath's optimization for both speed and memory efficiency. Memory allocation in MPath is required only for the initial pathfinder creation and for the final path result creation, with no GC pressure during the pathfinding algorithm execution. 
 
