@@ -31,7 +31,7 @@ namespace Migs.Mpath.Examples
             var destination = cell.Coordinate;
             var result = Battlefield.Instance.Pathfinder.GetPath(this, Coordinate, destination);
             
-            if(result.IsPathFound)
+            if(result.IsSuccess)
             {
                 StartCoroutine(MoveToPoint(result));
             }
