@@ -30,10 +30,12 @@ A high-performance A* implementation for 2D grid navigation, optimized for speed
 
 The following benchmark was run on a complex maze to test pathfinding performance. The test involved finding a path from coordinates (10, 10) to (502, 374) through a maze with narrow passages and dead ends. All benchmarks were implemented using [BenchmarkDotNet](https://benchmarkdotnet.org/).
 
-| Implementation | Mean      | Error     | StdDev    | Allocated   |
-|--------------- |----------:|----------:|----------:|------------:|
-| MPath          |  5.040 ms | 0.0245 ms | 0.0217 ms |    24.06 KB |
-| RoyT.AStar     | 58.127 ms | 1.1515 ms | 2.5991 ms | 12592.34 KB |
+| Method    | Mean      | Allocated   |
+|---------- |----------:|------------:|
+| MPath     |  5.092 ms |    24.06 KB |
+| [AStarLite](https://github.com/valantonini/AStar) |  8.118 ms |  8959.94 KB |
+| [RoyTAStar](https://github.com/roy-t/AStar) | 59.028 ms | 12592.34 KB |
+
 
 These results highlight MPath's optimization for both speed and memory efficiency. Memory allocation in MPath is required only for the initial pathfinder creation and for the final path result creation, with no GC pressure during the pathfinding algorithm execution. 
 
