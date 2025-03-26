@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "com.migsweb.pathfinding": {
+    "com.migsweb.mpath": {
       "version": "file:MPath",
       "depth": 0,
       "source": "embedded",

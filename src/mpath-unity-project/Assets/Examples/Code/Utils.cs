@@ -1,4 +1,4 @@
-namespace Demo
+namespace Migs.Mpath.Examples.Examples
 {
     public static class Utils
     {

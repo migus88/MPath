@@ -1,10 +1,9 @@
-using System;
 using System.Collections;
 using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
 using UnityEngine;
 
-namespace Demo
+namespace Migs.Mpath.Examples.Examples
 {
     public class Player : MonoBehaviour, IAgent
     {

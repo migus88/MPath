@@ -1,7 +1,7 @@
 using Migs.MPath.Core.Interfaces;
 using UnityEngine;
 
-namespace Code.Settings
+namespace Migs.MPath.Settings
 {
     [CreateAssetMenu(fileName = "PathfinderSettings", menuName = "Atomic/Pathfinder/Settings", order = 0)]
     public class ScriptablePathfinderSettings : ScriptableObject, IPathfinderSettings

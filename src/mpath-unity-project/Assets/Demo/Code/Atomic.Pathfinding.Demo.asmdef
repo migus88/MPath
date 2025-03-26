@@ -1,7 +1,0 @@
-{
-  "name": "Atomic.Pathfinding.Demo",
-  "references": [
-    "Atomic.Pathfinding.Unity"
-  ],
-  "allowUnsafeCode": true
-}

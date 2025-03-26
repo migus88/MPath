@@ -1,7 +1,7 @@
 using Migs.MPath.Core.Data;
 using UnityEngine;
 
-namespace Code
+namespace Migs.MPath
 {
     public static class PathfindingExtensions
     {

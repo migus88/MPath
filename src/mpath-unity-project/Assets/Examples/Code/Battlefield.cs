@@ -1,11 +1,11 @@
 using System;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
-using Code.Settings;
+using Migs.MPath.Settings;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-namespace Demo
+namespace Migs.Mpath.Examples.Examples
 {
     public class Battlefield : MonoBehaviour
     {
