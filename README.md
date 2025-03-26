@@ -35,7 +35,13 @@ The following benchmark was run on a complex maze to test pathfinding performanc
 | MPath     |  5.092 ms |    24.06 KB |
 | [AStarLite](https://github.com/valantonini/AStar) |  8.118 ms |  8959.94 KB |
 | [RoyTAStar](https://github.com/roy-t/AStar) | 59.028 ms | 12592.34 KB |
+| [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,532.7 ms | 108.13 MB |
 
+```
+Mean      : Arithmetic mean of all measurements
+Allocated : Allocated memory per single operation (managed only, inclusive, 1KB = 1024B)
+1 ms      : 1 Millisecond (0.001 sec)
+```
 
 These results highlight MPath's optimization for both speed and memory efficiency. Memory allocation in MPath is required only for the initial pathfinder creation and for the final path result creation, with no GC pressure during the pathfinding algorithm execution. 
 
