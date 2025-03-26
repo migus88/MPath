@@ -1,0 +1,8 @@
+{
+  "name": "com.migsweb.pathfinding",
+  "displayName": "Migs.MPath",
+  "description": "Unsafe implementation of A* Pathfinding",
+  "version": "0.9.0",
+  "unity": "2019.2",
+  "documentationUrl": ""
+}

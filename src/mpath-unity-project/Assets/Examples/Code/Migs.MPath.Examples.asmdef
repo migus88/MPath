@@ -1,0 +1,16 @@
+{
+    "name": "Migs.MPath.Examples",
+    "rootNamespace": "Migs.Mpath",
+    "references": [
+        "Migs.MPath.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
