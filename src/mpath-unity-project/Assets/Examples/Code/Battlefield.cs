@@ -5,7 +5,7 @@ using Migs.MPath.Settings;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-namespace Migs.Mpath.Examples.Examples
+namespace Migs.Mpath.Examples
 {
     public class Battlefield : MonoBehaviour
     {

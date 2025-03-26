@@ -3,7 +3,7 @@ using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
 using UnityEngine;
 
-namespace Migs.Mpath.Examples.Examples
+namespace Migs.Mpath.Examples
 {
     public class FieldCell : MonoBehaviour, ICellHolder
     {
