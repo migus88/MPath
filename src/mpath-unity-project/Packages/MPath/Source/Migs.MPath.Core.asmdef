@@ -1,16 +1,14 @@
 {
-    "name": "Migs.MPath.Runtime",
-    "rootNamespace": "Migs.MPath",
-    "references": [
-        "Migs.MPath.Core"
-    ],
+    "name": "Migs.MPath.Core",
+    "rootNamespace": "Migs.MPath.Core",
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
-    "allowUnsafeCode": false,
+    "allowUnsafeCode": true,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
-    "noEngineReferences": false
+    "noEngineReferences": true
 }

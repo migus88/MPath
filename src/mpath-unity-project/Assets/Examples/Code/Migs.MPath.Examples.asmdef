@@ -2,7 +2,8 @@
     "name": "Migs.MPath.Examples",
     "rootNamespace": "Migs.Mpath",
     "references": [
-        "Migs.MPath.Runtime"
+        "Migs.MPath.Runtime",
+        "Migs.MPath.Core"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
