@@ -10,13 +10,13 @@ public class MazeBenchmarkRunner
     private readonly (int x, int y) _destination = (502, 374);
         
     private static readonly string AtomicRunner = nameof(MigsMazeBenchmarkRunner);
-    private static readonly string RoyTRunner = nameof(RoyTAStarMazeBunchmarkRunner);
+    private static readonly string RoyTRunner = nameof(RoyTAStarMazeBenchmarkRunner);
 
     private readonly Dictionary<string, IMazeBenchmarkRunner> _benchmarkRunners =
         new()
         {
             [AtomicRunner] = new MigsMazeBenchmarkRunner(),
-            [RoyTRunner] = new RoyTAStarMazeBunchmarkRunner(),
+            [RoyTRunner] = new RoyTAStarMazeBenchmarkRunner(),
         };
         
     public MazeBenchmarkRunner()

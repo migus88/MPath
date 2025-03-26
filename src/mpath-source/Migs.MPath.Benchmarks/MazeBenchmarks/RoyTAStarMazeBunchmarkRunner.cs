@@ -8,9 +8,9 @@ using Path = Roy_T.AStar.Paths.Path;
 
 namespace Migs.MPath.Benchmarks.MazeBenchmarks;
 
-public class RoyTAStarMazeBunchmarkRunner : BaseMazeBenchmarkRunner
+public class RoyTAStarMazeBenchmarkRunner : BaseMazeBenchmarkRunner
 {
-    protected override string ResultImageName => nameof(RoyTAStarMazeBunchmarkRunner);
+    protected override string ResultImageName => nameof(RoyTAStarMazeBenchmarkRunner);
         
     private readonly PathFinder _pathFinder = new PathFinder();
     private Node[,] _nodes;
@@ -21,7 +21,6 @@ public class RoyTAStarMazeBunchmarkRunner : BaseMazeBenchmarkRunner
     {
         base.Init(maze);
             
-
         _nodes = new Node[_maze.Width, _maze.Height];
         PopulateNodes();
 
@@ -36,10 +35,11 @@ public class RoyTAStarMazeBunchmarkRunner : BaseMazeBenchmarkRunner
     public override void RenderPath((int x, int y) start, (int x, int y) destination)
     {
         var result = GetPath(start, destination);
+        
+        // Create coordinates array to include start point 
         var coordinates = new Coordinate[result.Edges.Count + 1];
-        var firstCoordinate = result.Edges[0].End.Position;
-        coordinates[0] = new Coordinate((int)firstCoordinate.X, (int)firstCoordinate.Y);
-
+        coordinates[0] = new Coordinate(start.x, start.y);
+        
         for (var i = 0; i < result.Edges.Count; i++)
         {
             var coordinate = result.Edges[i].End.Position;
@@ -66,8 +66,6 @@ public class RoyTAStarMazeBunchmarkRunner : BaseMazeBenchmarkRunner
         return path;
     }
         
-        
-
     private void PopulateNodes()
     {
         var cells = _maze.Cells;
@@ -130,4 +128,4 @@ public class RoyTAStarMazeBunchmarkRunner : BaseMazeBenchmarkRunner
             node.Connect(_nodes[neighbor.Item1, neighbor.Item2], velocity);
         }
     }
-}
+} 
