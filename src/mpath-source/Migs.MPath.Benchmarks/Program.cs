@@ -1,5 +1,4 @@
-﻿// See https://aka.ms/new-console-templat
-
+﻿using System;
 using Migs.MPath.Benchmarks;
 using Migs.MPath.Benchmarks.MazeBenchmarks;
 using BenchmarkDotNet.Configs;

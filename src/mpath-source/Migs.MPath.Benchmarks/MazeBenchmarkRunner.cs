@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using BenchmarkDotNet.Attributes;
 using Migs.MPath.Benchmarks.MazeBenchmarks;
 

@@ -10,8 +10,8 @@ SOURCE_DLL="$1"
 DLL_VERSION="$2"
 
 # Predefined data
-DESTINATION_DLL="./../migs-pathfinding-unity/Packages/Migs.Pathfinding/Migs.Pathfinding.Core.dll"
-PACKAGE_JSON="./../migs-pathfinding-unity/Packages/Migs.Pathfinding/package.json"
+DESTINATION_DLL="./../migs-pathfinding-unity/Packages/Migs.MPath/Migs.MPath.Core.dll"
+PACKAGE_JSON="./../migs-pathfinding-unity/Packages/Migs.MPath/package.json"
 
 echo "Starting post-build script..."
 
