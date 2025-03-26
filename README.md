@@ -104,6 +104,7 @@ Install-Package Migs.MPath
 ```bash
 dotnet add package Migs.MPath
 ```
+</details>
 
 ## Quick Start
 
