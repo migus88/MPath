@@ -10,7 +10,7 @@ SOURCE_DLL="$1"
 DLL_VERSION="$2"
 
 # Predefined data
-DESTINATION_DLL="./../mpath-unity-project/Packages/MPath/Migs.MPath.Core.dll"
+DESTINATION_DLL="./../mpath-unity-project/Packages/MPath/Runtime/Lib/Migs.MPath.Core.dll"
 PACKAGE_JSON="./../mpath-unity-project/Packages/MPath/package.json"
 
 echo "Starting post-build script..."
