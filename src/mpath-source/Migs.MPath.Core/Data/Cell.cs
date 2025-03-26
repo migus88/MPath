@@ -1,5 +1,4 @@
 using System.Runtime.CompilerServices;
-using Migs.MPath.Core.Interfaces;
 
 namespace Migs.MPath.Core.Data
 {

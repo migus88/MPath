@@ -106,23 +106,7 @@ namespace Migs.MPath.Core
             _settings = FastPathfinderSettings.FromSettings(settings ?? new PathfinderSettings());
             _openSet = new UnsafePriorityQueue(settings?.InitialBufferSize);
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ResetCells(Cell* cells)
-        {
-            for (var i = 0; i < Size; i++)
-            {
-                (cells + i)->Reset();
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Cell* GetCell(Cell* cells, int x, int y)
-        {
-            return cells + (x * Height + y);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        
         public PathResult GetPath(IAgent agent, Coordinate from, Coordinate to)
         {
             if (!IsPositionValid(to.X, to.Y))
@@ -222,6 +206,21 @@ namespace Migs.MPath.Core
 
                 return PathResult.Success(path, depth);
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ResetCells(Cell* cells)
+        {
+            for (var i = 0; i < Size; i++)
+            {
+                (cells + i)->Reset();
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private Cell* GetCell(Cell* cells, int x, int y)
+        {
+            return cells + (x * Height + y);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

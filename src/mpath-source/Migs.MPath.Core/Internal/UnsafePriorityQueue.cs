@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Migs.MPath.Core.Data;
-using Migs.MPath.Core.Interfaces;
 
 namespace Migs.MPath.Core.Internal
 {

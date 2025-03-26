@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Migs.MPath.Core.Data
 {
     public class PathResult : IDisposable
     {
+        private static readonly PathResult FailureResult = new(null);
+        
         public bool IsPathFound => Length > 0;
         public int Length { get; }
 
@@ -27,8 +28,6 @@ namespace Migs.MPath.Core.Data
         }
 
         private readonly Coordinate[] _path;
-        
-        private static readonly PathResult _failureResult = new(null);
 
         private PathResult(Coordinate[] path, int lenght = 0)
         {
@@ -44,7 +43,7 @@ namespace Migs.MPath.Core.Data
         /// <param name="lenght">Lenght of the path</param>
         /// <returns>Successful path result</returns>
         public static PathResult Success(Coordinate[] path, int lenght) => new(path, lenght);
-        public static PathResult Failure() => _failureResult;
+        public static PathResult Failure() => FailureResult;
 
         public void Dispose()
         {
