@@ -35,6 +35,6 @@ public class MazeBenchmarkRunner
         }
     }
 
-    [Benchmark] public void AtomicPathfinding() => _benchmarkRunners[AtomicRunner].FindPath(_start, _destination);
+    [Benchmark] public void MPath() => _benchmarkRunners[AtomicRunner].FindPath(_start, _destination);
     [Benchmark] public void RoyTAStar() => _benchmarkRunners[RoyTRunner].FindPath(_start, _destination);
 }
