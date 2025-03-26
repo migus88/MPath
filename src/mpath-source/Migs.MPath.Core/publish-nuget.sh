@@ -17,7 +17,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Find the latest package
-PACKAGE_PATH=$(find bin/Release/ -name "Migs.MPath.*.nupkg" | sort -V | tail -1)
+PACKAGE_PATH=$(find ./bin/Release -name "Migs.MPath.*.nupkg" | sort -V | tail -1)
 PACKAGE_NAME=$(basename $PACKAGE_PATH)
 echo -e "${GREEN}Package created: $PACKAGE_NAME${NC}"
 
