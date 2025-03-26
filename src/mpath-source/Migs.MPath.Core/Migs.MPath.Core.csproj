@@ -4,14 +4,25 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyVersion>0.9.0</AssemblyVersion>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Title>Migs.MPath</Title>
+    <Title>MPath</Title>
   </PropertyGroup>
   
   <PropertyGroup>
     <PackageId>Migs.MPath</PackageId>
-    <Version>0.9.0</Version>
+    <Version>1.0.0</Version>
+    <Authors>Yuri Sokolov</Authors>
+    <Company>Migs</Company>
+    <Description>High-performance, memory-efficient A* pathfinding implementation for grid-based environments with minimal garbage collection overhead</Description>
+    <Copyright>Copyright (c) 2021 Yuri Sokolov</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/migus88/MPath</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/migus88/MPath.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>pathfinding;astar;navigation;grid;performance;optimization</PackageTags>
+    <PackageReleaseNotes>https://github.com/migus88/MPath/releases</PackageReleaseNotes>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +33,10 @@
     <Compile Include="..\..\mpath-unity-project\Packages\MPath\Source\**\*.cs">
       <Link>Source\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Compile>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Include="..\..\..\docs\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
