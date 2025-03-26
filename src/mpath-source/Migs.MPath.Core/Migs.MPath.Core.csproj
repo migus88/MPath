@@ -1,29 +1,42 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyVersion>0.9.0</AssemblyVersion>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Title>Migs.MPath</Title>
+    <Title>MPath</Title>
+    <TargetFrameworks>netstandard2.1;net7.0</TargetFrameworks>
   </PropertyGroup>
   
   <PropertyGroup>
     <PackageId>Migs.MPath</PackageId>
-    <Version>0.9.0</Version>
+    <Version>1.0.0</Version>
     <Authors>Yuri Sokolov</Authors>
-    <Description>Unsafe implementation of AStar algorythm</Description>
-    <PackageTags>pathfinding;astar</PackageTags>
-    <RepositoryUrl>https://github.com/migus88/Migs.MPath</RepositoryUrl>
+    <Company>Migs</Company>
+    <Description>High-performance, memory-efficient A* pathfinding implementation for grid-based environments with minimal garbage collection overhead</Description>
+    <Copyright>Copyright (c) 2021 Yuri Sokolov</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/migus88/MPath</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/migus88/MPath.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>pathfinding;astar;navigation;grid;performance;optimization</PackageTags>
+    <PackageReleaseNotes>https://github.com/migus88/MPath/releases</PackageReleaseNotes>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Memory" Version="4.5.3" />
   </ItemGroup>
-
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Release' And $(SolutionDir) != '' And Exists('$(SolutionDir)')">
-    <Exec Command="./unity-package-updater.sh '$(TargetDir)$(TargetName).dll' '$(AssemblyVersion)'" WorkingDirectory="$(SolutionDir)" />
-  </Target>
+  
+  <ItemGroup>
+    <Compile Include="..\..\mpath-unity-project\Packages\MPath\Source\**\*.cs">
+      <Link>Source\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Compile>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Include="..\..\..\docs\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
 </Project>

@@ -5,38 +5,53 @@ using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
 using Migs.MPath.Tests.Implementations;
 using Migs.MPath.Tools;
+using FluentAssertions;
 
 namespace Migs.MPath.Tests
 {
     [TestFixture]
-    public unsafe class TerrainPathfinderTests
+    public class PathfinderTests
     {
-        [Test]
-        public void SingleAgent_AgentSize_Success_Test()
+        private const string ResultsDirectory = "Results/";
+
+        [SetUp]
+        public void Setup()
         {
+            // Create results directory if it doesn't exist
+            if (!Directory.Exists(ResultsDirectory))
+            {
+                Directory.CreateDirectory(ResultsDirectory);
+            }
+        }
+
+        [Test]
+        public void GetPath_WithLargerAgent_ShouldFindPathAroundObstacles()
+        {
+            // Arrange
             var maze = new Maze("Maze/Conditions/001.png");
             
             var start = maze.Start;
             var destination = maze.Destination;
             var agent = new Agent { Size = 2 };
 
-            var aStar = new Pathfinder(maze.Cells);
+            var pathfinder = new Pathfinder(maze.Cells);
             
-
-            var result = aStar.GetPath(agent, start, destination);
+            // Act
+            var result = pathfinder.GetPath(agent, start, destination);
+            
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            result.Length.Should().BeGreaterThan(0);
+            
+            // Visualization (not part of the test assertion)
             maze.AddPath(result.Path.ToArray());
-
-            if (!Directory.Exists("Results/"))
-            {
-                Directory.CreateDirectory("Results/");
-            }
-            
-            maze.SaveImage("Results/001.png", 100);
+            maze.SaveImage($"{ResultsDirectory}001.png", 100);
         }
         
         [Test]
-        public void Cavern_Test()
+        public void GetPath_ThroughCavern_ShouldFindPath()
         {
+            // Arrange
             var maze = new Maze("Maze/Conditions/000.gif");
             var start = new Coordinate(10, 10);
             var destination = new Coordinate(502, 374);
@@ -45,46 +60,55 @@ namespace Migs.MPath.Tests
             maze.SetDestination(destination);
             var agent = new Agent { Size = 1 };
             
-            var aStar = new Pathfinder(maze.Cells);
+            var pathfinder = new Pathfinder(maze.Cells);
             
-            //Jitting for more accurate stopwatch result
-            aStar.GetPath(agent, start, destination);
-
-            var sw = new Stopwatch();
-            sw.Start();
-            var result = aStar.GetPath(agent, start, destination);
-            sw.Stop();
-
-            Console.WriteLine($"Elapsed: {sw.ElapsedMilliseconds} ms");
+            // Act
+            var result = pathfinder.GetPath(agent, start, destination);
             
-            var closedCount = 0;
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            result.Length.Should().BeGreaterThan(0);
             
-            var propertyInfo = typeof(Cell).GetProperty("IsClosed", BindingFlags.NonPublic | BindingFlags.Instance);
-            
-            foreach (var cell in maze.Cells)
-            {
-                if ((bool)(propertyInfo?.GetValue(cell) ?? false))
-                {
-                    closedCount++;
-                    maze.SetClosed(cell.Coordinate);
-                }
-            }
-
-            Console.WriteLine($"Closed count: {closedCount}");
-            
-            if(result.IsPathFound)
+            // Visualization (not part of the test assertion)
+            if (result.IsSuccess)
             {
                 maze.AddPath(result.Path.ToArray());
             }
-
-            if (!Directory.Exists("Results/"))
-            {
-                Directory.CreateDirectory("Results/");
-            }
             
-            maze.SaveImage("Results/000.png", 4);
+            maze.SaveImage($"{ResultsDirectory}000.png", 4);
+        }
+        
+        [Test]
+        public void GetPath_WithInvalidDestination_ShouldThrowArgumentException()
+        {
+            // Arrange
+            var maze = new Maze("Maze/Conditions/001.png");
+            var start = maze.Start;
+            var invalidDestination = new Coordinate(maze.Width + 10, maze.Height + 10); // Outside maze bounds
+            var agent = new Agent { Size = 1 };
             
-            Assert.IsTrue(result.IsPathFound);
+            var pathfinder = new Pathfinder(maze.Cells);
+            
+            // Act & Assert
+            var action = () => pathfinder.GetPath(agent, start, invalidDestination);
+            action.Should().Throw<ArgumentException>()
+                  .WithMessage("*outside the valid field range*");
+        }
+        
+        [Test]
+        public void GetPath_WithNullAgent_ShouldThrowArgumentNullException()
+        {
+            // Arrange
+            var maze = new Maze("Maze/Conditions/001.png");
+            var start = maze.Start;
+            var destination = maze.Destination;
+            
+            var pathfinder = new Pathfinder(maze.Cells);
+            
+            // Act & Assert
+            var action = () => pathfinder.GetPath(null!, start, destination);
+            action.Should().Throw<ArgumentNullException>()
+                  .WithParameterName("agent");
         }
     }
 }

@@ -1,8 +1,29 @@
 {
   "name": "com.migsweb.mpath",
+  "version": "1.0.0",
   "displayName": "MPath",
-  "description": "Unsafe implementation of A* Pathfinding",
-  "version": "0.9.0",
-  "unity": "2019.2",
-  "documentationUrl": ""
+  "description": "High-performance, memory-efficient A* pathfinding implementation for grid-based environments with minimal garbage collection overhead",
+  "unity": "2022.3",
+  "keywords": [
+    "pathfinding",
+    "astar",
+    "navigation",
+    "grid",
+    "performance",
+    "optimization"
+  ],
+  "author": {
+    "name": "Yuri Sokolov",
+    "url": "https://github.com/migus88"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/migus88/MPath.git"
+  },
+  "license": "MIT",
+  "documentationUrl": "https://github.com/migus88/MPath/tree/master/docs",
+  "changelogUrl": "https://github.com/migus88/MPath/releases",
+  "licensesUrl": "https://github.com/migus88/MPath/blob/master/LICENSE",
+  "dependencies": {},
+  "samples": []
 }

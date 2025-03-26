@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Migs.MPath.Settings
 {
-    [CreateAssetMenu(fileName = "PathfinderSettings", menuName = "Atomic/Pathfinder/Settings", order = 0)]
+    [CreateAssetMenu(fileName = "PathfinderSettings", menuName = "MPath/Pathfinder Settings", order = 0)]
     public class ScriptablePathfinderSettings : ScriptableObject, IPathfinderSettings
     {
         /// <inheritdoc/>

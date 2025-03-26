@@ -21,7 +21,7 @@ namespace Migs.Mpath.Examples
             Battlefield.Instance.CellClicked += OnCellClicked;
         }
 
-        private unsafe void OnCellClicked(Cell cell)
+        private void OnCellClicked(Cell cell)
         {
             if (_isMoving)
             {
@@ -42,8 +42,6 @@ namespace Migs.Mpath.Examples
         {
             _isMoving = true;
 
-            // Notice that Path is IEnumerable. This means that we don't want to cast it to an array or a list
-            // to reduce the amount of allocations
             foreach (var coordinate in result.Path)
             {
                 var cell = Battlefield.Instance.GetFieldCell(coordinate.X, coordinate.Y);
