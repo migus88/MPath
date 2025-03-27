@@ -16,7 +16,7 @@ namespace Benchmarks.Editor
         private static readonly Vector2Int StartPoint = new Vector2Int(10, 10);
         private static readonly Vector2Int Destination = new Vector2Int(502, 374);
         
-        [Test, Performance]
+        [Test, Performance, Timeout(500000)]
         public void RunAllPathfindingBenchmarks()
         {
             foreach (var mazePath in GetMazeImagePaths())
@@ -29,7 +29,7 @@ namespace Benchmarks.Editor
             }
         }
         
-        [Test, Performance]
+        [Test, Performance, Timeout(500000)]
         public void MPathBenchmark()
         {
             foreach (var mazePath in GetMazeImagePaths())
@@ -42,7 +42,7 @@ namespace Benchmarks.Editor
             }
         }
         
-        [Test, Performance]
+        [Test, Performance, Timeout(10000000)]
         public void RoyTAStarBenchmark()
         {
             foreach (var mazePath in GetMazeImagePaths())
@@ -55,7 +55,7 @@ namespace Benchmarks.Editor
             }
         }
         
-        [Test, Performance]
+        [Test, Performance, Timeout(10000000)]
         public void AStarLiteBenchmark()
         {
             foreach (var mazePath in GetMazeImagePaths())
@@ -87,8 +87,10 @@ namespace Benchmarks.Editor
                     runner.FindPath(StartPoint, Destination);
                 })
                 .SampleGroup(testName)
-                .WarmupCount(3)
-                .MeasurementCount(10)
+                .WarmupCount(5)
+                .MeasurementCount(300)
+                .IterationsPerMeasurement(1)
+                .GC()
                 .Run();
             }
         }
@@ -104,16 +106,16 @@ namespace Benchmarks.Editor
                 runner.FindPath(StartPoint, Destination);
             })
             .SampleGroup(testName)
-            .WarmupCount(3)
-            .MeasurementCount(10)
+            .WarmupCount(5)
+            .MeasurementCount(300)
+            .IterationsPerMeasurement(1)
+            .GC()
             .Run();
         }
         
         private string[] GetMazeImagePaths()
         {
             return Directory.GetFiles(MazesDirectory, "*.png")
-                .Concat(Directory.GetFiles(MazesDirectory, "*.gif"))
-                .Concat(Directory.GetFiles(MazesDirectory, "*.jpg"))
                 .ToArray();
         }
         
