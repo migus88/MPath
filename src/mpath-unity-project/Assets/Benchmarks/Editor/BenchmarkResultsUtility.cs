@@ -12,7 +12,7 @@ namespace Benchmarks.Editor
 {
     public static class BenchmarkResultsUtility
     {
-        [MenuItem("Tools/Benchmarks/Export Results")]
+        [MenuItem("Tools/Benchmarks/Results/Export Results")]
         public static void ExportResults()
         {
             var testResults = LoadTestResults();
@@ -22,7 +22,7 @@ namespace Benchmarks.Editor
                 return;
             }
 
-            string path = EditorUtility.SaveFilePanel(
+            var path = EditorUtility.SaveFilePanel(
                 "Save Benchmark Results",
                 "",
                 "PathfindingBenchmarkResults.csv",
@@ -40,14 +40,14 @@ namespace Benchmarks.Editor
             {
                 foreach (var sampleGroup in result.SampleGroups)
                 {
-                    string[] parts = sampleGroup.Name.Split('_');
+                    var parts = sampleGroup.Name.Split('_');
                     if (parts.Length != 2)
                     {
                         continue;
                     }
 
-                    string algorithm = parts[0];
-                    string maze = parts[1];
+                    var algorithm = parts[0];
+                    var maze = parts[1];
 
                     var samples = sampleGroup.Samples;
                     var sampleCount = samples.Count;
@@ -74,7 +74,7 @@ namespace Benchmarks.Editor
         private static float GetMedian(List<double> samples)
         {
             var sortedSamples = samples.OrderBy(s => s).ToList();
-            int count = sortedSamples.Count;
+            var count = sortedSamples.Count;
             
             if (count == 0)
             {
@@ -91,23 +91,23 @@ namespace Benchmarks.Editor
 
         private static float CalculateStdDev(List<double> samples)
         {
-            int count = samples.Count;
+            var count = samples.Count;
             if (count <= 1)
             {
                 return 0;
             }
 
-            double mean = samples.Average();
-            double sum = samples.Sum(d => (d - mean) * (d - mean));
+            var mean = samples.Average();
+            var sum = samples.Sum(d => (d - mean) * (d - mean));
             return (float)Math.Sqrt(sum / (count - 1));
         }
 
-        [MenuItem("Tools/Benchmarks/Clear Results")]
+        [MenuItem("Tools/Benchmarks/Results/Clear Results")]
         public static void ClearResults()
         {
             // Unity's performance testing API doesn't provide a direct way to clear results
             // We'll need to delete the results file if it exists
-            string resultsPath = Path.Combine(Application.persistentDataPath, "PerformanceTestResults.json");
+            var resultsPath = Path.Combine(Application.persistentDataPath, "PerformanceTestResults.json");
             if (File.Exists(resultsPath))
             {
                 File.Delete(resultsPath);
@@ -121,7 +121,7 @@ namespace Benchmarks.Editor
         
         private static List<PerformanceTestResult> LoadTestResults()
         {
-            string resultsPath = Path.Combine(Application.persistentDataPath, "PerformanceTestResults.json");
+            var resultsPath = Path.Combine(Application.persistentDataPath, "PerformanceTestResults.json");
             
             if (!File.Exists(resultsPath))
             {
@@ -130,7 +130,7 @@ namespace Benchmarks.Editor
             
             try
             {
-                string json = File.ReadAllText(resultsPath);
+                var json = File.ReadAllText(resultsPath);
                 var run = JsonUtility.FromJson<Run>(json);
                 return run?.Results ?? new List<PerformanceTestResult>();
             }

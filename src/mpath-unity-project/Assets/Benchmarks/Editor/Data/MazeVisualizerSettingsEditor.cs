@@ -142,14 +142,14 @@ namespace Benchmarks.Editor.Data
             try
             {
                 // Get texture path
-                string texturePath = AssetDatabase.GetAssetPath(_settings.MazeTexture);
+                var texturePath = AssetDatabase.GetAssetPath(_settings.MazeTexture);
                 if (string.IsNullOrEmpty(texturePath))
                 {
                     throw new System.Exception("Cannot find path for texture");
                 }
                 
                 // Convert project path to absolute path
-                string absolutePath = Path.Combine(Application.dataPath, texturePath.Substring("Assets/".Length));
+                var absolutePath = Path.Combine(Application.dataPath, texturePath.Substring("Assets/".Length));
                 
                 // Create maze from image
                 return new UnityMaze(absolutePath);

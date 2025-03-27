@@ -5,6 +5,5 @@ namespace Benchmarks.Editor.Data
     public class SimpleAgent : IAgent
     {
         public int Size => 1;
-        public float Speed => 1;
     }
 }

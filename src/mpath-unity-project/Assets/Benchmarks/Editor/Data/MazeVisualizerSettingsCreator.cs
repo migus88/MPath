@@ -6,24 +6,24 @@ namespace Benchmarks.Editor.Data
 {
     public static class MazeVisualizerSettingsCreator
     {
-        [MenuItem("Tools/Benchmarks/Create Maze Visualizer Settings")]
+        [MenuItem("Tools/Benchmarks/Create Visualizer Settings")]
         public static void CreateMazeVisualizerSettings()
         {
             // Create the settings asset
             var settings = ScriptableObject.CreateInstance<MazeVisualizerSettings>();
             
             // Create directory if it doesn't exist
-            string directory = "Assets/Benchmarks/Settings";
+            var directory = "Assets/Benchmarks/Settings";
             if (!AssetDatabase.IsValidFolder(directory))
             {
-                string parentFolder = Path.GetDirectoryName(directory);
-                string newFolderName = Path.GetFileName(directory);
+                var parentFolder = Path.GetDirectoryName(directory);
+                var newFolderName = Path.GetFileName(directory);
                 AssetDatabase.CreateFolder(parentFolder, newFolderName);
                 AssetDatabase.Refresh();
             }
             
             // Create the asset
-            string assetPath = $"{directory}/MazeVisualizerSettings.asset";
+            var assetPath = $"{directory}/MazeVisualizerSettings.asset";
             AssetDatabase.CreateAsset(settings, assetPath);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();

@@ -11,8 +11,9 @@ namespace Benchmarks.Editor
 {
     public class BenchmarkResultsWindow : EditorWindow
     {
+        private readonly List<AlgorithmResult> _results = new();
+        
         private Vector2 _scrollPosition;
-        private List<AlgorithmResult> _results = new List<AlgorithmResult>();
         private string[] _mazeNames;
         private string[] _algorithmNames;
         private bool _initialized;
@@ -20,12 +21,12 @@ namespace Benchmarks.Editor
 
         private Color[] _algorithmColors =
         {
-            new Color(0.34f, 0.73f, 0.56f), // Green
-            new Color(0.93f, 0.51f, 0.39f), // Orange
-            new Color(0.46f, 0.61f, 0.80f), // Blue
+            new(0.34f, 0.73f, 0.56f), // Green
+            new(0.93f, 0.51f, 0.39f), // Orange
+            new(0.46f, 0.61f, 0.80f), // Blue
         };
 
-        [MenuItem("Tools/Benchmarks/View Results")]
+        [MenuItem("Tools/Benchmarks/Results/View Results")]
         public static void ShowWindow()
         {
             var window = GetWindow<BenchmarkResultsWindow>("Benchmark Results");
@@ -129,7 +130,7 @@ namespace Benchmarks.Editor
         {
             EditorGUILayout.LabelField(mazeName, EditorStyles.boldLabel);
             
-            Rect graphRect = GUILayoutUtility.GetRect(0, 100, GUILayout.ExpandWidth(true));
+            var graphRect = GUILayoutUtility.GetRect(0, 100, GUILayout.ExpandWidth(true));
             
             // Draw background
             EditorGUI.DrawRect(graphRect, new Color(0.2f, 0.2f, 0.2f));
@@ -147,13 +148,12 @@ namespace Benchmarks.Editor
         private void DrawGridLines(Rect graphRect)
         {
             // Horizontal grid lines
-            int divisions = 5;
-            float y;
-            
-            for (int i = 0; i <= divisions; i++)
+            const int divisions = 5;
+
+            for (var i = 0; i <= divisions; i++)
             {
-                y = graphRect.y + graphRect.height * i / divisions;
-                
+                var y = graphRect.y + graphRect.height * i / divisions;
+
                 // Draw line
                 EditorGUI.DrawRect(new Rect(graphRect.x, y, graphRect.width, 1), new Color(0.4f, 0.4f, 0.4f, 0.5f));
             }
@@ -165,31 +165,36 @@ namespace Benchmarks.Editor
             if (mazeResults.Count == 0)
                 return;
                 
-            float barWidth = 30;
-            float groupWidth = (_algorithmNames.Length * (barWidth + 5)) + 20;
-            float startX = graphRect.x + (graphRect.width - groupWidth) / 2;
+            var barWidth = 30f;
+            var groupWidth = (_algorithmNames.Length * (barWidth + 5)) + 20;
+            var startX = graphRect.x + (graphRect.width - groupWidth) / 2;
             
-            for (int i = 0; i < _algorithmNames.Length; i++)
+            for (var i = 0; i < _algorithmNames.Length; i++)
             {
                 var result = mazeResults.FirstOrDefault(r => r.AlgorithmName == _algorithmNames[i]);
                 if (result == null)
                     continue;
                     
-                float x = startX + (i * (barWidth + 5));
-                float normalizedHeight = result.MedianTime / _maxTime;
-                float height = normalizedHeight * graphRect.height;
-                float y = graphRect.y + graphRect.height - height;
+                var x = startX + (i * (barWidth + 5));
+                var normalizedHeight = result.MedianTime / _maxTime;
+                var height = normalizedHeight * graphRect.height;
+                var y = graphRect.y + graphRect.height - height;
                 
-                Rect barRect = new Rect(x, y, barWidth, height);
+                var barRect = new Rect(x, y, barWidth, height);
                 
                 // Draw bar
                 EditorGUI.DrawRect(barRect, _algorithmColors[i % _algorithmColors.Length]);
                 
                 // Draw label
-                GUIStyle labelStyle = new GUIStyle(EditorStyles.miniLabel);
-                labelStyle.alignment = TextAnchor.MiddleCenter;
-                labelStyle.normal.textColor = Color.white;
-                
+                var labelStyle = new GUIStyle(EditorStyles.miniLabel)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    normal =
+                    {
+                        textColor = Color.white
+                    }
+                };
+
                 EditorGUI.LabelField(
                     new Rect(x, y - 20, barWidth, 20),
                     $"{result.MedianTime:F2}ms", 
@@ -199,17 +204,15 @@ namespace Benchmarks.Editor
 
         private void DrawScaleLabels(Rect graphRect)
         {
-            int divisions = 5;
-            float y;
-            float value;
-            
-            GUIStyle labelStyle = new GUIStyle(EditorStyles.miniLabel);
+            const int divisions = 5;
+
+            var labelStyle = new GUIStyle(EditorStyles.miniLabel);
             labelStyle.alignment = TextAnchor.MiddleRight;
             
-            for (int i = 0; i <= divisions; i++)
+            for (var i = 0; i <= divisions; i++)
             {
-                y = graphRect.y + graphRect.height * (divisions - i) / divisions;
-                value = _maxTime * i / divisions;
+                var y = graphRect.y + graphRect.height * (divisions - i) / divisions;
+                var value = _maxTime * i / divisions;
                 
                 EditorGUI.LabelField(
                     new Rect(graphRect.x - 50, y - 8, 45, 16),
@@ -227,19 +230,19 @@ namespace Benchmarks.Editor
             {
                 foreach (var sampleGroup in result.SampleGroups)
                 {
-                    string[] parts = sampleGroup.Name.Split('_');
+                    var parts = sampleGroup.Name.Split('_');
                     if (parts.Length != 2)
                         continue;
                         
-                    string algorithm = parts[0];
-                    string maze = parts[1];
+                    var algorithm = parts[0];
+                    var maze = parts[1];
                     
                     var samples = sampleGroup.Samples;
                     if (samples.Count == 0)
                         continue;
                         
                     // Convert to milliseconds
-                    float median = (float)(GetMedian(samples) / 1000000f);
+                    var median = GetMedian(samples) / 1000000f;
                     
                     _results.Add(new AlgorithmResult
                     {
@@ -273,7 +276,7 @@ namespace Benchmarks.Editor
         private float GetMedian(List<double> samples)
         {
             var sortedSamples = samples.OrderBy(d => d).ToList();
-            int count = sortedSamples.Count;
+            var count = sortedSamples.Count;
             
             if (count == 0)
                 return 0;
@@ -292,7 +295,7 @@ namespace Benchmarks.Editor
         
         private static List<PerformanceTestResult> LoadTestResults()
         {
-            string resultsPath = Path.Combine(Application.persistentDataPath, "PerformanceTestResults.json");
+            var resultsPath = Path.Combine(Application.persistentDataPath, "PerformanceTestResults.json");
             
             if (!File.Exists(resultsPath))
             {
@@ -301,7 +304,7 @@ namespace Benchmarks.Editor
             
             try
             {
-                string json = File.ReadAllText(resultsPath);
+                var json = File.ReadAllText(resultsPath);
                 var run = JsonUtility.FromJson<Run>(json);
                 return run?.Results ?? new List<PerformanceTestResult>();
             }
