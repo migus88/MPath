@@ -61,20 +61,6 @@ namespace Benchmarks.Editor.Helpers
         }
 
         /// <summary>
-        /// Create a maze from existing cells
-        /// </summary>
-        public UnityMaze(Cell[,] cells, int width, int height, Coordinate start = default, Coordinate destination = default)
-        {
-            Cells = cells;
-            Width = width;
-            Height = height;
-            Start = start;
-            Destination = destination;
-
-            CreateTexture();
-        }
-
-        /// <summary>
         /// Create cells from the loaded texture
         /// </summary>
         private void CreateCells()
@@ -89,59 +75,21 @@ namespace Benchmarks.Editor.Helpers
                     var pixel = GetPixel(x, y);
                     
                     // Create a new cell
-                    ref var cell = ref Cells[x, y];
+                    ref var cell = ref Cells[x, Height - 1 - y];
                     cell.IsWalkable = IsWalkable(pixel);
-                    cell.Coordinate = new Coordinate(x, y);
+                    cell.Coordinate = new Coordinate(x, Height - 1 - y);
                     
                     // Set start/destination if this pixel is red/blue
                     if (IsStart(pixel))
                     {
-                        Start = new Coordinate(x, y);
+                        Start = new Coordinate(x, Height - 1 - y);
                     }
                     else if (IsDestination(pixel))
                     {
-                        Destination = new Coordinate(x, y);
+                        Destination = new Coordinate(x, Height - 1 - y);
                     }
                 }
             }
-        }
-
-        /// <summary>
-        /// Create a texture from cells
-        /// </summary>
-        private void CreateTexture()
-        {
-            _texture = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
-            _pixelData = new Color32[Width * Height];
-            
-            for (short y = 0; y < Height; y++)
-            {
-                for (short x = 0; x < Width; x++)
-                {
-                    var cell = Cells[x, y];
-                    Color32 pixel = White;
-                    
-                    if (!cell.IsWalkable || cell.IsOccupied)
-                    {
-                        pixel = Black;
-                    }
-                    
-                    var coordinates = new Coordinate(x, y);
-                    
-                    if (Start == coordinates)
-                    {
-                        pixel = Red;
-                    }
-                    else if (Destination == coordinates)
-                    {
-                        pixel = Blue;
-                    }
-                    
-                    SetPixel(x, y, pixel);
-                }
-            }
-            
-            ApplyPixelChanges();
         }
 
         /// <summary>
@@ -185,7 +133,7 @@ namespace Benchmarks.Editor.Helpers
                     continue;
                 }
                 
-                SetPixel((int)coordinate.X, (int)coordinate.Y, Green);
+                SetPixelTopLeftOrigin((int)coordinate.X, (int)coordinate.Y, Green);
             }
             
             ApplyPixelChanges();
@@ -268,6 +216,20 @@ namespace Benchmarks.Editor.Helpers
         private void SetPixel(int x, int y, Color32 color)
         {
             int index = y * Width + x;
+            _pixelData[index] = color;
+        }
+        
+        private Color32 GetPixelTopLeftOrigin(int x, int y)
+        {
+            int flippedY = Height - 1 - y;
+            int index = flippedY * Width + x;
+            return _pixelData[index];
+        }
+
+        private void SetPixelTopLeftOrigin(int x, int y, Color32 color)
+        {
+            int flippedY = Height - 1 - y;
+            int index = flippedY * Width + x;
             _pixelData[index] = color;
         }
 

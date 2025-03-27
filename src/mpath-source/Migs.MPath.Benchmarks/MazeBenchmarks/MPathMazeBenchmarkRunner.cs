@@ -6,9 +6,9 @@ using Migs.MPath.Tools;
 
 namespace Migs.MPath.Benchmarks.MazeBenchmarks;
 
-public class MigsMazeBenchmarkRunner : BaseMazeBenchmarkRunner
+public class MPathMazeBenchmarkRunner : BaseMazeBenchmarkRunner
 {
-    protected override string ResultImageName => nameof(MigsMazeBenchmarkRunner);
+    protected override string ResultImageName => nameof(MPathMazeBenchmarkRunner);
         
     private Pathfinder _pathfinder;
     private IAgent _agent;

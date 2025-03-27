@@ -9,7 +9,7 @@ public class MazeBenchmarkRunner
     private readonly (int x, int y) _start = (10, 10);
     private readonly (int x, int y) _destination = (502, 374);
         
-    private static readonly string AtomicRunner = nameof(MigsMazeBenchmarkRunner);
+    private static readonly string AtomicRunner = nameof(MPathMazeBenchmarkRunner);
     private static readonly string RoyTRunner = nameof(RoyTAStarMazeBenchmarkRunner);
     private static readonly string AStarLiteRunner = nameof(AStarLiteBenchmarkRunner);
     private static readonly string LinqToAStarRunner = nameof(LinqToAStarMazeBenchmarkRunner);
@@ -17,7 +17,7 @@ public class MazeBenchmarkRunner
     private readonly Dictionary<string, IMazeBenchmarkRunner> _benchmarkRunners =
         new()
         {
-            [AtomicRunner] = new MigsMazeBenchmarkRunner(),
+            [AtomicRunner] = new MPathMazeBenchmarkRunner(),
             [RoyTRunner] = new RoyTAStarMazeBenchmarkRunner(),
             [AStarLiteRunner] = new AStarLiteBenchmarkRunner(),
             [LinqToAStarRunner] = new LinqToAStarMazeBenchmarkRunner(),
