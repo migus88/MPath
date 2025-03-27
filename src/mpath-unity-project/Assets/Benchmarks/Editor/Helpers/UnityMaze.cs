@@ -86,7 +86,7 @@ namespace Benchmarks.Editor.Helpers
                 for (short x = 0; x < Width; x++)
                 {
                     // Get the pixel color
-                    Color32 pixel = GetPixel(x, y);
+                    var pixel = GetPixel(x, y);
                     
                     // Create a new cell
                     ref var cell = ref Cells[x, y];
@@ -271,22 +271,12 @@ namespace Benchmarks.Editor.Helpers
             _pixelData[index] = color;
         }
 
-        // Check if a cell is walkable at given coordinates
         public bool IsWalkable(int x, int y) => IsWalkable(GetPixel(x, y));
-        
-        // Check if a cell is blocked at given coordinates
         public bool IsBlocked(int x, int y) => IsBlocked(GetPixel(x, y));
-        
-        // Check if a cell is the start point at given coordinates
         public bool IsStart(int x, int y) => IsStart(GetPixel(x, y));
-        
-        // Check if a cell is the destination at given coordinates
         public bool IsDestination(int x, int y) => IsDestination(GetPixel(x, y));
-        
-        // Check if a cell is part of a path at given coordinates
         public bool IsPath(int x, int y) => IsPath(GetPixel(x, y));
 
-        // Color check helper methods
         private bool IsWalkable(Color32 color) => !IsBlocked(color);
         private bool IsBlocked(Color32 color) => ColorEquals(color, Black);
         private bool IsStart(Color32 color) => ColorEquals(color, Red);
@@ -296,11 +286,11 @@ namespace Benchmarks.Editor.Helpers
         /// <summary>
         /// Compare two colors with some tolerance
         /// </summary>
-        private bool ColorEquals(Color32 a, Color32 b, byte tolerance = 5)
+        private bool ColorEquals(Color32 a, Color32 b, byte tolerance = 2)
         {
             return Math.Abs(a.r - b.r) <= tolerance &&
                    Math.Abs(a.g - b.g) <= tolerance &&
                    Math.Abs(a.b - b.b) <= tolerance;
         }
     }
-} 
+}

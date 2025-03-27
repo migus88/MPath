@@ -167,11 +167,6 @@ namespace Migs.MPath.Tools
         {
             _cells = new Cell[Width, Height];
             
-            fixed(Cell* ptr = _cells)
-            {
-                _cellsPtr = ptr;
-            }
-            
             for (short y = 0; y < Height; y++)
             {
                 for (short x = 0; x < Width; x++)

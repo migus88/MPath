@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using AStar;
 using AStar.Options;
 using Benchmarks.Editor.Helpers;
@@ -29,7 +30,7 @@ namespace Benchmarks.Editor.Runners
             var worldGrid = new WorldGrid(grid);
             var options = new PathFinderOptions
             {
-                SearchLimit = 20000
+                SearchLimit = 50000
             };
             _pathFinder = new PathFinder(worldGrid, options);
         }
@@ -45,6 +46,34 @@ namespace Benchmarks.Editor.Runners
             {
                 throw new Exception("No path found for AStar!");
             }
+        }
+        
+        public override void RenderPath(string path, int scale, Vector2Int start, Vector2Int destination)
+        {
+            // Set start and destination points on the maze
+            Maze.SetStart(new Coordinate(start.x, start.y));
+            Maze.SetDestination(new Coordinate(destination.x, destination.y));
+            
+            var result = _pathFinder.FindPath(
+                new Position(start.x, start.y),
+                new Position(destination.x, destination.y)
+            );
+
+            if (result.Length > 0)
+            {
+                // Convert the path to coordinates
+                var coordinates = new List<Coordinate>();
+                
+                foreach (var position in result)
+                {
+                    coordinates.Add(new Coordinate(position.Column, position.Row));
+                }
+                
+                // Add path to maze
+                Maze.AddPath(coordinates.ToArray());
+            }
+            
+            Maze.SaveImage(path, scale);
         }
     }
 }

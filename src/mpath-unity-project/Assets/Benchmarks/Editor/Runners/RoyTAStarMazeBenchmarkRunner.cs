@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Benchmarks.Editor.Helpers;
 using Migs.MPath.Core.Data;
 using Roy_T.AStar.Graphs;
@@ -34,6 +35,40 @@ namespace Benchmarks.Editor.Runners
             {
                 throw new Exception("Path not found");
             }
+        }
+        
+        public override void RenderPath(string path, int scale, Vector2Int start, Vector2Int destination)
+        {
+            // Set start and destination points on the maze
+            Maze.SetStart(new Coordinate(start.x, start.y));
+            Maze.SetDestination(new Coordinate(destination.x, destination.y));
+            
+            var startPoint = new GridPosition(start.x, start.y);
+            var endPoint = new GridPosition(destination.x, destination.y);
+
+            var result = _pathFinder.FindPath(startPoint, endPoint, _grid);
+
+            if (result.Edges.Count > 0)
+            {
+                // Convert the path to coordinates
+                var coordinates = new List<Coordinate>();
+                
+                // Start point
+                coordinates.Add(new Coordinate(start.x, start.y));
+                
+                // Add each point along the path
+                foreach (var edge in result.Edges)
+                {
+                    int x = (int)edge.End.Position.X;
+                    int y = (int)edge.End.Position.Y;
+                    coordinates.Add(new Coordinate(x, y));
+                }
+                
+                // Add path to maze
+                Maze.AddPath(coordinates.ToArray());
+            }
+            
+            Maze.SaveImage(path, scale);
         }
 
         private void PopulateNodes()
