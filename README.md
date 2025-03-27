@@ -60,7 +60,7 @@ Allocated : Allocated memory per single operation (managed only, inclusive, 1KB 
 
 These results highlight MPath's optimization for both speed and memory efficiency. Memory allocation in MPath is required only for the initial pathfinder creation and for the final path result creation, with no GC pressure during the pathfinding algorithm execution. 
 
-More comparison benchmarks with other popular pathfinding libraries will be added in future updates.
+For detailed information on how to run benchmarks, including Unity benchmark tests, see the [benchmarks documentation](benchmarks.md).
 
 ## Installation
 
