@@ -1,9 +1,9 @@
 using System;
 using System.IO;
-using UnityEngine;
 using Migs.MPath.Core.Data;
+using UnityEngine;
 
-namespace Bemcmarks.Editor
+namespace Benchmarks.Editor.Helpers
 {
     /// <summary>
     /// Unity-friendly implementation of the Maze class for editor use

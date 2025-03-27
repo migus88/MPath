@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Bemcmarks
+namespace Benchmarks.Editor.Helpers
 {
     /// <summary>
     /// ScriptableObject to hold maze data

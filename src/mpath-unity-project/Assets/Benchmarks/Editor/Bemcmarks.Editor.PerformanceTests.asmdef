@@ -1,11 +1,9 @@
 {
-    "name": "Bemcmarks.Editor.PerformanceTests",
-    "rootNamespace": "Bemcmarks.Editor.PerformanceTests",
+    "name": "Bemcmarks.Editor",
+    "rootNamespace": "",
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "Bemcmarks",
-        "Bemcmarks.Editor",
         "Migs.MPath.Core",
         "Unity.PerformanceTesting",
         "Unity.PerformanceTesting.Editor"

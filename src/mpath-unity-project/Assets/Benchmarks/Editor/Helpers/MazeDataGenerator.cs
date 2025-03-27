@@ -1,8 +1,9 @@
-using UnityEngine;
-using UnityEditor;
 using System.IO;
+using Bemcmarks;
+using UnityEditor;
+using UnityEngine;
 
-namespace Bemcmarks.Editor
+namespace Benchmarks.Editor.Helpers
 {
     /// <summary>
     /// Editor utility to generate maze data from image files
