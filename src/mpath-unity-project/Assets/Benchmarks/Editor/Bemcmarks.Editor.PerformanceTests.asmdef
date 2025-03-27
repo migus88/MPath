@@ -1,5 +1,5 @@
 {
-    "name": "Bemcmarks.Editor",
+    "name": "Benchmarks.Editor.PerformanceTests",
     "rootNamespace": "",
     "references": [
         "UnityEngine.TestRunner",
