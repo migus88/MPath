@@ -27,9 +27,13 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="cavern.gif">
+      <None Update="Mazes\cavern.png">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Mazes\" />
     </ItemGroup>
 
 </Project>

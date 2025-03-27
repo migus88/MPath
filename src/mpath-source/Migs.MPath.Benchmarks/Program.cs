@@ -11,7 +11,7 @@ var config = ManualConfig.CreateMinimumViable()
 
 if (args.Length > 0 && args[0] == "profile")
 {
-    var benchmarkRunner = new MigsMazeBenchmarkRunner();
+    var benchmarkRunner = new MPathMazeBenchmarkRunner();
     benchmarkRunner.Init(null);
 
     for (var i = 0; i < 100; i++)

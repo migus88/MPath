@@ -12,7 +12,7 @@ public abstract class BaseMazeBenchmarkRunner : IMazeBenchmarkRunner
 
     public virtual void Init(Maze maze)
     {
-        _maze = maze ?? new Maze("cavern.gif");
+        _maze = maze ?? new Maze("Mazes/cavern.png");
     }
 
     public abstract void FindPath((int x, int y) start, (int x, int y) destination);

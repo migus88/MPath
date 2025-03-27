@@ -64,7 +64,7 @@ public class AStarLiteBenchmarkRunner : BaseMazeBenchmarkRunner
         var coordinates = new Coordinate[result.Length];
         for (var i = 0; i < result.Length; i++)
         {
-            coordinates[i] = new Coordinate(result[i].Column, result[i].Row);
+            coordinates[i] = new Coordinate(result[i].Row, result[i].Column);
         }
         
         _maze.AddPath(coordinates);
