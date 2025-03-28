@@ -1,0 +1,28 @@
+name: Run Tests
+
+on:
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.x
+        
+    - name: Restore dependencies
+      run: dotnet restore src/mpath-source/Migs.MPath.sln
+      
+    - name: Build
+      run: dotnet build src/mpath-source/Migs.MPath.sln --no-restore
+      
+    - name: Test
+      run: dotnet test src/mpath-source/Migs.MPath.Tests/Migs.MPath.Tests.csproj --no-build --verbosity normal 
