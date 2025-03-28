@@ -3,14 +3,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/Version-1.0.0-blue.svg)](src/mpath-unity-project/Packages/MPath/package.json)
 
-A high-performance A* implementation for 2D grid navigation, optimized for speed and minimal memory allocations.
+A high-performance A* implementation for 2D grid navigation, designed primarily for game development (especially Unity) but fully compatible with any .NET project. MPath is optimized for speed and minimal memory allocations, making it ideal for real-time applications.
 
 ## Features
 
 - Fast A* pathfinding with near-zero garbage collection overhead
 - Allocates memory only when necessary to maximize performance
-- Designed for 2D grid-based navigation
-- Works in Unity projects and any other type of .NET applications
+- Designed for 2D grid-based navigation in games
+- First-class support for Unity with dedicated integration components
+- Fully usable in any standalone .NET application
 - Extensively tested with comprehensive unit tests
 - Includes performance benchmarks
 
