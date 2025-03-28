@@ -26,7 +26,7 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 | [RoyTAStar](https://github.com/roy-t/AStar) | 56.458 ms | 12592.34 KB |
 | [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,697 ms | 108.13 MB |
 
-For detailed information about MPath's performance benchmarks, including implementation comparisons and path smoothing options, see the [benchmarks documentation](benchmarks/benchmarks.md).
+For detailed information about MPath's performance benchmarks, including implementation comparisons and path smoothing options, see the [benchmarks documentation](docs/benchmarks/benchmarks.md).
 
 ## Installation
 

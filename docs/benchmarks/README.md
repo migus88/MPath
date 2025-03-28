@@ -4,7 +4,7 @@ This document contains detailed information about MPath's performance benchmarks
 
 ## Complex Maze Pathfinding
 
-![Benchmark Maze](../src/mpath-source/Migs.MPath.Benchmarks/Mazes/cavern.png)
+![Benchmark Maze](../../src/mpath-source/Migs.MPath.Benchmarks/Mazes/cavern.png)
 
 *The complex maze used for benchmarking*
 
