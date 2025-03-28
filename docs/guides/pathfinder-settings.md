@@ -90,6 +90,13 @@ Available options:
 - With **Simple**, redundant waypoints are removed based on angle changes, creating smoother paths while being computationally efficient.
 - With **StringPulling**, a more thorough line-of-sight calculation is performed to create the most direct paths possible, though with slightly higher computational cost.
 
+
+**Limitations**:
+- **StringPullingSmoothing** might not behave as expected in all scenarios:
+  - In complex mazes with narrow passages, it can occasionally create paths that appear to cut corners
+  - When used with agents that have a size greater than 1, some paths might seem to brush too close to obstacles
+  - In highly dynamic environments where obstacles change frequently, the more optimized path might become invalid more quickly
+
 **Example visualization**:
 ```
 No Smoothing:         Simple Smoothing:      String Pulling:
@@ -106,8 +113,8 @@ S = Start, E = End, + = Waypoint
 
 **When to use**:
 - **None**: When you need exact cell-by-cell paths or when performance is critical and path aesthetics don't matter
-- **Simple**: For most game scenarios - good balance of performance and path quality
-- **StringPulling**: When you need the most direct and natural-looking paths and can afford the slight performance cost
+- **Simple**: For most game scenarios - good balance of performance and path quality. Almost no overhead.
+- **StringPulling**: When you need the most direct and natural-looking paths and can afford the slight performance cost; best for open areas rather than complex mazes
 
 ### Cell Handling Settings
 

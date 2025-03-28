@@ -33,10 +33,36 @@ else if (args[0] == "debug")
 }
 else if (args[0] == "render")
 {
-    Console.WriteLine("Rendering all paths for visual comparison...");
-    var runner = new MazeBenchmarkRunner();
-    runner.PrintAllResults();
-    Console.WriteLine("All paths rendered successfully. Check the Results directory for output images.");
+    if (args.Length == 1)
+    {
+        Console.WriteLine("Rendering all paths for visual comparison...");
+        var runner = new MazeBenchmarkRunner();
+        runner.PrintAllResults();
+        Console.WriteLine("All paths rendered successfully. Check the Results directory for output images.");
+        return;
+    }
+    
+    switch (args[1])
+    {
+        case "smoothing":
+            new PathSmoothingBenchmarkRunner().RenderPaths();
+            break;
+        default:
+            Console.WriteLine("Invalid argument.");
+            break;
+    }
+}
+else if (args[0] == "info")
+{
+    switch (args[1])
+    {
+        case "smoothing":
+            new PathSmoothingBenchmarkRunner().PrintPathCounts();
+            break;
+        default:
+            Console.WriteLine("Invalid argument.");
+            break;
+    }
 }
 else if (args[0] == "benchmark")
 {

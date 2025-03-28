@@ -122,7 +122,7 @@ namespace Migs.MPath.Tools
                     continue;
                 }
 
-                _bitmap.SetPixel((int) coordinate.X, (int) coordinate.Y, SKColors.Green);
+                _bitmap.SetPixel((int) coordinate.X, (int) coordinate.Y, SKColors.Purple);
             }
         }
 
@@ -199,6 +199,6 @@ namespace Migs.MPath.Tools
         private bool IsBlocked(SKColor pixel) => pixel == SKColors.Black;
         private bool IsStart(SKColor pixel) => pixel == SKColors.Red;
         private bool IsDestination(SKColor pixel) => pixel == SKColors.Blue;
-        private bool IsPath(SKColor pixel) => pixel == SKColors.Green;
+        private bool IsPath(SKColor pixel) => pixel == SKColors.Fuchsia;
     }
 }

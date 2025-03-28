@@ -4,7 +4,7 @@ This document contains detailed information about MPath's performance benchmarks
 
 ## Complex Maze Pathfinding
 
-![Benchmark Maze](src/mpath-source/Migs.MPath.Benchmarks/cavern.png)
+![Benchmark Maze](../src/mpath-source/Migs.MPath.Benchmarks/Mazes/cavern.png)
 
 *The complex maze used for benchmarking*
 
@@ -15,8 +15,8 @@ The following benchmark was run on a complex maze to test pathfinding performanc
 | Method    | Mean      | Allocated   |
 |---------- |----------:|------------:|
 | MPath     |  5.092 ms |    24.06 KB |
-| [AStarLite](https://github.com/valantonini/AStar) |  8.118 ms |  8959.94 KB |
-| [RoyTAStar](https://github.com/roy-t/AStar) | 59.028 ms | 12592.34 KB |
+| [AStarLite](https://github.com/valantonini/AStar) |  8.118 ms |  8.74 MB |
+| [RoyTAStar](https://github.com/roy-t/AStar) | 59.028 ms | 12.29 MB |
 | [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,532.7 ms | 108.13 MB |
 
 These results highlight MPath's optimization for both speed and memory efficiency. Memory allocation in MPath is required only for the initial pathfinder creation and for the final path result creation, with no GC pressure during the pathfinding algorithm execution.
@@ -25,15 +25,16 @@ These results highlight MPath's optimization for both speed and memory efficienc
 
 The following benchmark compares different path smoothing options using the same maze and coordinates:
 
-| Method                 | Mean     | Error     | StdDev    | Ratio | Allocated | Alloc Ratio |
-|----------------------- |---------:|----------:|----------:|------:|----------:|------------:|
-| NoSmoothing            | 5.066 ms | 0.0175 ms | 0.0155 ms |  1.00 |  24.06 KB |        1.00 |
-| SimpleSmoothing        | 5.070 ms | 0.0167 ms | 0.0139 ms |  1.00 |  24.06 KB |        1.00 |
-| StringPullingSmoothing | 6.471 ms | 0.0275 ms | 0.0230 ms |  1.28 |  24.06 KB |        1.00 |
+| Method                 | Mean     | Allocated | Path Length |
+|----------------------- |---------:|----------:|-----------:|
+| NoSmoothing            | 5.066 ms | 24.06 KB  | 1078 |
+| SimpleSmoothing        | 5.070 ms | 24.06 KB  | 311 |
+| StringPullingSmoothing | 6.471 ms | 24.06 KB  | 200 |
 
 The results show that:
 - Simple smoothing adds negligible overhead compared to no smoothing
 - String pulling smoothing adds about 28% overhead, but still maintains the same memory efficiency
+- Path smoothing significantly reduces the number of steps in the path (SimpleSmoothing: 71% reduction, StringPullingSmoothing: 81% reduction)
 
 ## Benchmark Environment Specs
 
