@@ -111,40 +111,37 @@ dotnet add package Migs.MPath
 Here's a simple example of using MPath in a .NET project:
 
 ```csharp
-// Create a 10x10 grid
-var cells = new Cell[100];
-for (int i = 0; i < 100; i++)
-{
-    int x = i % 10;
-    int y = i / 10;
-    cells[i] = new Cell
-    {
-        Coordinate = new Coordinate(x, y),
-        IsWalkable = true,
-        Weight = 1.0f
-    };
-}
+// Create matrix of Cells
+var cells = new Cell[10, 10];
 
-// Add some obstacles
-cells[12].IsWalkable = false;
-cells[13].IsWalkable = false;
+// Or do it with gameObjects that implements ICellHolder
+[SerializeField] private FieldCell[] _cells;
 
 // Create a simple agent
 var agent = new SimpleAgent { Size = 1 };
 
-// Configure and create pathfinder
-var settings = new PathfinderSettings { IsDiagonalMovementEnabled = true };
-using var pathfinder = new Pathfinder(cells, 10, 10, settings);
+// Or your own player controller that implements IAgent
+[SerializeField] private PlayerController _player;
+
+// Create a pathfinder
+_pathfinder = new Pathfinder(cells);
+
+// Optionally pass a configuration file (see docs)
+_pathfinder = new Pathfinder(cells, config);
+
+// You can also enable path caching
+_pathfinder.EnablePathCaching();
 
 // Find a path
 var start = new Coordinate(1, 1);
 var end = new Coordinate(8, 8);
+
 using var result = pathfinder.GetPath(agent, start, end);
 
 // Use the path
 if (result.IsSuccess)
 {
-    Console.WriteLine($"Path found with {result.Length} steps!");
+    Debug.Log($"Path found with {result.Length} steps!");
 }
 ```
 
