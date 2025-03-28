@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
 using Migs.MPath.Core.Internal;
+using Migs.MPath.Core.Caching;
 using static Migs.MPath.Core.Internal.DirectionIndexes;
 
 namespace Migs.MPath.Core
@@ -29,6 +30,9 @@ namespace Migs.MPath.Core
         private readonly ICellHolder[,] _cellHoldersMatrix;
         private readonly Cell[] _cells;
         private readonly Cell[,] _cellsMatrix;
+        
+        private bool _isPathCachingEnabled;
+        private IPathCaching _pathCaching;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Pathfinder"/> class with a pre-existing cell array.
@@ -42,11 +46,8 @@ namespace Migs.MPath.Core
         public Pathfinder(Cell[] cells, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
             : this(fieldWidth, fieldHeight, settings)
         {
-            if (cells == null)
-                throw new ArgumentNullException(nameof(cells));
-                
+            _cells = cells ?? throw new ArgumentNullException(nameof(cells));
             _initializationMode = InitializationMode.CellsArray;
-            _cells = cells;
         }
 
         /// <summary>
@@ -61,10 +62,7 @@ namespace Migs.MPath.Core
         public Pathfinder(ICellHolder[] holders, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
             : this(fieldWidth, fieldHeight, settings)
         {
-            if (holders == null)
-                throw new ArgumentNullException(nameof(holders));
-                
-            _cellHolders = holders;
+            _cellHolders = holders ?? throw new ArgumentNullException(nameof(holders));
             _cells = ArrayPool<Cell>.Shared.Rent(Size);
             _initializationMode = InitializationMode.CellHoldersArray;
         }
@@ -106,9 +104,14 @@ namespace Migs.MPath.Core
         private Pathfinder(int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
         {
             if (fieldWidth <= 0)
+            {
                 throw new ArgumentException("Field width must be positive", nameof(fieldWidth));
+            }
+            
             if (fieldHeight <= 0)
+            {
                 throw new ArgumentException("Field height must be positive", nameof(fieldHeight));
+            }
                 
             Width = fieldWidth;
             Height = fieldHeight;
@@ -118,6 +121,57 @@ namespace Migs.MPath.Core
             _openSet = new UnsafePriorityQueue(settings?.InitialBufferSize);
         }
         
+        /// <summary>
+        /// Enables path caching for the pathfinder.
+        /// </summary>
+        /// <param name="pathCachingHandler">Optional custom implementation of IPathCaching. If null, the default implementation will be used.</param>
+        /// <returns>The current pathfinder instance.</returns>
+        public Pathfinder EnablePathCaching(IPathCaching pathCachingHandler = null)
+        {
+            if (_isPathCachingEnabled)
+            {
+                // Dispose any existing path caching handler
+                _pathCaching?.Dispose();
+            }
+            
+            _pathCaching = pathCachingHandler ?? new DefaultPathCaching();
+            _isPathCachingEnabled = true;
+            
+            return this;
+        }
+        
+        /// <summary>
+        /// Disables path caching for the pathfinder.
+        /// </summary>
+        /// <returns>The current pathfinder instance.</returns>
+        public Pathfinder DisablePathCaching()
+        {
+            if (!_isPathCachingEnabled)
+            {
+                return this;
+            }
+            
+            _pathCaching?.Dispose();
+            _pathCaching = null;
+            _isPathCachingEnabled = false;
+
+            return this;
+        }
+        
+        /// <summary>
+        /// Invalidates the current path cache.
+        /// </summary>
+        /// <returns>The current pathfinder instance.</returns>
+        public Pathfinder InvalidateCache()
+        {
+            if (_isPathCachingEnabled && _pathCaching != null)
+            {
+                _pathCaching.ClearCache();
+            }
+            
+            return this;
+        }
+
         /// <summary>
         /// Calculates a path from the specified starting position to the destination.
         /// </summary>
@@ -130,11 +184,19 @@ namespace Migs.MPath.Core
         public PathResult GetPath(IAgent agent, Coordinate from, Coordinate to)
         {
             if (agent == null)
+            {
                 throw new ArgumentNullException(nameof(agent));
+            }
                 
             if (!IsPositionValid(to.X, to.Y))
             {
                 throw new ArgumentException("Destination is outside the valid field range", nameof(to));
+            }
+            
+            // Try to get the path from cache if caching is enabled
+            if (_isPathCachingEnabled && _pathCaching.TryGetCachedPath(agent, from, to, out var cachedPath))
+            {
+                return cachedPath;
             }
 
             InitializeCellsArray();
@@ -146,7 +208,15 @@ namespace Migs.MPath.Core
                 ResetCells(ptr);
                 _openSet.Clear();
 
-                return CalculatePath(agent, from, to, ptr);
+                var result = CalculatePath(agent, from, to, ptr);
+                
+                // Cache the path if caching is enabled and path was found
+                if (_isPathCachingEnabled && result.IsSuccess)
+                {
+                    _pathCaching.CachePath(agent, from, to, result);
+                }
+                
+                return result;
             }
         }
 
@@ -505,13 +575,20 @@ namespace Migs.MPath.Core
         }
 
         /// <summary>
-        /// Releases all resources used by the <see cref="Pathfinder"/> instance.
+        /// Releases all resources used by this Pathfinder instance.
         /// </summary>
         public void Dispose()
         {
-            if(_initializationMode != InitializationMode.CellsArray && _cells != null)
+            if (_initializationMode != InitializationMode.CellsArray && _cells != null)
             {
                 ArrayPool<Cell>.Shared.Return(_cells);
+            }
+            
+            // Dispose the path caching if it exists
+            if (_isPathCachingEnabled)
+            {
+                _pathCaching?.Dispose();
+                _pathCaching = null;
             }
         }
 
