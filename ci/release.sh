@@ -150,3 +150,5 @@ echo -e "\n${GREEN}Release process completed successfully!${NC}"
 echo "Release artifacts are available in the builds directory:"
 ls -la builds/
 echo -e "\n${YELLOW}Note: All changes are local. You can review them before pushing to remote.${NC}" 
+
+echo -e "\n${GREEN}Don't forget to update the README.md file with the new version number (the badge and the links).${NC}" 
