@@ -70,7 +70,7 @@ public class LinqToAStarMazeBenchmarkRunner : BaseMazeBenchmarkRunner
         // Build the LINQ query for A* search
         var solution = from step in queryable.Except(_obstacles)
                        where _boundary.Contains(step)
-                       orderby step.GetManhattanDistance(goalPoint) // Using built-in extension method
+                       orderby step.GetManhattanDistance(goalPoint) 
                        select step;
         
         // Execute query and get the solution path
