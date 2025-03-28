@@ -13,8 +13,9 @@ namespace Migs.MPath.Editor
     
     public static class PackageExporter
     {
-        private const string PackagePath = "Packages/MPath";
-        private const string BuildsDirectory = "builds";
+        private const string PackagesPath = "Packages";
+        private const string AssetsPath = "Assets";
+        private const string MPathFolder = "MPath";
         private const string PackageNameFormat = "migs-mpath-{0}.unitypackage";
         
         [MenuItem("MPath/Export Package")]
@@ -32,31 +33,78 @@ namespace Migs.MPath.Editor
         
         private static void ExportPackageInternal()
         {
-            // Ensure builds directory exists
-            if (!Directory.Exists(BuildsDirectory))
-            {
-                Directory.CreateDirectory(BuildsDirectory);
-            }
-            
-            // Get version from package.json
-            string packageJsonPath = Path.Combine(PackagePath, "package.json");
-            string json = File.ReadAllText(packageJsonPath);
+            // Get version from package.json before moving folders
+            var packageJsonPath = Path.Combine(PackagesPath, MPathFolder, "package.json");
+            var json = File.ReadAllText(packageJsonPath);
             
             // Parse version using JsonUtility
-            PackageInfo packageInfo = JsonUtility.FromJson<PackageInfo>(json);
-            string version = packageInfo.version;
+            var packageInfo = JsonUtility.FromJson<PackageInfo>(json);
+            var version = packageInfo.version;
+            
+            // Ensure builds directory exists
+            var buildsDirectory = Path.Combine(Application.dataPath, "../../../builds");
+            
+            if (!Directory.Exists(buildsDirectory))
+            {
+                Directory.CreateDirectory(buildsDirectory);
+            }
+            
+            // Move MPath from Packages to Assets
+            Debug.Log("Moving MPath from Packages to Assets...");
+            var sourcePath = Path.Combine(PackagesPath, MPathFolder);
+            var targetPath = Path.Combine(AssetsPath, MPathFolder);
+            
+            // Make sure Assets/MPath doesn't already exist
+            if (Directory.Exists(targetPath))
+            {
+                Debug.LogError($"Target directory already exists: {targetPath}");
+                return;
+            }
+            
+            // Move the directory
+            try
+            {
+                Directory.Move(sourcePath, targetPath);
+                AssetDatabase.Refresh();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Failed to move directory: {ex.Message}");
+                return;
+            }
             
             // Create the output path
-            string outputPath = Path.Combine(BuildsDirectory, string.Format(PackageNameFormat, version));
+            var outputPath = Path.Combine(buildsDirectory, string.Format(PackageNameFormat, version));
             
-            // Export the package
-            AssetDatabase.ExportPackage(
-                PackagePath,
-                outputPath,
-                ExportPackageOptions.Recurse
-            );
-            
-            Debug.Log($"Package exported to: {outputPath}");
+            try
+            {
+                // Export the package - now from Assets/MPath
+                AssetDatabase.ExportPackage(
+                    Path.Combine(AssetsPath, MPathFolder),
+                    outputPath,
+                    ExportPackageOptions.Recurse
+                );
+                
+                Debug.Log($"Package exported to: {outputPath}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Failed to export package: {ex.Message}");
+            }
+            finally
+            {
+                // Move MPath back to Packages folder
+                Debug.Log("Moving MPath back to Packages...");
+                try
+                {
+                    Directory.Move(targetPath, sourcePath);
+                    AssetDatabase.Refresh();
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"Failed to move directory back: {ex.Message}. Manual intervention required!");
+                }
+            }
         }
     }
 } 
