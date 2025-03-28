@@ -23,7 +23,7 @@ A high-performance A* implementation for 2D grid navigation, optimized for speed
 <details>
 <summary>🖼️ View Benchmark Maze</summary>
 
-![Benchmark Maze](src/mpath-source/Migs.MPath.Benchmarks/cavern.gif)
+![Benchmark Maze](src/mpath-source/Migs.MPath.Benchmarks/Mazes/cavern.png)
 
 *The complex maze used for benchmarking*
 </details>
@@ -32,10 +32,10 @@ The following benchmark was run on a complex maze to test pathfinding performanc
 
 | Method    | Mean      | Allocated   |
 |---------- |----------:|------------:|
-| MPath     |  5.092 ms |    24.06 KB |
-| [AStarLite](https://github.com/valantonini/AStar) |  8.118 ms |  8959.94 KB |
-| [RoyTAStar](https://github.com/roy-t/AStar) | 59.028 ms | 12592.34 KB |
-| [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,532.7 ms | 108.13 MB |
+| MPath     |  5.019 ms |    24.06 KB |
+| [AStarLite](https://github.com/valantonini/AStar) |  7.709 ms |  8960.04 KB |
+| [RoyTAStar](https://github.com/roy-t/AStar) | 56.458 ms | 12592.34 KB |
+| [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,697 ms | 108.13 MB |
 
 <details>
 <summary>Specs</summary>
@@ -59,8 +59,6 @@ Allocated : Allocated memory per single operation (managed only, inclusive, 1KB 
 </details>
 
 These results highlight MPath's optimization for both speed and memory efficiency. Memory allocation in MPath is required only for the initial pathfinder creation and for the final path result creation, with no GC pressure during the pathfinding algorithm execution. 
-
-For detailed information on how to run benchmarks, including Unity benchmark tests, see the [benchmarks documentation](benchmarks.md).
 
 ## Installation
 
