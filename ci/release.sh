@@ -32,12 +32,19 @@ ask_continue() {
 }
 
 # Step 1: Check if current branch is master
-print_step "Checking if current branch is master"
+print_step "Checking current branch"
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 if [ "$CURRENT_BRANCH" != "master" ]; then
-    print_error "Current branch is $CURRENT_BRANCH, not master. Please switch to master branch."
+    echo -e "${YELLOW}Warning: Current branch is $CURRENT_BRANCH, not master.${NC}"
+    echo "It's recommended to run this script on the master branch."
+    read -p "Continue on $CURRENT_BRANCH branch? (y/n): " continue_nonmaster
+    if [[ ! "$continue_nonmaster" =~ ^[Yy]$ ]]; then
+        print_error "Operation cancelled by user. Please switch to master branch."
+    fi
+    print_success "Continuing on $CURRENT_BRANCH branch"
+else
+    print_success "Current branch is master"
 fi
-print_success "Current branch is master"
 
 # Step 2: Check for unstaged or uncommitted changes
 print_step "Checking for unstaged or uncommitted changes"
@@ -108,32 +115,12 @@ fi
 cp "$NUGET_PACKAGE" builds/
 print_success "NuGet package copied to builds directory"
 
-# Step 9: Run Unity in batch mode to create UnityPackage
-print_step "Running Unity to create UnityPackage"
-
-# Find Unity on macOS
-UNITY_PATH="/Applications/Unity/Hub/Editor"
-LATEST_UNITY=$(find "$UNITY_PATH" -maxdepth 1 -type d | sort -V | tail -n1)
-
-if [ -z "$LATEST_UNITY" ]; then
-    print_error "Unity installation not found"
+# Step 9: Create package tarball with modified paths
+print_step "Creating Unity package with proper paths"
+if ! ./ci/process-unity-package.sh; then
+    print_error "Failed to create and process Unity package"
 fi
-
-UNITY_EXECUTABLE="$LATEST_UNITY/Unity.app/Contents/MacOS/Unity"
-
-if [ ! -f "$UNITY_EXECUTABLE" ]; then
-    print_error "Unity executable not found at $UNITY_EXECUTABLE"
-fi
-
-UNITY_PROJECT_PATH="$(pwd)/src/mpath-unity-project"
-
-# Run Unity in batch mode
-if ! "$UNITY_EXECUTABLE" -batchmode -projectPath "$UNITY_PROJECT_PATH" -executeMethod Migs.MPath.Editor.PackageExporter.ExportPackageFromBatchMode -quit -logFile unity_build.log; then
-    cat unity_build.log
-    print_error "Unity batch mode execution failed"
-fi
-
-print_success "UnityPackage created successfully"
+print_success "Unity package created successfully"
 
 # Step 10: Create a version tag on master
 print_step "Creating version tag v$VERSION"
