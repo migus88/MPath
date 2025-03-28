@@ -19,6 +19,8 @@ MPath uses a single codebase for both Unity and .NET:
 | [ICellHolder](ICellHolder.md) | Interface for objects that hold cell data |
 | [IPathfinderSettings](IPathfinderSettings.md) | Interface for configuring pathfinding behavior |
 | [PathfinderSettings](PathfinderSettings.md) | Default implementation of IPathfinderSettings |
+| [IPathCaching](IPathCaching.md) | Interface for path caching functionality |
+| [DefaultPathCaching](DefaultPathCaching.md) | Default implementation of path caching |
 
 ## Unity-Specific Components
 

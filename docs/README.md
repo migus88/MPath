@@ -10,6 +10,7 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 - Fast A* pathfinding with near-zero garbage collection overhead
 - Allocates memory only when necessary to maximize performance
 - Designed for 2D grid-based navigation in games
+- Optional path caching system for reusing calculated paths
 - First-class support for Unity with dedicated integration components
 - Fully usable in any standalone .NET application
 - Extensively tested with comprehensive unit tests
@@ -136,6 +137,9 @@ var agent = new SimpleAgent { Size = 1 };
 var settings = new PathfinderSettings { IsDiagonalMovementEnabled = true };
 using var pathfinder = new Pathfinder(cells, 10, 10, settings);
 
+// Optional: Enable path caching for better performance when reusing paths
+pathfinder.EnablePathCaching();
+
 // Find a path
 var start = new Coordinate(1, 1);
 var end = new Coordinate(8, 8);
@@ -155,6 +159,7 @@ MPath comes with comprehensive documentation:
 - [Getting Started Guide](docs/README.md) - Overview and basic usage
 - [API Reference](docs/api/README.md) - Detailed class and interface documentation
 - [Integration Guides](docs/guides/) - Specific guides for Unity and .NET projects
+- [Path Caching Guide](docs/guides/path-caching.md) - How to use and customize path caching
 
 The API reference provides detailed information about all public classes, interfaces, and methods, with examples for each component.
 
