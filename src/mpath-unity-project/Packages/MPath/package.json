@@ -1,6 +1,6 @@
 {
   "name": "com.migsweb.mpath",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "displayName": "MPath",
   "description": "High-performance, memory-efficient A* pathfinding implementation for grid-based environments with minimal garbage collection overhead",
   "unity": "2022.3",
