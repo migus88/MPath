@@ -180,20 +180,20 @@ if (result.IsSuccess)
 }
 ```
 
-### Integration Guides
+### Documentation
 
-- [Unity Integration](docs/guides/unity-example.md) - Detailed guide for Unity projects
-- [.NET Projects](docs/guides/getting-started.md) - More detailed examples for .NET projects
+MPath comes with comprehensive documentation:
+
+- [Getting Started Guide](docs/README.md) - Overview and basic usage
+- [API Reference](docs/api/README.md) - Detailed class and interface documentation
+- [Integration Guides](docs/guides/) - Specific guides for Unity and .NET projects
+
+The API reference provides detailed information about all public classes, interfaces, and methods, with examples for each component.
 
 ### Important Notes
 
 - Always dispose `PathResult` objects after use (use `using` statements)
 - Reuse the pathfinder instance for best performance
-- For larger grids, consider using dynamic grid updates to improve performance
-
-## Documentation
-
-For detailed usage instructions and API reference, see the [documentation](docs/README.md).
 
 ## License
 

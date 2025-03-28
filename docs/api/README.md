@@ -1,37 +1,28 @@
 # MPath API Reference
 
-This section contains detailed documentation of the MPath API.
+## Project Structure
 
-## Core Classes
+MPath uses a single codebase for both Unity and .NET:
+- Core source code in `src/mpath-unity-project/Packages/MPath/Source`
+- .NET project links to this code via `<Compile Include=""/>` in the `.csproj` file
+- Unity-specific code in `src/mpath-unity-project/Packages/MPath/Runtime`
 
-### [Pathfinder](Pathfinder.md)
-The main class for performing pathfinding operations.
+## Classes and Interfaces
 
-### [PathResult](PathResult.md)
-Contains the results of a pathfinding operation.
+| Type | Description |
+|------|-------------|
+| [Pathfinder](Pathfinder.md) | Main class for performing pathfinding operations |
+| [PathResult](PathResult.md) | Contains the results of pathfinding operations |
+| [Cell](Cell.md) | Represents a single cell in the pathfinding grid |
+| [Coordinate](Coordinate.md) | Represents a position in the grid |
+| [IAgent](IAgent.md) | Interface for entities that need pathfinding |
+| [ICellHolder](ICellHolder.md) | Interface for objects that hold cell data |
+| [IPathfinderSettings](IPathfinderSettings.md) | Interface for configuring pathfinding behavior |
+| [PathfinderSettings](PathfinderSettings.md) | Default implementation of IPathfinderSettings |
 
-## Data Structures
+## Unity-Specific Components
 
-### [Cell](Cell.md)
-Represents a single cell in the pathfinding grid.
-
-### [Coordinate](Coordinate.md)
-Represents a position in the grid.
-
-## Interfaces
-
-### [IAgent](IAgent.md)
-Interface for entities that need to find paths.
-
-### [ICellHolder](ICellHolder.md)
-Interface for objects that provide cell data.
-
-### [IPathfinderSettings](IPathfinderSettings.md)
-Interface for configuring pathfinding behavior.
-
-## Configuration
-
-### [PathfinderSettings](PathfinderSettings.md)
-Default implementation of IPathfinderSettings.
-
-This section is under development and will be expanded with detailed API documentation. 
+| Type | Description |
+|------|-------------|
+| [ScriptablePathfinderSettings](ScriptablePathfinderSettings.md) | Unity ScriptableObject implementation of pathfinding settings |
+| [PathfindingExtensions](PathfindingExtensions.md) | Extension methods for Unity integration | 
