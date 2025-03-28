@@ -31,9 +31,11 @@ namespace Migs.MPath.Tests.Caching
             {
                 for (var x = 0; x < FieldSize; x++)
                 {
-                    var cell = new Cell();
-                    cell.Coordinate = new Coordinate(x, y);
-                    cell.IsWalkable = true;
+                    var cell = new Cell
+                    {
+                        Coordinate = new Coordinate(x, y),
+                        IsWalkable = true
+                    };
                     _cells[y * FieldSize + x] = cell;
                 }
             }

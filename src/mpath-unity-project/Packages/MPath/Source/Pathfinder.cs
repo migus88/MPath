@@ -46,11 +46,8 @@ namespace Migs.MPath.Core
         public Pathfinder(Cell[] cells, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
             : this(fieldWidth, fieldHeight, settings)
         {
-            if (cells == null)
-                throw new ArgumentNullException(nameof(cells));
-                
+            _cells = cells ?? throw new ArgumentNullException(nameof(cells));
             _initializationMode = InitializationMode.CellsArray;
-            _cells = cells;
         }
 
         /// <summary>
@@ -65,10 +62,7 @@ namespace Migs.MPath.Core
         public Pathfinder(ICellHolder[] holders, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
             : this(fieldWidth, fieldHeight, settings)
         {
-            if (holders == null)
-                throw new ArgumentNullException(nameof(holders));
-                
-            _cellHolders = holders;
+            _cellHolders = holders ?? throw new ArgumentNullException(nameof(holders));
             _cells = ArrayPool<Cell>.Shared.Rent(Size);
             _initializationMode = InitializationMode.CellHoldersArray;
         }
@@ -110,9 +104,14 @@ namespace Migs.MPath.Core
         private Pathfinder(int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
         {
             if (fieldWidth <= 0)
+            {
                 throw new ArgumentException("Field width must be positive", nameof(fieldWidth));
+            }
+            
             if (fieldHeight <= 0)
+            {
                 throw new ArgumentException("Field height must be positive", nameof(fieldHeight));
+            }
                 
             Width = fieldWidth;
             Height = fieldHeight;
@@ -147,13 +146,15 @@ namespace Migs.MPath.Core
         /// <returns>The current pathfinder instance.</returns>
         public Pathfinder DisablePathCaching()
         {
-            if (_isPathCachingEnabled)
+            if (!_isPathCachingEnabled)
             {
-                _pathCaching?.Dispose();
-                _pathCaching = null;
-                _isPathCachingEnabled = false;
+                return this;
             }
             
+            _pathCaching?.Dispose();
+            _pathCaching = null;
+            _isPathCachingEnabled = false;
+
             return this;
         }
         
@@ -183,7 +184,9 @@ namespace Migs.MPath.Core
         public PathResult GetPath(IAgent agent, Coordinate from, Coordinate to)
         {
             if (agent == null)
+            {
                 throw new ArgumentNullException(nameof(agent));
+            }
                 
             if (!IsPositionValid(to.X, to.Y))
             {

@@ -42,7 +42,9 @@ namespace Migs.MPath.Core.Caching
             
             // Don't cache failed paths
             if (!pathResult.IsSuccess)
+            {
                 return;
+            }
                 
             var key = new CacheKey(agent.Size, from, to);
             
@@ -77,7 +79,9 @@ namespace Migs.MPath.Core.Caching
         private void ThrowIfDisposed()
         {
             if (_isDisposed)
+            {
                 throw new ObjectDisposedException(nameof(DefaultPathCaching));
+            }
         }
 
         /// <summary>
@@ -86,7 +90,9 @@ namespace Migs.MPath.Core.Caching
         public void Dispose()
         {
             if (_isDisposed)
+            {
                 return;
+            }
                 
             ClearCache();
             _isDisposed = true;
@@ -111,8 +117,8 @@ namespace Migs.MPath.Core.Caching
             public bool Equals(CacheKey other)
             {
                 return _agentSize == other._agentSize &&
-                       _from.Equals(other._from) &&
-                       _to.Equals(other._to);
+                       _from == other._from &&
+                       _to == other._to;
             }
 
             public override bool Equals(object obj)

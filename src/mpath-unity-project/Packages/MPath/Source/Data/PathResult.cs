@@ -27,6 +27,11 @@ namespace Migs.MPath.Core.Data
         {
             get
             {
+                if (_isDisposed)
+                {
+                    throw new ObjectDisposedException(nameof(PathResult));
+                }
+                
                 if (Length <= 0 || _path.Length < Length)
                 {
                     yield break;
@@ -61,10 +66,14 @@ namespace Migs.MPath.Core.Data
         public static PathResult Success(Coordinate[] path, int length)
         {
             if (path == null)
+            {
                 throw new ArgumentNullException(nameof(path));
+            }
                 
             if (length < 0 || length > path.Length)
+            {
                 throw new ArgumentOutOfRangeException(nameof(length));
+            }
                 
             return new PathResult(path, length, true);
         }
@@ -89,13 +98,19 @@ namespace Migs.MPath.Core.Data
         public Coordinate Get(int index)
         {
             if (_isDisposed)
+            {
                 throw new ObjectDisposedException(nameof(PathResult));
+            }
                 
             if (!IsSuccess)
+            {
                 throw new InvalidOperationException("Path was not found");
+            }
                 
             if (index < 0 || index >= Length)
+            {
                 throw new ArgumentOutOfRangeException(nameof(index));
+            }
                 
             return _path[index];
         }
@@ -106,7 +121,9 @@ namespace Migs.MPath.Core.Data
         public void Dispose()
         {
             if (_isDisposed || _path == null)
+            {
                 return;
+            }
                 
             ArrayPool<Coordinate>.Shared.Return(_path);
             _isDisposed = true;
