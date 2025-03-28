@@ -71,6 +71,44 @@ When false, this movement is illegal:
 
 **Effect on pathfinding**: When disabled, paths are more realistic as agents can't "squeeze" through impossible corners. When enabled, more paths become available but may look unnatural.
 
+#### PathSmoothingMethod
+
+Controls what type of path smoothing is applied to the calculated path.
+
+```csharp
+settings.PathSmoothingMethod = PathSmoothingMethod.None; // No path smoothing (default)
+```
+
+Available options:
+
+- **PathSmoothingMethod.None**: No smoothing is applied, original A* path is returned
+- **PathSmoothingMethod.Simple**: Simple angle-based smoothing that removes redundant waypoints
+- **PathSmoothingMethod.StringPulling**: More advanced string pulling algorithm that creates optimal direct paths
+
+**Effect on pathfinding**:
+- With **None**, paths follow the exact grid cells calculated by A*, which may include unnecessary zigzags and turns.
+- With **Simple**, redundant waypoints are removed based on angle changes, creating smoother paths while being computationally efficient.
+- With **StringPulling**, a more thorough line-of-sight calculation is performed to create the most direct paths possible, though with slightly higher computational cost.
+
+**Example visualization**:
+```
+No Smoothing:         Simple Smoothing:      String Pulling:
+S---+                 S----+                 S
+    |                      |                  \
+    |                      |                   \
+    |                      +-----E              \
+    +---+                                        \
+        |                                         \
+        +---E                                      E
+
+S = Start, E = End, + = Waypoint
+```
+
+**When to use**:
+- **None**: When you need exact cell-by-cell paths or when performance is critical and path aesthetics don't matter
+- **Simple**: For most game scenarios - good balance of performance and path quality
+- **StringPulling**: When you need the most direct and natural-looking paths and can afford the slight performance cost
+
 ### Cell Handling Settings
 
 #### IsCalculatingOccupiedCells

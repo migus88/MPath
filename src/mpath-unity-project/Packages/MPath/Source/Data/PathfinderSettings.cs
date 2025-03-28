@@ -23,6 +23,9 @@ namespace Migs.MPath.Core.Data
         public float DiagonalMovementMultiplier { get; set; } = 1.41f;
 
         /// <inheritdoc/>
+        public PathSmoothingMethod PathSmoothingMethod { get; set; } = PathSmoothingMethod.None;
+
+        /// <inheritdoc/>
         public int? InitialBufferSize { get; set; } = null;
     }
 }

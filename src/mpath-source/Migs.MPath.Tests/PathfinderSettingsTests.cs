@@ -21,6 +21,7 @@ namespace Migs.MPath.Tests
             settings.IsCellWeightEnabled.Should().BeTrue();
             settings.StraightMovementMultiplier.Should().Be(1.0f);
             settings.DiagonalMovementMultiplier.Should().Be(1.41f);
+            settings.PathSmoothingMethod.Should().Be(PathSmoothingMethod.None);
             settings.InitialBufferSize.Should().BeNull();
         }
         
@@ -45,6 +46,7 @@ namespace Migs.MPath.Tests
                 IsCellWeightEnabled = isCellWeightEnabled,
                 StraightMovementMultiplier = straightMultiplier,
                 DiagonalMovementMultiplier = diagonalMultiplier,
+                PathSmoothingMethod = PathSmoothingMethod.StringPulling,
                 InitialBufferSize = bufferSize
             };
             
@@ -55,6 +57,7 @@ namespace Migs.MPath.Tests
             settings.IsCellWeightEnabled.Should().Be(isCellWeightEnabled);
             settings.StraightMovementMultiplier.Should().Be(straightMultiplier);
             settings.DiagonalMovementMultiplier.Should().Be(diagonalMultiplier);
+            settings.PathSmoothingMethod.Should().Be(PathSmoothingMethod.StringPulling);
             settings.InitialBufferSize.Should().Be(bufferSize);
         }
         

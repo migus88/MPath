@@ -1,3 +1,5 @@
+using Migs.MPath.Core.Data;
+
 namespace Migs.MPath.Core.Interfaces
 {
     public interface IPathfinderSettings
@@ -36,6 +38,12 @@ namespace Migs.MPath.Core.Interfaces
         /// The cost of the movement in a diagonal line
         /// </summary>
         float DiagonalMovementMultiplier { get; }
+
+        /// <summary>
+        /// Specifies the path smoothing method to apply to the calculated path.<br/>
+        /// Different methods offer trade-offs between path quality and performance.
+        /// </summary>
+        PathSmoothingMethod PathSmoothingMethod { get; }
 
         /// <summary>
         /// The initial size of the Open Set buffer. <br/>

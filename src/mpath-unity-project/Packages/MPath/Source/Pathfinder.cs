@@ -12,7 +12,7 @@ namespace Migs.MPath.Core
     /// <summary>
     /// A high-performance, memory-efficient A* pathfinding implementation for grid-based environments.
     /// </summary>
-    public sealed unsafe class Pathfinder : IDisposable
+    public sealed unsafe partial class Pathfinder : IDisposable
     {
         private const int MaxNeighbors = 8;
         private const int SingleCellAgentSize = 1;
@@ -264,6 +264,12 @@ namespace Migs.MPath.Core
                 path[i] = current->Coordinate;
                 var parentCoord = current->ParentCoordinate;
                 current = GetCell(cells, parentCoord.X, parentCoord.Y);
+            }
+
+            // Apply path smoothing if enabled
+            if (_settings.PathSmoothingMethod != PathSmoothingMethod.None && depth > 2)
+            {
+                return SmoothPath(path, depth, cells);
             }
 
             return PathResult.Success(path, depth);

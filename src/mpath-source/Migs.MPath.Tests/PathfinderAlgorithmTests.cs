@@ -276,6 +276,230 @@ namespace Migs.MPath.Tests
             result.Length.Should().Be(0); // No path is needed
         }
         
+        [Test]
+        public void GetPath_WithPathSmoothingEnabled_ShouldSmoothPath()
+        {
+            // Arrange
+            var width = 10;
+            var height = 10;
+            var cells = CreateEmptyGrid(width, height);
+            
+            // Create two versions of settings for comparison
+            var noSmoothingSettings = new PathfinderSettings
+            {
+                PathSmoothingMethod = PathSmoothingMethod.None
+            };
+            
+            var smoothingSettings = new PathfinderSettings
+            {
+                PathSmoothingMethod = PathSmoothingMethod.StringPulling
+            };
+
+            // Create a simple maze with a zigzag path that should be smoothed
+            // Make a small corridor that forces a zigzag path without smoothing
+            for (int i = 2; i < 8; i++)
+            {
+                // Create walls in alternating rows
+                if (i % 2 == 0)
+                {
+                    cells[i * height + 4].IsWalkable = false;
+                }
+                else
+                {
+                    cells[i * height + 6].IsWalkable = false;
+                }
+            }
+
+            var from = new Coordinate(1, 5);
+            var to = new Coordinate(8, 5);
+            var agent = new Agent { Size = 1 };
+
+            // Get both smoothed and unsmoothed paths for comparison
+            using var noSmoothingPathfinder = new Pathfinder(cells, width, height, noSmoothingSettings);
+            var noSmoothingResult = noSmoothingPathfinder.GetPath(agent, from, to);
+            
+            using var smoothingPathfinder = new Pathfinder(cells, width, height, smoothingSettings);
+            var smoothingResult = smoothingPathfinder.GetPath(agent, from, to);
+
+            // Assert
+            noSmoothingResult.IsSuccess.Should().BeTrue();
+            smoothingResult.IsSuccess.Should().BeTrue();
+            
+            // With path smoothing, we expect a shorter path than without smoothing
+            smoothingResult.Length.Should().BeLessThan(noSmoothingResult.Length);
+        }
+
+        [Test]
+        public void GetPath_WithSimpleSmoothing_ShouldSmoothPath()
+        {
+            // Arrange
+            var width = 10;
+            var height = 10;
+            var cells = CreateEmptyGrid(width, height);
+            
+            // Create two versions of settings for comparison
+            var noSmoothingSettings = new PathfinderSettings
+            {
+                PathSmoothingMethod = PathSmoothingMethod.None
+            };
+            
+            var smoothingSettings = new PathfinderSettings
+            {
+                PathSmoothingMethod = PathSmoothingMethod.Simple
+            };
+
+            // Create a simple maze with a zigzag path that should be smoothed
+            // Make a small corridor that forces a zigzag path without smoothing
+            for (int i = 2; i < 8; i++)
+            {
+                // Create walls in alternating rows
+                if (i % 2 == 0)
+                {
+                    cells[i * height + 4].IsWalkable = false;
+                }
+                else
+                {
+                    cells[i * height + 6].IsWalkable = false;
+                }
+            }
+
+            var from = new Coordinate(1, 5);
+            var to = new Coordinate(8, 5);
+            var agent = new Agent { Size = 1 };
+
+            // Get both smoothed and unsmoothed paths for comparison
+            using var noSmoothingPathfinder = new Pathfinder(cells, width, height, noSmoothingSettings);
+            var noSmoothingResult = noSmoothingPathfinder.GetPath(agent, from, to);
+            
+            using var smoothingPathfinder = new Pathfinder(cells, width, height, smoothingSettings);
+            var smoothingResult = smoothingPathfinder.GetPath(agent, from, to);
+
+            // Assert
+            noSmoothingResult.IsSuccess.Should().BeTrue();
+            smoothingResult.IsSuccess.Should().BeTrue();
+            
+            // With path smoothing, the path should never be longer than without smoothing
+            // In some simple cases, they might be the same length
+            smoothingResult.Length.Should().BeLessThanOrEqualTo(noSmoothingResult.Length);
+        }
+
+        [Test]
+        public void GetPath_CompareWithAndWithoutSmoothing_ShouldReducePathLength()
+        {
+            // Arrange
+            var width = 20;
+            var height = 20;
+            var cells = CreateEmptyGrid(width, height);
+            
+            // Create a complex maze with many obstacles that would create a jagged path
+            for (int i = 5; i < 15; i++)
+            {
+                // Create horizontal and vertical walls with gaps
+                cells[i * height + 10].IsWalkable = false;
+                cells[10 * height + i].IsWalkable = false;
+                
+                // Leave some gaps for the path to go through
+                if (i == 7 || i == 12)
+                {
+                    cells[i * height + 10].IsWalkable = true;
+                    cells[10 * height + i].IsWalkable = true;
+                }
+            }
+
+            var from = new Coordinate(5, 5);
+            var to = new Coordinate(15, 15);
+            var agent = new Agent { Size = 1 };
+
+            // Create a pathfinder without smoothing
+            var settingsWithoutSmoothing = new PathfinderSettings
+            {
+                PathSmoothingMethod = PathSmoothingMethod.None
+            };
+            
+            // Create a pathfinder with smoothing
+            var settingsWithSmoothing = new PathfinderSettings
+            {
+                PathSmoothingMethod = PathSmoothingMethod.StringPulling
+            };
+
+            // Act
+            using var pathfinderWithoutSmoothing = new Pathfinder(cells, width, height, settingsWithoutSmoothing);
+            var resultWithoutSmoothing = pathfinderWithoutSmoothing.GetPath(agent, from, to);
+            
+            using var pathfinderWithSmoothing = new Pathfinder(cells, width, height, settingsWithSmoothing);
+            var resultWithSmoothing = pathfinderWithSmoothing.GetPath(agent, from, to);
+
+            // Assert
+            resultWithoutSmoothing.IsSuccess.Should().BeTrue();
+            resultWithSmoothing.IsSuccess.Should().BeTrue();
+            
+            // The smoothed path should have fewer waypoints
+            resultWithSmoothing.Length.Should().BeLessThan(resultWithoutSmoothing.Length);
+        }
+        
+        [Test]
+        public void GetPath_CompareAllSmoothingMethods_ShouldReducePathLength()
+        {
+            // Arrange
+            var width = 20;
+            var height = 20;
+            var cells = CreateEmptyGrid(width, height);
+            
+            // Create a complex maze with many obstacles that would create a jagged path
+            for (int i = 5; i < 15; i++)
+            {
+                // Create horizontal and vertical walls with gaps
+                cells[i * height + 10].IsWalkable = false;
+                cells[10 * height + i].IsWalkable = false;
+                
+                // Leave some gaps for the path to go through
+                if (i == 7 || i == 12)
+                {
+                    cells[i * height + 10].IsWalkable = true;
+                    cells[10 * height + i].IsWalkable = true;
+                }
+            }
+
+            var from = new Coordinate(5, 5);
+            var to = new Coordinate(15, 15);
+            var agent = new Agent { Size = 1 };
+
+            // Create pathfinders with different smoothing methods
+            var settingsNoSmoothing = new PathfinderSettings
+            {
+                PathSmoothingMethod = PathSmoothingMethod.None
+            };
+            
+            var settingsSimpleSmoothing = new PathfinderSettings
+            {
+                PathSmoothingMethod = PathSmoothingMethod.Simple
+            };
+            
+            var settingsStringPulling = new PathfinderSettings
+            {
+                PathSmoothingMethod = PathSmoothingMethod.StringPulling
+            };
+
+            // Act
+            using var pathfinderNoSmoothing = new Pathfinder(cells, width, height, settingsNoSmoothing);
+            var resultNoSmoothing = pathfinderNoSmoothing.GetPath(agent, from, to);
+            
+            using var pathfinderSimpleSmoothing = new Pathfinder(cells, width, height, settingsSimpleSmoothing);
+            var resultSimpleSmoothing = pathfinderSimpleSmoothing.GetPath(agent, from, to);
+            
+            using var pathfinderStringPulling = new Pathfinder(cells, width, height, settingsStringPulling);
+            var resultStringPulling = pathfinderStringPulling.GetPath(agent, from, to);
+
+            // Assert
+            resultNoSmoothing.IsSuccess.Should().BeTrue();
+            resultSimpleSmoothing.IsSuccess.Should().BeTrue();
+            resultStringPulling.IsSuccess.Should().BeTrue();
+            
+            // Both types of smoothing should reduce path length compared to no smoothing
+            resultSimpleSmoothing.Length.Should().BeLessThan(resultNoSmoothing.Length);
+            resultStringPulling.Length.Should().BeLessThan(resultNoSmoothing.Length);
+        }
+        
         private static Cell[] CreateEmptyGrid(int width, int height)
         {
             var cells = new Cell[width * height];

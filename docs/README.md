@@ -10,6 +10,7 @@ MPath provides a robust implementation of the A* pathfinding algorithm with seve
 - **Flexible Grid Representation**: Supports various ways to represent your grid data
 - **Agent-Based Pathfinding**: Accounts for agent size and movement constraints
 - **Customizable Behavior**: Configurable settings for diagonal movement, corner cutting, and more
+- **Path Smoothing**: Optional string pulling algorithm for more natural, direct paths
 - **Optimized Performance**: Designed for high-performance in real-time applications
 
 ## Documentation Sections
@@ -49,6 +50,7 @@ MPath provides a robust implementation of the A* pathfinding algorithm with seve
 - [Movement Settings](guides/pathfinder-settings.md#movement-pattern-settings)
 - [Cell Handling Settings](guides/pathfinder-settings.md#cell-handling-settings)
 - [Cost Calculation Settings](guides/pathfinder-settings.md#cost-calculation-settings)
+- [Path Smoothing](guides/pathfinder-settings.md#pathsmoothingmethod)
 - [Recommended Presets](guides/pathfinder-settings.md#recommended-settings-for-common-scenarios)
 
 ### Performance
