@@ -7,6 +7,8 @@ namespace Migs.MPath.Core.Data
     {
         private const int HashMultiplier = 397;
         
+        public static readonly Coordinate Zero = new Coordinate(0, 0);
+        
         public int X { get; private set; }
         public int Y { get; private set; }
         public bool IsInitialized { get; private set; }
@@ -36,6 +38,18 @@ namespace Migs.MPath.Core.Data
         public static bool operator !=(Coordinate left, Coordinate right)
         {
             return !(left == right);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Coordinate operator +(Coordinate left, Coordinate right)
+        {
+            return new Coordinate(left.X + right.X, left.Y + right.Y);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Coordinate operator -(Coordinate left, Coordinate right)
+        {
+            return new Coordinate(left.X - right.X, left.Y - right.Y);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,3 +1,4 @@
+using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
 using UnityEngine;
 
@@ -18,6 +19,8 @@ namespace Migs.MPath.Settings
         [field: SerializeField] public float StraightMovementMultiplier { get; set; } = 1f;
         /// <inheritdoc/>
         [field: SerializeField] public float DiagonalMovementMultiplier { get; set; } = 1.41f;
+        /// <inheritdoc/>
+        [field: SerializeField] public PathSmoothingMethod PathSmoothingMethod { get; set; } = PathSmoothingMethod.None;
         /// <inheritdoc cref="InitialBufferSize"/>
         [field: SerializeField] public int InitialBufferSizeSerialized { get; set; } = -1;
 
