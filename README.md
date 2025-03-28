@@ -140,106 +140,21 @@ dotnet add package Migs.MPath
 
 ## Quick Start
 
-### Unity Example
-
-See more examples inside Unity Project
+Here's a simple example of using MPath in a .NET project:
 
 ```csharp
-// Define a cell holder for Unity objects
-public class GridCell : MonoBehaviour, ICellHolder
+// Create a 10x10 grid
+var cells = new Cell[100];
+for (int i = 0; i < 100; i++)
 {
-    public Cell CellData { get; private set; }
-    
-    [SerializeField] private bool _isWalkable = true;
-    [SerializeField] private Vector2Int _position;
-    [SerializeField] private float _weight = 1.0f;
-    
-    private void Awake()
+    int x = i % 10;
+    int y = i / 10;
+    cells[i] = new Cell
     {
-        CellData = new Cell
-        {
-            Coordinate = new Coordinate(_position.x, _position.y),
-            IsWalkable = _isWalkable,
-            Weight = _weight
-        };
-    }
-}
-
-// Define a Unity agent
-public class UnitAgent : MonoBehaviour, IAgent
-{
-    public Coordinate Coordinate { get; set; }
-    public int Size => 1; // Single cell agent
-    
-    // Movement logic using the path
-    public IEnumerator FollowPath(PathResult result, float speed)
-    {
-        foreach (var coordinate in result.Path)
-        {
-            var targetPosition = new Vector3(coordinate.X, 0, coordinate.Y);
-            
-            while (Vector3.Distance(transform.position, targetPosition) > 0.01f)
-            {
-                transform.position = Vector3.MoveTowards(
-                    transform.position, 
-                    targetPosition,
-                    speed * Time.deltaTime
-                );
-                yield return null;
-            }
-            
-            Coordinate = coordinate;
-        }
-    }
-}
-
-// In your game controller
-[SerializeField] private ScriptablePathfinderSettings _settings;
-[SerializeField] private GridCell[] _gridCells;
-[SerializeField] private Vector2Int _gridSize;
-
-private Pathfinder _pathfinder;
-
-private void Start()
-{
-    // Initialize the pathfinder with the grid cells
-    _pathfinder = new Pathfinder(_gridCells, _gridSize.x, _gridSize.y, _settings);
-}
-
-// Find a path for an agent
-public PathResult FindPath(UnitAgent agent, Coordinate destination)
-{
-    return _pathfinder.GetPath(agent, agent.Coordinate, destination);
-}
-
-private void OnDestroy()
-{
-    // Dispose the pathfinder when no longer needed
-    _pathfinder?.Dispose();
-}
-```
-
-### .NET Projects
-
-```csharp
-// Create a 10x10 grid of cells
-int width = 10;
-int height = 10;
-Cell[] cells = new Cell[width * height];
-
-// Initialize each cell
-for (int y = 0; y < height; y++)
-{
-    for (int x = 0; x < width; x++)
-    {
-        int index = y * width + x;
-        cells[index] = new Cell
-        {
-            Coordinate = new Coordinate(x, y),
-            IsWalkable = true,  // All cells are walkable by default
-            Weight = 1.0f       // Default movement cost
-        };
-    }
+        Coordinate = new Coordinate(x, y),
+        IsWalkable = true,
+        Weight = 1.0f
+    };
 }
 
 // Add some obstacles
@@ -247,40 +162,28 @@ cells[12].IsWalkable = false;
 cells[13].IsWalkable = false;
 
 // Create a simple agent
-public class SimpleAgent : IAgent
-{
-    // Agent occupies a single cell
-    public int Size => 1;
-}
-var agent = new SimpleAgent();
+var agent = new SimpleAgent { Size = 1 };
 
-// Configure pathfinder settings
-IPathfinderSettings settings = new PathfinderSettings
-{
-    IsDiagonalMovementEnabled = true,      // Allow diagonal movement
-    IsMovementBetweenCornersEnabled = false // Don't allow cutting corners
-};
-
-// Create the pathfinder
-using var pathfinder = new Pathfinder(cells, width, height, settings);
+// Configure and create pathfinder
+var settings = new PathfinderSettings { IsDiagonalMovementEnabled = true };
+using var pathfinder = new Pathfinder(cells, 10, 10, settings);
 
 // Find a path
 var start = new Coordinate(1, 1);
 var end = new Coordinate(8, 8);
-
 using var result = pathfinder.GetPath(agent, start, end);
 
-// Check if a path was found and use it
+// Use the path
 if (result.IsSuccess)
 {
     Console.WriteLine($"Path found with {result.Length} steps!");
-    
-    foreach (Coordinate coordinate in result.Path)
-    {
-        Console.WriteLine($"Step: {coordinate}");
-    }
 }
 ```
+
+### Integration Guides
+
+- [Unity Integration](docs/guides/unity-example.md) - Detailed guide for Unity projects
+- [.NET Projects](docs/guides/getting-started.md) - More detailed examples for .NET projects
 
 ### Important Notes
 

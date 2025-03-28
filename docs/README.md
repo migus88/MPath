@@ -19,5 +19,6 @@ MPath provides a robust implementation of the A* pathfinding algorithm with seve
 - [Grid Setup Guide](guides/grid-setup.md) - Methods for creating and managing grids
 - [Agent Configuration](guides/agent-configuration.md) - Working with pathfinding agents
 - [Pathfinder Settings](guides/pathfinder-settings.md) - Customizing pathfinding behavior
+- [Unity Integration](guides/unity-example.md) - Detailed guide for Unity projects
 - [Performance Considerations](guides/performance.md) - Optimizing for different scenarios
 - [API Reference](api/README.md) - Detailed API documentation
