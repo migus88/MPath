@@ -75,6 +75,18 @@ if [[ "$increment_version" =~ ^[Yy]$ ]]; then
     # Extract the version number from the output (last line)
     VERSION=$(echo "$NEW_VERSION" | tail -n1)
     print_success "Version incremented to $VERSION"
+    
+    # Commit the version changes
+    print_step "Committing version changes"
+    git add src/mpath-source/Migs.MPath.Core/Migs.MPath.Core.csproj src/mpath-unity-project/Packages/MPath/package.json
+    git commit -m "version bump to $VERSION"
+    if [ $? -ne 0 ]; then
+        print_error "Failed to commit version changes"
+    fi
+    print_success "Version changes committed"
+    
+    # Store the commit hash for later use with tag
+    VERSION_COMMIT=$(git rev-parse HEAD)
 else
     # Get current version from package.json
     VERSION=$(grep -o '"version": "[^"]*"' "src/mpath-unity-project/Packages/MPath/package.json" | cut -d'"' -f4)
@@ -124,7 +136,13 @@ print_success "Unity package created successfully"
 
 # Step 10: Create a version tag locally
 print_step "Creating local version tag $VERSION"
-git tag "$VERSION"
+if [[ "$increment_version" =~ ^[Yy]$ ]]; then
+    # Tag the specific commit where version was bumped
+    git tag "$VERSION" $VERSION_COMMIT
+else
+    # Tag the current HEAD
+    git tag "$VERSION"
+fi
 print_success "Tag $VERSION created locally"
 echo -e "${YELLOW}Note: Tag was only created locally. Use 'git push origin $VERSION' to push it to remote when ready.${NC}"
 
