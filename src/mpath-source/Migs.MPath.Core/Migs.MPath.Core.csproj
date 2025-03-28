@@ -3,7 +3,7 @@
   <PropertyGroup>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyVersion>1.1.0</AssemblyVersion>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Title>MPath</Title>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -11,7 +11,7 @@
   
   <PropertyGroup>
     <PackageId>Migs.MPath</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.0.0</Version>
     <Authors>Yuri Sokolov</Authors>
     <Company>Migs</Company>
     <Description>High-performance, memory-efficient A* pathfinding implementation for grid-based environments with minimal garbage collection overhead</Description>
