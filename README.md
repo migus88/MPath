@@ -21,12 +21,12 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 
 | Method    | Mean      | Allocated   |
 |---------- |----------:|------------:|
-| MPath     |  5.019 ms |    24.06 KB |
-| [AStarLite](https://github.com/valantonini/AStar) |  7.709 ms |  8960.04 KB |
-| [RoyTAStar](https://github.com/roy-t/AStar) | 56.458 ms | 12592.34 KB |
-| [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,697 ms | 108.13 MB |
+| MPath     |  5.092 ms |    24.06 KB |
+| [AStarLite](https://github.com/valantonini/AStar) |  8.118 ms |  8.74 MB |
+| [RoyTAStar](https://github.com/roy-t/AStar) | 59.028 ms | 12.29 MB |
+| [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,532.7 ms | 108.13 MB |
 
-For detailed information about MPath's performance benchmarks, including implementation comparisons and path smoothing options, see the [benchmarks documentation](docs/benchmarks/benchmarks.md).
+For detailed information about MPath's performance benchmarks, including implementation comparisons and path smoothing options, see the [benchmarks documentation](docs/benchmarks/README.md).
 
 ## Installation
 
