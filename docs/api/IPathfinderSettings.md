@@ -15,6 +15,7 @@ Defines the configuration settings for the MPath pathfinding system. This interf
 | `StraightMovementMultiplier` | `float` | The cost multiplier for horizontal/vertical movement. |
 | `DiagonalMovementMultiplier` | `float` | The cost multiplier for diagonal movement. |
 | `InitialBufferSize` | `int?` | The initial size of the Open Set buffer. |
+| `PathSmoothingMethod` | `PathSmoothingMethod` | The method used to smooth the calculated path. |
 
 ## Implementations
 
@@ -35,7 +36,8 @@ var settings = new PathfinderSettings
     IsCellWeightEnabled = true,
     StraightMovementMultiplier = 1.0f,
     DiagonalMovementMultiplier = 1.4f,
-    InitialBufferSize = 128
+    InitialBufferSize = 128,
+    PathSmoothingMethod = PathSmoothingMethod.StringPulling
 };
 
 // Use these settings when creating a pathfinder
@@ -46,4 +48,8 @@ var pathfinder = new Pathfinder(cells, width, height, settings);
 
 - These settings can significantly impact both the performance and the quality of pathfinding results.
 - Enabling diagonal movement generally results in more natural-looking paths but can be more computationally expensive.
-- Consider the trade-offs between realistic movement and performance when configuring these settings. 
+- Consider the trade-offs between realistic movement and performance when configuring these settings.
+- Path smoothing can significantly reduce the number of waypoints in a path, but different smoothing methods have different performance characteristics:
+  - `None`: Fastest but may result in zigzag paths
+  - `Simple`: Very fast with good path quality for most cases
+  - `StringPulling`: Most computationally expensive but produces the most optimal paths 

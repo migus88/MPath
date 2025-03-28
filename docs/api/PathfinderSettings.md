@@ -15,6 +15,7 @@ Default implementation of the `IPathfinderSettings` interface.
 | `StraightMovementMultiplier` | `float` | `1.0f` | The cost multiplier for horizontal/vertical movement. |
 | `DiagonalMovementMultiplier` | `float` | `1.41f` | The cost multiplier for diagonal movement. |
 | `InitialBufferSize` | `int?` | `null` | The initial size of the Open Set buffer. |
+| `PathSmoothingMethod` | `PathSmoothingMethod` | `None` | The method used to smooth the calculated path. |
 
 ## Example
 
@@ -29,7 +30,8 @@ var customSettings = new PathfinderSettings
     IsCalculatingOccupiedCells = false,
     IsCellWeightEnabled = true,
     DiagonalMovementMultiplier = 1.4f,
-    InitialBufferSize = 128
+    InitialBufferSize = 128,
+    PathSmoothingMethod = PathSmoothingMethod.StringPulling
 };
 
 // Use with pathfinder
@@ -38,8 +40,10 @@ var pathfinder = new Pathfinder(cells, width, height, customSettings);
 
 ## Remarks
 
-- This class provides a simple implementation of `IPathfinderSettings` with reasonable defaults.
-- All properties have sensible default values but can be customized to fit specific requirements.
-- For Unity projects, consider using `ScriptablePathfinderSettings` instead, which provides the same functionality with Inspector integration.
-- The default diagonal movement multiplier (1.41f) approximates the actual Euclidean distance multiplier (√2 ≈ 1.414).
-- When `InitialBufferSize` is null, the pathfinder will use an internal default size based on performance benchmarks. 
+- This class provides a standard implementation of `IPathfinderSettings` for general use.
+- All properties have sensible defaults that work well for most scenarios.
+- The `PathSmoothingMethod` property controls how the path is optimized after calculation:
+  - `None`: Returns the raw A* path without any smoothing
+  - `Simple`: Removes redundant waypoints based on direction changes
+  - `StringPulling`: Creates optimal direct paths using line-of-sight checks
+- For Unity projects, consider using `ScriptablePathfinderSettings`
