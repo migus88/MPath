@@ -71,24 +71,25 @@ Releases are driven by interactive bash scripts in `ci/` (macOS-oriented; uses B
 
 ## Architecture
 
-### Core algorithm — `Source/Pathfinder.cs` (+ `Pathfinder_PathSmoothing.cs`)
+### Core algorithm — `Source/Pathfinder.cs` (+ `Pathfinder_PathSmoothing.cs`, `Pathfinder_Reachability.cs`)
 
 `Pathfinder` is a `sealed unsafe partial class`. The hot path operates on a flat `Cell[]` via a raw `Cell*` pointer (`fixed`/`stackalloc`), indexed as `x * Height + y` (see `GetCell`). Key performance design points to preserve when editing:
 
 - **Cells are reused, not reallocated.** `GetPath` pins the cell array, calls `ResetCells`, clears the open set, and runs A*. The same buffer serves every query.
 - **`ArrayPool<Cell>.Shared`** backs every constructor except the raw `Cell[]` one. `Dispose()` returns the rented array — so `Pathfinder` is `IDisposable` and meant to be a **reused, long-lived instance**, while `PathResult` (which rents a `Coordinate[]` from a pool) is **per-query and must be disposed** (`using`). Disposing results, not recreating the pathfinder, is the intended usage.
-- **Four constructors → `InitializationMode`** (`CellsArray`, `CellHoldersArray`, `CellsMatrix`, `CellHoldersMatrix`). `InitializeCellsArray()` dispatches to the matching `TryInitializing...` method to flatten the caller's representation into `_cells` before each search. The `Cell[]`-array mode sorts in place (`Utils.CellsComparison`) and is the only mode that does **not** pool/copy.
+- **Four constructors → `InitializationMode`** (`CellsArray`, `CellHoldersArray`, `CellsMatrix`, `CellHoldersMatrix`). `InitializeCellsArray()` dispatches to the matching `TryInitializing...` method to flatten the caller's representation into `_cells` before each search. The `Cell[]`-array mode sorts in place (`Utils.CellsComparison`) and is the only mode that does **not** pool/copy. `CellsComparison` sorts **X-major then Y-minor** so the sorted layout matches `GetCell`'s `x * Height + y` indexing (the matrix/holder modes write cells at `Coordinate.X * Height + Coordinate.Y`); keep all four modes consistent or neighbor adjacency silently transposes.
 - **`stackalloc Cell*[8]` neighbors**, populated cardinal-first then diagonal. Diagonal inclusion respects `IsDiagonalMovementEnabled` and `IsMovementBetweenCornersEnabled` (corner-cutting). Agent `Size > 1` triggers a clearance scan in `GetWalkableLocation`.
 - Heuristic is **Manhattan distance** (`GetH`). G-score folds in per-cell `Weight` (when `IsCellWeightEnabled`) and straight-vs-diagonal travel multipliers.
 
 ### Open set — `Source/Internal/UnsafePriorityQueue.cs`
 
-A custom binary-heap min-priority-queue over `Cell*`. Each `Cell` stores its own `QueueIndex` (internal field) so membership tests (`Contains`) and decrease-key updates are O(1)/O(log n) without a separate map.
+A custom binary-heap min-priority-queue over `Cell*`. Each `Cell` stores its own `QueueIndex` (internal field) so membership tests (`Contains`) and decrease-key updates are O(1)/O(log n) without a separate map. `UpdatePriority` performs a real decrease-key (re-heapifies via cascade up/down) and is used by the reachability search; the A* hot path mutates scores in place instead.
 
 ### Data types — `Source/Data/`
 
 - `Cell` (struct): public fields (`Coordinate`, `IsWalkable`, `IsOccupied`, `Weight`) + `internal` algorithm scratch fields (`ScoreF/G/H`, `Depth`, `ParentCoordinate`, `QueueIndex`, `IsClosed`). `Reset()` clears only the scratch state.
 - `Coordinate` (struct), `PathResult` (`IDisposable`; `IsSuccess`, `Length`, `Get(int)` and a `Path` enumerable over the pooled array), `PathfinderSettings` (public, mutable, implements `IPathfinderSettings`), `PathSmoothingMethod` (enum: `None`, etc.).
+- `RangeResult` (`IDisposable`; result of `Pathfinder.GetReachable`, rents a `ReachableCell[]` from the pool — must be disposed) and `ReachableCell` (readonly struct: `Coordinate` + `Cost`). The reachability search is a budget-bounded uniform-cost (Dijkstra) flood fill in `Pathfinder_Reachability.cs`; per-step cost = straight/diagonal multiplier **+** cell `Weight` (added when weighting is enabled, matching the main A*'s additive `GetCellWeightMultiplier` term), independent of the A* heuristic. Weight must be added, not multiplied — `Cell.Weight` defaults to 0, so a multiplier would zero out every step cost and flood the whole board.
 
 ### Settings flow
 

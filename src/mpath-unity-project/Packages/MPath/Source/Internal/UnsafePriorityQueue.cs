@@ -98,6 +98,41 @@ namespace Migs.MPath.Core.Internal
         }
 
         /// <summary>
+        /// Updates the priority of a cell already contained in the queue and restores the heap property.
+        /// Used to perform a decrease-key operation (e.g. when a cheaper route to a cell is discovered).
+        /// </summary>
+        /// <param name="item">Pointer to the cell whose priority should change. Must already be in the queue.</param>
+        /// <param name="priority">The new priority value (lower values have higher priority).</param>
+        /// <exception cref="ArgumentNullException">Thrown when item is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void UpdatePriority(Cell* item, float priority)
+        {
+            if (item == null)
+                throw new ArgumentNullException(nameof(item));
+
+            item->ScoreF = priority;
+            OnPriorityUpdated(item);
+        }
+
+        /// <summary>
+        /// Restores the heap property after a cell's priority has changed, cascading up or down as needed.
+        /// </summary>
+        /// <param name="item">Pointer to the cell whose priority changed.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void OnPriorityUpdated(Cell* item)
+        {
+            var parentIndex = item->QueueIndex >> 1;
+
+            if (parentIndex > 0 && HasHigherPriority(item, (Cell*)_collection[parentIndex]))
+            {
+                CascadeUp(item);
+                return;
+            }
+
+            CascadeDown(item);
+        }
+
+        /// <summary>
         /// Determines whether the queue contains the specified cell.
         /// </summary>
         /// <param name="item">Pointer to the cell to locate.</param>

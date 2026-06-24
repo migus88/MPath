@@ -13,6 +13,8 @@ MPath uses a single codebase for both Unity and .NET:
 |------|-------------|
 | [Pathfinder](Pathfinder.md) | Main class for performing pathfinding operations |
 | [PathResult](PathResult.md) | Contains the results of pathfinding operations |
+| [RangeResult](RangeResult.md) | Contains the results of a movement-range (reachability) query |
+| [ReachableCell](ReachableCell.md) | A single reachable cell paired with its cheapest path cost |
 | [Cell](Cell.md) | Represents a single cell in the pathfinding grid |
 | [Coordinate](Coordinate.md) | Represents a position in the grid |
 | [IAgent](IAgent.md) | Interface for entities that need pathfinding |
