@@ -20,6 +20,7 @@ MPath provides a robust implementation of the A* pathfinding algorithm with seve
 - [Agent Configuration](guides/agent-configuration.md) - Working with pathfinding agents
 - [Pathfinder Settings](guides/pathfinder-settings.md) - Customizing pathfinding behavior
 - [Movement Range](guides/movement-range.md) - Finding every cell an agent can reach within a budget
+- [Distance and Line of Sight](guides/distance-and-line-of-sight.md) - Grid distance metrics and visibility checks
 - [Unity Integration](guides/unity-example.md) - Detailed guide for Unity projects
 - [Performance Considerations](guides/performance.md) - Optimizing for different scenarios
 - [API Reference](api/README.md) - Detailed API documentation

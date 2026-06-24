@@ -71,7 +71,7 @@ Releases are driven by interactive bash scripts in `ci/` (macOS-oriented; uses B
 
 ## Architecture
 
-### Core algorithm — `Source/Pathfinder.cs` (+ `Pathfinder_PathSmoothing.cs`, `Pathfinder_Reachability.cs`)
+### Core algorithm — `Source/Pathfinder.cs` (+ `Pathfinder_PathSmoothing.cs`, `Pathfinder_Reachability.cs`, `Pathfinder_Geometry.cs`)
 
 `Pathfinder` is a `sealed unsafe partial class`. The hot path operates on a flat `Cell[]` via a raw `Cell*` pointer (`fixed`/`stackalloc`), indexed as `x * Height + y` (see `GetCell`). Key performance design points to preserve when editing:
 
@@ -80,6 +80,10 @@ Releases are driven by interactive bash scripts in `ci/` (macOS-oriented; uses B
 - **Four constructors → `InitializationMode`** (`CellsArray`, `CellHoldersArray`, `CellsMatrix`, `CellHoldersMatrix`). `InitializeCellsArray()` dispatches to the matching `TryInitializing...` method to flatten the caller's representation into `_cells` before each search. The `Cell[]`-array mode sorts in place (`Utils.CellsComparison`) and is the only mode that does **not** pool/copy. `CellsComparison` sorts **X-major then Y-minor** so the sorted layout matches `GetCell`'s `x * Height + y` indexing (the matrix/holder modes write cells at `Coordinate.X * Height + Coordinate.Y`); keep all four modes consistent or neighbor adjacency silently transposes.
 - **`stackalloc Cell*[8]` neighbors**, populated cardinal-first then diagonal. Diagonal inclusion respects `IsDiagonalMovementEnabled` and `IsMovementBetweenCornersEnabled` (corner-cutting). Agent `Size > 1` triggers a clearance scan in `GetWalkableLocation`.
 - Heuristic is **Manhattan distance** (`GetH`). G-score folds in per-cell `Weight` (when `IsCellWeightEnabled`) and straight-vs-diagonal travel multipliers.
+
+### Geometry helpers — `Source/Pathfinder_Geometry.cs`
+
+Public spatial queries that don't produce a path: `static GetManhattanDistance`/`GetChebyshevDistance` (pure integer metrics over `Coordinate`, no grid state) and the instance `HasLineOfSight(from, to, LineOfSightMode mode = BlockedByUnwalkableCells)`. LOS pins `_cells` and delegates to the private Bresenham `HasLineOfSight(from, to, Cell*, mode)` in `Pathfinder_PathSmoothing.cs` (also used by string-pulling smoothing, which always passes `BlockedByUnwalkableCells`). The per-cell test is `IsLineOfSightBlocked`: under `BlockedByUnwalkableCells` a non-walkable cell blocks; under `IgnoreUnwalkableCells` it's transparent (see-through terrain). In **both** modes an occupied cell blocks when `IsCalculatingOccupiedCells` is set — the mode governs walkability only, occupancy stays orthogonal. Endpoints are never tested; the ray is single-cell (agent size ignored). `LineOfSightMode` is a public enum in `Source/Data/`.
 
 ### Open set — `Source/Internal/UnsafePriorityQueue.cs`
 

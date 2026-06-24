@@ -11,6 +11,7 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 - Allocates memory only when necessary to maximize performance
 - Designed for 2D grid-based navigation in games
 - Movement-range queries (`GetReachable`) for "where can this unit move?" mechanics
+- Distance metrics (Manhattan, Chebyshev) and line-of-sight checks for range and visibility logic
 - First-class support for Unity with dedicated integration components
 - Fully usable in any standalone .NET application
 - Extensively tested with comprehensive unit tests
@@ -159,6 +160,27 @@ foreach (var cell in range.Cells)
     Debug.Log($"{cell.Coordinate} reachable for {cell.Cost}");
 }
 ```
+
+### Distance and line of sight
+
+For range checks and visibility — without computing a full path — use the distance metrics and the line-of-sight test:
+
+```csharp
+// Pure grid distances (static, allocation-free)
+int manhattan = Pathfinder.GetManhattanDistance(start, end); // |dx| + |dy|
+int chebyshev = Pathfinder.GetChebyshevDistance(start, end);  // max(|dx|, |dy|)
+
+// Is the target visible (no walls in between)?
+if (pathfinder.HasLineOfSight(shooter, target))
+{
+    Debug.Log("Clear shot!");
+}
+
+// Or see through terrain that blocks movement but not vision (water, pits, glass):
+pathfinder.HasLineOfSight(shooter, target, LineOfSightMode.IgnoreUnwalkableCells);
+```
+
+See the [Distance and Line of Sight guide](docs/guides/distance-and-line-of-sight.md) for details.
 
 ### Documentation
 
