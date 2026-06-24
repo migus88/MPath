@@ -19,6 +19,7 @@ A high-performance A* pathfinding implementation for grid-based environments.
 |--------|-------------|
 | `PathResult GetPath(IAgent agent, Coordinate from, Coordinate to)` | Calculates a path from starting position to destination. |
 | `RangeResult GetReachable(IAgent agent, Coordinate from, float budget)` | Finds every cell whose cheapest path cost from the origin is within the budget. |
+| `StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to)` | Begins a tick-by-tick A* search for visualizing the algorithm's progress. |
 | `bool HasLineOfSight(Coordinate from, Coordinate to, LineOfSightMode mode = BlockedByUnwalkableCells)` | Returns whether an unobstructed straight line connects two cells. |
 | `static int GetManhattanDistance(Coordinate from, Coordinate to)` | Manhattan (taxicab) distance `\|dx\| + \|dy\|`. |
 | `static int GetChebyshevDistance(Coordinate from, Coordinate to)` | Chebyshev (chessboard) distance `max(\|dx\|, \|dy\|)`. |
@@ -77,6 +78,33 @@ foreach (var cell in range.Cells)
 ```
 
 See [RangeResult](RangeResult.md) and [ReachableCell](ReachableCell.md) for the returned types. Like `PathResult`, a `RangeResult` must be disposed (use `using`).
+
+### Visualizing the search (stepwise)
+
+`BeginStepwiseSearch` returns a [`StepwiseSearch`](StepwiseSearch.md) that runs the **same** A* expansion as `GetPath`, but one cell at a time, so you can display how the algorithm explores the grid. It is an **educational / visualization** facility — `GetPath` remains the way to compute a path in production.
+
+Each `Tick()` expands a single cell and returns a [`SearchStep`](SearchStep.md) snapshot containing the accumulated searched area (every discovered cell, tagged [`Open`](SearchNode.md) or `Closed`, with its A* scores) and — once the destination is reached — the resulting path.
+
+```csharp
+using var pathfinder = new Pathfinder(cells, 10, 10);
+var agent = new SimpleAgent { Size = 1 };
+
+using var search = pathfinder.BeginStepwiseSearch(agent, new Coordinate(1, 1), new Coordinate(8, 8));
+
+while (!search.IsComplete)
+{
+    var step = search.Tick();
+    Render(step.Searched);          // highlight open (frontier) vs closed (expanded) cells
+}
+
+var result = search.Tick();         // idempotent once complete
+if (result.State == SearchState.Success)
+{
+    DrawPath(result.Path);          // raw A* path (origin excluded, like PathResult)
+}
+```
+
+The session **pins** the pathfinder's cell buffer for the lifetime of the search, so it must be disposed (use `using`), and the owning `Pathfinder` must not be used for any other query until then. See the [Visualizing the search](../guides/visualizing-search.md) guide for a full walk-through.
 
 ### Distance and line of sight
 

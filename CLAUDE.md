@@ -71,7 +71,7 @@ Releases are driven by interactive bash scripts in `ci/` (macOS-oriented; uses B
 
 ## Architecture
 
-### Core algorithm — `Source/Pathfinder.cs` (+ `Pathfinder_PathSmoothing.cs`, `Pathfinder_Reachability.cs`, `Pathfinder_Geometry.cs`)
+### Core algorithm — `Source/Pathfinder.cs` (+ `Pathfinder_PathSmoothing.cs`, `Pathfinder_Reachability.cs`, `Pathfinder_Geometry.cs`, `Pathfinder_Stepwise.cs`)
 
 `Pathfinder` is a `sealed unsafe partial class`. The hot path operates on a flat `Cell[]` via a raw `Cell*` pointer (`fixed`/`stackalloc`), indexed as `x * Height + y` (see `GetCell`). Key performance design points to preserve when editing:
 
@@ -80,10 +80,15 @@ Releases are driven by interactive bash scripts in `ci/` (macOS-oriented; uses B
 - **Four constructors → `InitializationMode`** (`CellsArray`, `CellHoldersArray`, `CellsMatrix`, `CellHoldersMatrix`). `InitializeCellsArray()` dispatches to the matching `TryInitializing...` method to flatten the caller's representation into `_cells` before each search. The `Cell[]`-array mode sorts in place (`Utils.CellsComparison`) and is the only mode that does **not** pool/copy. `CellsComparison` sorts **X-major then Y-minor** so the sorted layout matches `GetCell`'s `x * Height + y` indexing (the matrix/holder modes write cells at `Coordinate.X * Height + Coordinate.Y`); keep all four modes consistent or neighbor adjacency silently transposes.
 - **`stackalloc Cell*[8]` neighbors**, populated cardinal-first then diagonal. Diagonal inclusion respects `IsDiagonalMovementEnabled` and `IsMovementBetweenCornersEnabled` (corner-cutting). Agent `Size > 1` triggers a clearance scan in `GetWalkableLocation`.
 - Heuristic is **Manhattan distance** (`GetH`). G-score folds in per-cell `Weight` (when `IsCellWeightEnabled`) and straight-vs-diagonal travel multipliers.
+- **One A* iteration = `ExpandNext`** (dequeue → goal check → close + `PopulateNeighbors`/`ProcessNeighbors`). `CalculatePath`'s main loop and the stepwise search both call it, so the two share the exact same expansion logic (and find the same path). It is `AggressiveInlining` to keep the batch hot path unchanged — preserve that if you touch it.
 
 ### Geometry helpers — `Source/Pathfinder_Geometry.cs`
 
 Public spatial queries that don't produce a path: `static GetManhattanDistance`/`GetChebyshevDistance` (pure integer metrics over `Coordinate`, no grid state) and the instance `HasLineOfSight(from, to, LineOfSightMode mode = BlockedByUnwalkableCells)`. LOS pins `_cells` and delegates to the private Bresenham `HasLineOfSight(from, to, Cell*, mode)` in `Pathfinder_PathSmoothing.cs` (also used by string-pulling smoothing, which always passes `BlockedByUnwalkableCells`). The per-cell test is `IsLineOfSightBlocked`: under `BlockedByUnwalkableCells` a non-walkable cell blocks; under `IgnoreUnwalkableCells` it's transparent (see-through terrain). In **both** modes an occupied cell blocks when `IsCalculatingOccupiedCells` is set — the mode governs walkability only, occupancy stays orthogonal. Endpoints are never tested; the ray is single-cell (agent size ignored). `LineOfSightMode` is a public enum in `Source/Data/`.
+
+### Stepwise search — `Source/Pathfinder_Stepwise.cs`
+
+An **educational/visualization** API that runs the same A* one expansion at a time. `Pathfinder.BeginStepwiseSearch(agent, from, to)` returns a `Pathfinder.StepwiseSearch` (a public nested `IDisposable` class) you advance with `Tick()`; each tick returns an immutable `SearchStep` snapshot of the accumulated searched area (open + closed cells, with A* scores) plus the path once it succeeds. Chosen over the user-suggested "subclass Pathfinder" because `Pathfinder` is `sealed` and the algorithm internals are `private` — a nested class reuses them all (`ExpandNext`, `_openSet`, `ResetCells`, `GetCell`, …) **without** duplicating logic or widening access modifiers. Key points: it **pins `_cells` via a `GCHandle`** for the whole search (the open set holds raw pointers across ticks that must stay valid), so the session **must be disposed** and the owning `Pathfinder` can't service other queries until then (a `_searchSessionActive` guard throws on a second concurrent session). Discovery is tracked incrementally via a `bool[] _seen` keyed by pointer offset; per-tick snapshot building is O(discovered) — deliberately not optimized, since this is not the hot path. The visualized `Path` is the **raw** parent-pointer path (no smoothing), matching `PathResult`'s origin-excluded convention.
 
 ### Open set — `Source/Internal/UnsafePriorityQueue.cs`
 
@@ -94,6 +99,7 @@ A custom binary-heap min-priority-queue over `Cell*`. Each `Cell` stores its own
 - `Cell` (struct): public fields (`Coordinate`, `IsWalkable`, `IsOccupied`, `Weight`) + `internal` algorithm scratch fields (`ScoreF/G/H`, `Depth`, `ParentCoordinate`, `QueueIndex`, `IsClosed`). `Reset()` clears only the scratch state.
 - `Coordinate` (struct), `PathResult` (`IDisposable`; `IsSuccess`, `Length`, `Get(int)` and a `Path` enumerable over the pooled array), `PathfinderSettings` (public, mutable, implements `IPathfinderSettings`), `PathSmoothingMethod` (enum: `None`, etc.).
 - `RangeResult` (`IDisposable`; result of `Pathfinder.GetReachable`, rents a `ReachableCell[]` from the pool — must be disposed) and `ReachableCell` (readonly struct: `Coordinate` + `Cost`). The reachability search is a budget-bounded uniform-cost (Dijkstra) flood fill in `Pathfinder_Reachability.cs`; per-step cost = straight/diagonal multiplier **+** cell `Weight` (added when weighting is enabled, matching the main A*'s additive `GetCellWeightMultiplier` term), independent of the A* heuristic. Weight must be added, not multiplied — `Cell.Weight` defaults to 0, so a multiplier would zero out every step cost and flood the whole board.
+- `SearchStep` (plain class, **not** pooled/disposable — it owns plain arrays so snapshots survive across ticks), `SearchNode` (readonly struct: `Coordinate` + `SearchNodeState` + `ScoreG/H/F`), `SearchState` (enum: `InProgress`/`Success`/`Failure`), `SearchNodeState` (enum: `Open`/`Closed`). These back the stepwise search (see above); they intentionally favour clarity over allocation since the stepwise API is not the hot path.
 
 ### Settings flow
 
