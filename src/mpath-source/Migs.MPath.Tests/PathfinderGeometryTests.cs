@@ -154,6 +154,66 @@ namespace Migs.MPath.Tests
         }
 
         [Test]
+        public void HasLineOfSight_WithIgnoreUnwalkableMode_SeesThroughWalls()
+        {
+            var cells = CreateEmptyGrid(GridSize, GridSize);
+            SetWalkable(cells, 2, 0, false); // wall directly on the (0,0)->(4,0) line
+
+            using var pathfinder = new Pathfinder(cells, GridSize, GridSize);
+
+            // Default mode is blocked by the wall...
+            pathfinder.HasLineOfSight(new Coordinate(0, 0), new Coordinate(4, 0))
+                      .Should().BeFalse();
+
+            // ...but IgnoreUnwalkableCells treats the wall as transparent.
+            pathfinder.HasLineOfSight(new Coordinate(0, 0), new Coordinate(4, 0),
+                          LineOfSightMode.IgnoreUnwalkableCells)
+                      .Should().BeTrue();
+        }
+
+        [Test]
+        public void HasLineOfSight_WithIgnoreUnwalkableMode_StillBlockedByOccupiedCell()
+        {
+            var cells = CreateEmptyGrid(GridSize, GridSize);
+            SetOccupied(cells, 2, 0, true); // occupant on the line; occupancy is on by default
+
+            using var pathfinder = new Pathfinder(cells, GridSize, GridSize);
+
+            // Ignoring unwalkable cells does NOT ignore occupants - units still block sight.
+            pathfinder.HasLineOfSight(new Coordinate(0, 0), new Coordinate(4, 0),
+                          LineOfSightMode.IgnoreUnwalkableCells)
+                      .Should().BeFalse();
+        }
+
+        [Test]
+        public void HasLineOfSight_WithIgnoreUnwalkableMode_AndOccupancyDisabled_SeesThroughEverything()
+        {
+            var cells = CreateEmptyGrid(GridSize, GridSize);
+            SetWalkable(cells, 2, 0, false);  // wall on the line
+            SetOccupied(cells, 3, 0, true);   // occupant on the line
+
+            var settings = new PathfinderSettings { IsCalculatingOccupiedCells = false };
+            using var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
+
+            pathfinder.HasLineOfSight(new Coordinate(0, 0), new Coordinate(4, 0),
+                          LineOfSightMode.IgnoreUnwalkableCells)
+                      .Should().BeTrue();
+        }
+
+        [Test]
+        public void HasLineOfSight_WithExplicitBlockedMode_MatchesDefault()
+        {
+            var cells = CreateEmptyGrid(GridSize, GridSize);
+            SetWalkable(cells, 2, 0, false);
+
+            using var pathfinder = new Pathfinder(cells, GridSize, GridSize);
+
+            pathfinder.HasLineOfSight(new Coordinate(0, 0), new Coordinate(4, 0),
+                          LineOfSightMode.BlockedByUnwalkableCells)
+                      .Should().BeFalse();
+        }
+
+        [Test]
         public void HasLineOfSight_IsSymmetric()
         {
             var cells = CreateEmptyGrid(GridSize, GridSize);

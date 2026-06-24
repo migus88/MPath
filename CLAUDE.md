@@ -83,7 +83,7 @@ Releases are driven by interactive bash scripts in `ci/` (macOS-oriented; uses B
 
 ### Geometry helpers — `Source/Pathfinder_Geometry.cs`
 
-Public spatial queries that don't produce a path: `static GetManhattanDistance`/`GetChebyshevDistance` (pure integer metrics over `Coordinate`, no grid state) and the instance `HasLineOfSight(from, to)`. LOS pins `_cells` and delegates to the existing private Bresenham `HasLineOfSight(from, to, Cell*)` (also used by string-pulling smoothing in `Pathfinder_PathSmoothing.cs`) — a cell between the endpoints blocks sight when not walkable, or occupied when `IsCalculatingOccupiedCells` is set. Endpoints are never tested; the ray is single-cell (agent size ignored).
+Public spatial queries that don't produce a path: `static GetManhattanDistance`/`GetChebyshevDistance` (pure integer metrics over `Coordinate`, no grid state) and the instance `HasLineOfSight(from, to, LineOfSightMode mode = BlockedByUnwalkableCells)`. LOS pins `_cells` and delegates to the private Bresenham `HasLineOfSight(from, to, Cell*, mode)` in `Pathfinder_PathSmoothing.cs` (also used by string-pulling smoothing, which always passes `BlockedByUnwalkableCells`). The per-cell test is `IsLineOfSightBlocked`: under `BlockedByUnwalkableCells` a non-walkable cell blocks; under `IgnoreUnwalkableCells` it's transparent (see-through terrain). In **both** modes an occupied cell blocks when `IsCalculatingOccupiedCells` is set — the mode governs walkability only, occupancy stays orthogonal. Endpoints are never tested; the ray is single-cell (agent size ignored). `LineOfSightMode` is a public enum in `Source/Data/`.
 
 ### Open set — `Source/Internal/UnsafePriorityQueue.cs`
 

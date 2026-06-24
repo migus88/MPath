@@ -175,6 +175,9 @@ if (pathfinder.HasLineOfSight(shooter, target))
 {
     Debug.Log("Clear shot!");
 }
+
+// Or see through terrain that blocks movement but not vision (water, pits, glass):
+pathfinder.HasLineOfSight(shooter, target, LineOfSightMode.IgnoreUnwalkableCells);
 ```
 
 See the [Distance and Line of Sight guide](docs/guides/distance-and-line-of-sight.md) for details.

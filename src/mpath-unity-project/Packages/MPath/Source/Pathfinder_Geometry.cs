@@ -39,23 +39,30 @@ namespace Migs.MPath.Core
 
         /// <summary>
         /// Determines whether there is an unobstructed straight line between two cells, i.e. whether every
-        /// cell the line passes through (excluding the two endpoints) is traversable. The line is traced
+        /// cell the line passes through (excluding the two endpoints) is transparent. The line is traced
         /// with a Bresenham walk, so this is an O(distance) query that allocates nothing.
-        /// A cell blocks line of sight when it is not walkable, or — when
-        /// <see cref="IPathfinderSettings.IsCalculatingOccupiedCells"/> is enabled — when it is occupied.
+        /// By default a cell blocks line of sight when it is not walkable; pass
+        /// <see cref="LineOfSightMode.IgnoreUnwalkableCells"/> to see through obstacles that block movement
+        /// but not vision. Independently of the mode, an occupied cell blocks sight when
+        /// <see cref="IPathfinderSettings.IsCalculatingOccupiedCells"/> is enabled.
         /// </summary>
         /// <remarks>
-        /// The endpoints themselves are never tested for walkability, so a target standing on an occupied
-        /// or blocked cell can still be "seen". Agent size is not considered — the check traces a single-cell
-        /// ray. A coordinate always has line of sight to itself.
+        /// The endpoints themselves are never tested, so a target standing on a blocked or occupied cell can
+        /// still be "seen". Agent size is not considered — the check traces a single-cell ray. A coordinate
+        /// always has line of sight to itself.
         /// </remarks>
         /// <param name="from">The observer coordinate. Must be inside the grid.</param>
         /// <param name="to">The target coordinate. Must be inside the grid.</param>
+        /// <param name="mode">
+        /// Whether cells that are not walkable block line of sight. Defaults to
+        /// <see cref="LineOfSightMode.BlockedByUnwalkableCells"/>.
+        /// </param>
         /// <returns><c>true</c> if no obstacle lies between the two coordinates; otherwise <c>false</c>.</returns>
         /// <exception cref="ArgumentException">
         /// Thrown when <paramref name="from"/> or <paramref name="to"/> is outside the valid field range.
         /// </exception>
-        public bool HasLineOfSight(Coordinate from, Coordinate to)
+        public bool HasLineOfSight(Coordinate from, Coordinate to,
+            LineOfSightMode mode = LineOfSightMode.BlockedByUnwalkableCells)
         {
             if (!IsPositionValid(from.X, from.Y))
             {
@@ -73,7 +80,7 @@ namespace Migs.MPath.Core
 
             fixed (Cell* ptr = &MemoryMarshal.GetReference(cells))
             {
-                return HasLineOfSight(from, to, ptr);
+                return HasLineOfSight(from, to, ptr, mode);
             }
         }
     }

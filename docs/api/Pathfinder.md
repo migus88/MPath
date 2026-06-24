@@ -19,7 +19,7 @@ A high-performance A* pathfinding implementation for grid-based environments.
 |--------|-------------|
 | `PathResult GetPath(IAgent agent, Coordinate from, Coordinate to)` | Calculates a path from starting position to destination. |
 | `RangeResult GetReachable(IAgent agent, Coordinate from, float budget)` | Finds every cell whose cheapest path cost from the origin is within the budget. |
-| `bool HasLineOfSight(Coordinate from, Coordinate to)` | Returns whether an unobstructed straight line connects two cells. |
+| `bool HasLineOfSight(Coordinate from, Coordinate to, LineOfSightMode mode = BlockedByUnwalkableCells)` | Returns whether an unobstructed straight line connects two cells. |
 | `static int GetManhattanDistance(Coordinate from, Coordinate to)` | Manhattan (taxicab) distance `\|dx\| + \|dy\|`. |
 | `static int GetChebyshevDistance(Coordinate from, Coordinate to)` | Chebyshev (chessboard) distance `max(\|dx\|, \|dy\|)`. |
 | `Pathfinder EnablePathCaching(IPathCaching pathCachingHandler = null)` | Enables path caching with optional custom implementation. |
@@ -93,7 +93,7 @@ var manhattan = Pathfinder.GetManhattanDistance(new Coordinate(1, 1), new Coordi
 var chebyshev = Pathfinder.GetChebyshevDistance(new Coordinate(1, 1), new Coordinate(4, 5)); // 4
 ```
 
-`HasLineOfSight` traces a Bresenham line between the two cells and returns `false` if any cell **between** them is not walkable (or, when `IsCalculatingOccupiedCells` is enabled, is occupied). It is an O(distance) query that allocates nothing — handy for fog-of-war, ranged attacks or skipping pathfinding when a target is in plain sight.
+`HasLineOfSight` traces a Bresenham line between the two cells and returns `false` if any cell **between** them blocks sight. It is an O(distance) query that allocates nothing — handy for fog-of-war, ranged attacks or skipping pathfinding when a target is in plain sight.
 
 ```csharp
 using var pathfinder = new Pathfinder(cells, 10, 10);
@@ -104,4 +104,11 @@ if (pathfinder.HasLineOfSight(new Coordinate(2, 2), new Coordinate(7, 5)))
 }
 ```
 
-The endpoints themselves are never tested for walkability, so a target standing on a blocked or occupied cell can still be "seen". Agent size is not considered — the check traces a single-cell ray. A cell always has line of sight to itself, and an out-of-range coordinate throws `ArgumentException`. 
+By default (`LineOfSightMode.BlockedByUnwalkableCells`) a non-walkable cell blocks sight. Pass [`LineOfSightMode.IgnoreUnwalkableCells`](LineOfSightMode.md) to see through obstacles that block movement but not vision (water, a pit, a glass wall):
+
+```csharp
+// Terrain doesn't block the shot, but units (occupied cells) still might.
+var visible = pathfinder.HasLineOfSight(shooter, target, LineOfSightMode.IgnoreUnwalkableCells);
+```
+
+The mode only governs walkability. Independently, an occupied cell blocks sight when `IsCalculatingOccupiedCells` is enabled — so "ignore terrain, but units still block" is expressible. The endpoints themselves are never tested, so a target standing on a blocked or occupied cell can still be "seen". Agent size is not considered — the check traces a single-cell ray. A cell always has line of sight to itself, and an out-of-range coordinate throws `ArgumentException`. 

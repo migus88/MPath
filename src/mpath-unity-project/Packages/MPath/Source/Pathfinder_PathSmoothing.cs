@@ -42,7 +42,9 @@ namespace Migs.MPath.Core
                 // Find furthest point with line of sight from current
                 for (var i = originalLength - 1; i > currentIndex; i--)
                 {
-                    if (!HasLineOfSight(originalPath[currentIndex], originalPath[i], cells))
+                    // Smoothing may only shortcut across cells an agent can actually walk through.
+                    if (!HasLineOfSight(originalPath[currentIndex], originalPath[i], cells,
+                            LineOfSightMode.BlockedByUnwalkableCells))
                     {
                         continue;
                     }
@@ -100,7 +102,7 @@ namespace Migs.MPath.Core
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool HasLineOfSight(Coordinate from, Coordinate to, Cell* cells)
+        private bool HasLineOfSight(Coordinate from, Coordinate to, Cell* cells, LineOfSightMode mode)
         {
             (int X, int Y) p0 = new Coordinate(from.X, from.Y);
             (int X, int Y) p1 = new Coordinate(to.X, to.Y);
@@ -137,8 +139,7 @@ namespace Migs.MPath.Core
                 // Skip checking the endpoints
                 if (currentCoord != from && currentCoord != to)
                 {
-                    var cell = GetWalkableLocation(cells, checkX, checkY);
-                    if (cell == null)
+                    if (IsLineOfSightBlocked(cells, checkX, checkY, mode))
                     {
                         // Hit an obstacle
                         return false;
@@ -157,6 +158,25 @@ namespace Migs.MPath.Core
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Determines whether the cell at (<paramref name="x"/>, <paramref name="y"/>) interrupts line of
+        /// sight. Under <see cref="LineOfSightMode.BlockedByUnwalkableCells"/> a non-walkable cell blocks;
+        /// under <see cref="LineOfSightMode.IgnoreUnwalkableCells"/> walkability is ignored. In both modes an
+        /// occupied cell blocks when <see cref="IPathfinderSettings.IsCalculatingOccupiedCells"/> is enabled.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsLineOfSightBlocked(Cell* cells, int x, int y, LineOfSightMode mode)
+        {
+            var cell = GetCell(cells, x, y);
+
+            if (mode == LineOfSightMode.BlockedByUnwalkableCells && !cell->IsWalkable)
+            {
+                return true;
+            }
+
+            return _settings.IsCalculatingOccupiedCells && cell->IsOccupied;
         }
     }
 }

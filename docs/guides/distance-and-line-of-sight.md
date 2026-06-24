@@ -51,6 +51,25 @@ else
 
 A cell between the endpoints blocks line of sight when it is **not walkable**, or — when `IsCalculatingOccupiedCells` is enabled (the default) — when it is **occupied**. This mirrors how `GetPath` and `GetReachable` treat the grid, so "can I see it?" and "can I walk there?" stay consistent.
 
+### Seeing through obstacles (`LineOfSightMode`)
+
+Some obstacles block movement but not vision — water, a pit, a chasm, a glass wall. Because MPath models terrain with a single `IsWalkable` flag, the optional [`LineOfSightMode`](../api/LineOfSightMode.md) parameter lets you choose whether unwalkable cells block sight:
+
+```csharp
+// Default: walls block the line.
+bool blockedByWalls = pathfinder.HasLineOfSight(shooter, target);
+
+// See through unwalkable terrain (but occupants can still block).
+bool ignoringTerrain = pathfinder.HasLineOfSight(shooter, target, LineOfSightMode.IgnoreUnwalkableCells);
+```
+
+| Mode | Unwalkable cells | Occupied cells (when `IsCalculatingOccupiedCells`) |
+|------|------------------|----------------------------------------------------|
+| `BlockedByUnwalkableCells` *(default)* | block sight | block sight |
+| `IgnoreUnwalkableCells` | transparent | block sight |
+
+The mode only governs walkability; occupancy stays under `IsCalculatingOccupiedCells`. That orthogonality lets you express "ignore terrain, but units still block the shot" by pairing `IgnoreUnwalkableCells` with occupancy enabled.
+
 ### Behavior and edge cases
 
 - **Endpoints are never tested.** Only the cells *between* `from` and `to` are checked, so a target standing on a blocked or occupied cell (for example, an enemy unit) can still be seen.
