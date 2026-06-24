@@ -10,6 +10,7 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 - Fast A* pathfinding with near-zero garbage collection overhead
 - Allocates memory only when necessary to maximize performance
 - Designed for 2D grid-based navigation in games
+- Movement-range queries (`GetReachable`) for "where can this unit move?" mechanics
 - First-class support for Unity with dedicated integration components
 - Fully usable in any standalone .NET application
 - Extensively tested with comprehensive unit tests
@@ -145,6 +146,20 @@ if (result.IsSuccess)
 }
 ```
 
+### Movement range
+
+Need to know every tile a unit can reach within a movement budget (e.g. for a tactics game)? Use `GetReachable`:
+
+```csharp
+// Every cell whose cheapest path cost is <= 5
+using var range = pathfinder.GetReachable(agent, new Coordinate(4, 4), 5f);
+
+foreach (var cell in range.Cells)
+{
+    Debug.Log($"{cell.Coordinate} reachable for {cell.Cost}");
+}
+```
+
 ### Documentation
 
 MPath comes with comprehensive documentation:
@@ -157,7 +172,7 @@ The API reference provides detailed information about all public classes, interf
 
 ### Important Notes
 
-- Always dispose `PathResult` objects after use (use `using` statements)
+- Always dispose `PathResult` and `RangeResult` objects after use (use `using` statements)
 - Reuse the pathfinder instance for best performance
 
 ## License
