@@ -19,6 +19,9 @@ A high-performance A* pathfinding implementation for grid-based environments.
 |--------|-------------|
 | `PathResult GetPath(IAgent agent, Coordinate from, Coordinate to)` | Calculates a path from starting position to destination. |
 | `RangeResult GetReachable(IAgent agent, Coordinate from, float budget)` | Finds every cell whose cheapest path cost from the origin is within the budget. |
+| `bool HasLineOfSight(Coordinate from, Coordinate to)` | Returns whether an unobstructed straight line connects two cells. |
+| `static int GetManhattanDistance(Coordinate from, Coordinate to)` | Manhattan (taxicab) distance `\|dx\| + \|dy\|`. |
+| `static int GetChebyshevDistance(Coordinate from, Coordinate to)` | Chebyshev (chessboard) distance `max(\|dx\|, \|dy\|)`. |
 | `Pathfinder EnablePathCaching(IPathCaching pathCachingHandler = null)` | Enables path caching with optional custom implementation. |
 | `Pathfinder DisablePathCaching()` | Disables path caching. |
 | `Pathfinder InvalidateCache()` | Clears the current path cache without disabling caching. |
@@ -73,4 +76,32 @@ foreach (var cell in range.Cells)
 }
 ```
 
-See [RangeResult](RangeResult.md) and [ReachableCell](ReachableCell.md) for the returned types. Like `PathResult`, a `RangeResult` must be disposed (use `using`). 
+See [RangeResult](RangeResult.md) and [ReachableCell](ReachableCell.md) for the returned types. Like `PathResult`, a `RangeResult` must be disposed (use `using`).
+
+### Distance and line of sight
+
+For lightweight spatial queries that don't need a full path, `Pathfinder` exposes grid metrics and a line-of-sight test:
+
+- `GetManhattanDistance(from, to)` — the taxicab distance `|dx| + |dy|` (cardinal steps). This is the metric used by the A* heuristic.
+- `GetChebyshevDistance(from, to)` — the chessboard distance `max(|dx|, |dy|)` (steps when diagonals cost the same as cardinals).
+- `HasLineOfSight(from, to)` — whether a straight line between two cells is unobstructed.
+
+The two distance methods are `static`, pure, and allocation-free — they only read the coordinates and ignore walls, weights and movement settings:
+
+```csharp
+var manhattan = Pathfinder.GetManhattanDistance(new Coordinate(1, 1), new Coordinate(4, 5)); // 7
+var chebyshev = Pathfinder.GetChebyshevDistance(new Coordinate(1, 1), new Coordinate(4, 5)); // 4
+```
+
+`HasLineOfSight` traces a Bresenham line between the two cells and returns `false` if any cell **between** them is not walkable (or, when `IsCalculatingOccupiedCells` is enabled, is occupied). It is an O(distance) query that allocates nothing — handy for fog-of-war, ranged attacks or skipping pathfinding when a target is in plain sight.
+
+```csharp
+using var pathfinder = new Pathfinder(cells, 10, 10);
+
+if (pathfinder.HasLineOfSight(new Coordinate(2, 2), new Coordinate(7, 5)))
+{
+    // Nothing blocks the shot.
+}
+```
+
+The endpoints themselves are never tested for walkability, so a target standing on a blocked or occupied cell can still be "seen". Agent size is not considered — the check traces a single-cell ray. A cell always has line of sight to itself, and an out-of-range coordinate throws `ArgumentException`. 
