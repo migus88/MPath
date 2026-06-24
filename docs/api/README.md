@@ -15,6 +15,10 @@ MPath uses a single codebase for both Unity and .NET:
 | [PathResult](PathResult.md) | Contains the results of pathfinding operations |
 | [RangeResult](RangeResult.md) | Contains the results of a movement-range (reachability) query |
 | [ReachableCell](ReachableCell.md) | A single reachable cell paired with its cheapest path cost |
+| [StepwiseSearch](StepwiseSearch.md) | A tick-by-tick driver over the A* search for visualizing its progress |
+| [SearchStep](SearchStep.md) | A per-tick snapshot of a stepwise search (searched area + path) |
+| [SearchNode](SearchNode.md) | A single searched cell with its open/closed state and A* scores |
+| [SearchState](SearchState.md) | The overall state of a stepwise search (in progress / success / failure) |
 | [Cell](Cell.md) | Represents a single cell in the pathfinding grid |
 | [Coordinate](Coordinate.md) | Represents a position in the grid |
 | [LineOfSightMode](LineOfSightMode.md) | Controls whether unwalkable cells block `HasLineOfSight` |

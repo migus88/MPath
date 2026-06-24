@@ -12,6 +12,7 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 - Designed for 2D grid-based navigation in games
 - Movement-range queries (`GetReachable`) for "where can this unit move?" mechanics
 - Distance metrics (Manhattan, Chebyshev) and line-of-sight checks for range and visibility logic
+- Stepwise search (`BeginStepwiseSearch`) for visualizing how the algorithm explores the grid
 - First-class support for Unity with dedicated integration components
 - Fully usable in any standalone .NET application
 - Extensively tested with comprehensive unit tests
@@ -182,6 +183,27 @@ pathfinder.HasLineOfSight(shooter, target, LineOfSightMode.IgnoreUnwalkableCells
 
 See the [Distance and Line of Sight guide](docs/guides/distance-and-line-of-sight.md) for details.
 
+### Visualizing the search
+
+Want to *show* how A* explores the grid (for teaching or a demo)? `BeginStepwiseSearch` runs the same search as `GetPath`, but one cell at a time, exposing the frontier and explored area after every step:
+
+```csharp
+using var search = pathfinder.BeginStepwiseSearch(agent, new Coordinate(1, 1), new Coordinate(8, 8));
+
+while (!search.IsComplete)
+{
+    var step = search.Tick();
+    Render(step.Searched); // open (frontier) vs closed (expanded) cells, with A* scores
+}
+
+if (search.Tick().State == SearchState.Success)
+{
+    DrawPath(search.Tick().Path);
+}
+```
+
+This is an educational/visualization tool — `GetPath` remains the way to compute paths in production. See the [Visualizing the Search guide](docs/guides/visualizing-search.md) for details.
+
 ### Documentation
 
 MPath comes with comprehensive documentation:
@@ -194,7 +216,7 @@ The API reference provides detailed information about all public classes, interf
 
 ### Important Notes
 
-- Always dispose `PathResult` and `RangeResult` objects after use (use `using` statements)
+- Always dispose `PathResult`, `RangeResult`, and `StepwiseSearch` objects after use (use `using` statements)
 - Reuse the pathfinder instance for best performance
 
 ## License

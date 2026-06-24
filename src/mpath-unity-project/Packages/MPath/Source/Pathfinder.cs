@@ -226,36 +226,58 @@ namespace Migs.MPath.Core
         private PathResult CalculatePath(IAgent agent, Coordinate from, Coordinate to, Cell* ptr)
         {
             var scoreH = GetH(from.X, from.Y, to.X, to.Y);
-            var current = GetCell(ptr, from.X, from.Y);
-            
-            _openSet.Enqueue(current, scoreH);
+            var start = GetCell(ptr, from.X, from.Y);
+
+            _openSet.Enqueue(start, scoreH);
 
             var neighbors = stackalloc Cell*[MaxNeighbors];
             var agentSize = agent.Size;
 
-            // A* algorithm main loop
+            // A* algorithm main loop. Each iteration expands one cell; ExpandNext is the single
+            // source of truth for that step, shared with the stepwise (tick-by-tick) search.
+            Cell* current = null;
             while (_openSet.Count > 0)
             {
-                current = _openSet.Dequeue();
-
-                if (current->Coordinate == to)
+                if (ExpandNext(ptr, to, agentSize, neighbors, out current))
                 {
+                    // Destination dequeued — search is done.
                     break;
                 }
-
-                current->IsClosed = true;
-
-                PopulateNeighbors(ptr, current, agentSize, neighbors);
-                ProcessNeighbors(current, neighbors, to);
             }
 
             // Path reconstruction
-            if (current->Coordinate != to)
+            if (current == null || current->Coordinate != to)
             {
                 return PathResult.Failure();
             }
 
             return ReconstructPath(current, ptr);
+        }
+
+        /// <summary>
+        /// Expands the next cell from the open set: dequeues the current best candidate and — unless it is the
+        /// destination — closes it and relaxes its neighbors. This is one iteration of the A* main loop,
+        /// factored out so the batch <see cref="GetPath"/> and the stepwise <see cref="StepwiseSearch"/> run the
+        /// exact same logic. The caller is responsible for ensuring the open set is non-empty.
+        /// </summary>
+        /// <returns><c>true</c> when the dequeued cell is the destination and the search should stop;
+        /// otherwise <c>false</c>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool ExpandNext(Cell* ptr, Coordinate to, int agentSize, Cell** neighbors, out Cell* current)
+        {
+            current = _openSet.Dequeue();
+
+            if (current->Coordinate == to)
+            {
+                return true;
+            }
+
+            current->IsClosed = true;
+
+            PopulateNeighbors(ptr, current, agentSize, neighbors);
+            ProcessNeighbors(current, neighbors, to);
+
+            return false;
         }
 
         /// <summary>
