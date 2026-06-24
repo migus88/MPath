@@ -1,17 +1,12 @@
 # MPath — AI Agent & LLM Reference
 
-> **Purpose.** This is a single, self-contained, machine-first reference for AI coding agents (and the
-> humans pairing with them) who need to *use* the MPath library in their own project. It front-loads the
-> public API surface, the capabilities, the canonical usage patterns, and the non-obvious rules that cause
-> bugs. Read this top-to-bottom and you can write correct MPath code without opening any other file.
+> **Audience: AI coding agents (and their humans) that want to *use* MPath in their own project.**
+> This is a single, self-contained, machine-first page: the public API surface, the capabilities, the
+> canonical usage patterns, and the non-obvious rules that cause bugs. Read it top-to-bottom and you can
+> write correct MPath code without opening any other file. For full per-member signatures of a type, follow
+> its link into [`docs/api/`](api/README.md).
 >
-> If you are instead modifying **this repository's own source**, read [`CLAUDE.md`](../CLAUDE.md) first —
-> it documents the dual NuGet/Unity layout and where the source of truth lives.
->
-> **Maintenance contract (read this if you change the public API).** This document mirrors the public API
-> and must be updated in the *same change* that alters it. See [Maintenance contract](#maintenance-contract)
-> at the bottom. A stale agent reference is worse than none — agents will confidently emit code against
-> signatures that no longer exist.
+> *(Modifying MPath's own source instead of using it? This page is not for you — see [`CLAUDE.md`](../CLAUDE.md).)*
 
 ---
 
@@ -27,7 +22,7 @@
 | Allocations | Near-zero on the hot path — uses `unsafe` pointers + `ArrayPool`. |
 | Lifecycle rule | `Pathfinder` is **long-lived & reused** (dispose once). Each result (`PathResult` / `RangeResult` / `StepwiseSearch`) is **per-query & must be disposed** (`using`). |
 | Grid indexing | Flat layout is `index = x * Height + y` (X-major). |
-| Coordinate origin | `(0,0)` is one corner; `X` and `Y` are non-negative grid indices, not world units. |
+| Coordinate origin | `(0,0)` is one corner; `X`/`Y` are non-negative grid indices, not world units. |
 
 ## Namespaces (what to `using`)
 
@@ -47,13 +42,11 @@ core library has **no** `UnityEngine` dependency and works in any .NET app.
 ## Install
 
 ```bash
-# .NET
-dotnet add package Migs.MPath
+dotnet add package Migs.MPath          # .NET
 ```
 
 ```
-# Unity (OpenUPM CLI, run in the project folder)
-openupm add com.migsweb.mpath
+openupm add com.migsweb.mpath          # Unity (run in the project folder)
 ```
 
 ---
@@ -61,9 +54,9 @@ openupm add com.migsweb.mpath
 ## Mental model — four building blocks
 
 1. **`Cell`** — one grid square. Public, mutable fields: `Coordinate`, `IsWalkable`, `IsOccupied`,
-   `Weight`. *You* own the grid data; MPath copies/reads it.
-2. **`IAgent`** — the thing moving. Single member `int Size` (in cells; `1` = occupies one tile,
-   `> 1` triggers a clearance scan so the agent only fits where a `Size×Size` block is walkable).
+   `Weight`. *You* own the grid data; MPath reads it.
+2. **`IAgent`** — the thing moving. Single member `int Size` (in cells; `1` = one tile, `> 1` triggers a
+   clearance scan so the agent only fits where a `Size×Size` block is walkable).
 3. **`Pathfinder`** — the engine. Build it once from your grid + settings, reuse it for every query,
    dispose it at the end of its life.
 4. **A result type per query** — `PathResult`, `RangeResult`, or `StepwiseSearch`. All are `IDisposable`
@@ -84,7 +77,7 @@ using Migs.MPath.Core.Interfaces;
 
 class Unit : IAgent { public int Size => 1; }
 
-// 1. Build a grid (matrix form is simplest). Cells default to walkable? No — set fields explicitly.
+// 1. Build a grid (matrix form is simplest). Cell fields default to ZERO — set them explicitly.
 var grid = new Cell[10, 10];
 for (int x = 0; x < 10; x++)
 for (int y = 0; y < 10; y++)
@@ -108,88 +101,60 @@ if (result.IsSuccess)
 
 ---
 
-## Public API surface (complete)
+## Public API surface
 
-### `Pathfinder` — `sealed`, `IDisposable`
+Full per-member signatures for every type live in [`docs/api/`](api/README.md) (one page per type). This
+section gives the entry point in full and maps the rest, so it stays small as the API grows.
+
+### `Pathfinder` — the entry point (`sealed`, `IDisposable`)
 
 **Constructors** (pick the one matching your grid representation; `settings` is optional):
 
 ```csharp
-Pathfinder(Cell[]        cells,            int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
-Pathfinder(ICellHolder[] holders,          int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
-Pathfinder(Cell[,]       cellsMatrix,                                       IPathfinderSettings settings = null)
-Pathfinder(ICellHolder[,] cellHoldersMatrix,                               IPathfinderSettings settings = null)
+Pathfinder(Cell[]         cells,             int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
+Pathfinder(ICellHolder[]  holders,           int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
+Pathfinder(Cell[,]        cellsMatrix,                                        IPathfinderSettings settings = null)
+Pathfinder(ICellHolder[,] cellHoldersMatrix,                                 IPathfinderSettings settings = null)
 ```
 
-- Matrix constructors infer width/height from the array dimensions.
-- The flat `Cell[]` constructor sorts the array **in place** (X-major) and is the only mode that does not
-  copy — the other three flatten into a pooled internal buffer.
-- `ICellHolder` lets you back cells with your own objects (e.g. Unity `MonoBehaviour`s) via
-  `Cell CellData { get; }`.
+Matrix constructors infer width/height from the array. The flat `Cell[]` form sorts in place (X-major) and
+is the only mode that doesn't copy; the others flatten into a pooled buffer. `ICellHolder` lets you back
+cells with your own objects (e.g. Unity `MonoBehaviour`s) via `Cell CellData { get; }`.
 
 **Methods:**
 
 | Signature | Returns | Notes |
 |-----------|---------|-------|
 | `GetPath(IAgent agent, Coordinate from, Coordinate to)` | `PathResult` | Core A* query. Throws `ArgumentNullException` if `agent` is null, `ArgumentException` if `to` is outside the grid. Returns a **failure** result (not an exception) when no path exists. |
-| `GetReachable(IAgent agent, Coordinate from, float budget)` | `RangeResult` | Every cell reachable for total cost `<= budget` (movement-range / "where can this unit move?"). Uniform-cost flood fill. |
-| `HasLineOfSight(Coordinate from, Coordinate to, LineOfSightMode mode = BlockedByUnwalkableCells)` | `bool` | Single-cell Bresenham ray. Endpoints are not tested; agent size ignored. |
-| `static GetManhattanDistance(Coordinate from, Coordinate to)` | `int` | `|dx| + |dy|`. Pure metric, no grid state, allocation-free. |
+| `GetReachable(IAgent agent, Coordinate from, float budget)` | `RangeResult` | Every cell reachable for total cost `<= budget` ("where can this unit move?"). Uniform-cost flood fill. |
+| `HasLineOfSight(Coordinate from, Coordinate to, LineOfSightMode mode = BlockedByUnwalkableCells)` | `bool` | Single-cell Bresenham ray. Endpoints not tested; agent size ignored. |
+| `static GetManhattanDistance(Coordinate from, Coordinate to)` | `int` | `|dx| + |dy|`. Pure metric, allocation-free. |
 | `static GetChebyshevDistance(Coordinate from, Coordinate to)` | `int` | `max(|dx|, |dy|)`. Pure metric, allocation-free. |
 | `BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to)` | `StepwiseSearch` | Educational/visualization driver running the same A* one expansion at a time. **Pins the grid until disposed** — the pathfinder can't serve other queries meanwhile, and a second concurrent session throws. |
 | `EnablePathCaching(IPathCaching handler = null)` | `Pathfinder` | Fluent (returns `this`). Opt-in. Pass your own `IPathCaching` or use the built-in `DefaultPathCaching`. |
 | `DisablePathCaching()` | `Pathfinder` | Fluent. |
-| `InvalidateCache()` | `Pathfinder` | Fluent. **Mutating the grid does NOT auto-invalidate** — call this yourself after the grid changes. |
+| `InvalidateCache()` | `Pathfinder` | Fluent. **Mutating the grid does NOT auto-invalidate** — call this after the grid changes. |
 | `Dispose()` | `void` | Returns the rented cell buffer to the pool. Call once, at end of life. |
 
-### Result types
+### Everything else — type map
 
-**`PathResult`** (`IDisposable`):
-- `bool IsSuccess`
-- `int Length` — number of steps.
-- `IEnumerable<Coordinate> Path` — the steps, **excluding the origin** (`from`).
-- `Coordinate Get(int index)`
-- `Dispose()` — returns the pooled `Coordinate[]`.
+One row per type; click through for full members. The load-bearing facts are repeated in
+[Capabilities & recipes](#capabilities--recipes) and [Critical rules & gotchas](#critical-rules--gotchas-the-bug-causers).
 
-**`RangeResult`** (`IDisposable`, from `GetReachable`):
-- `bool IsSuccess` · `int Length`
-- `IEnumerable<ReachableCell> Cells`
-- `ReachableCell Get(int index)`
-- `bool Contains(Coordinate coordinate)`
-- `bool TryGetCost(Coordinate coordinate, out float cost)`
-- `Dispose()`
-
-**`ReachableCell`** (`readonly struct`): `Coordinate Coordinate`, `float Cost`.
-
-**`StepwiseSearch`** (nested `Pathfinder.StepwiseSearch`, `IDisposable`):
-- `SearchState State` · `bool IsComplete`
-- `SearchStep Tick()` — advance one expansion; returns an immutable snapshot.
-- `SearchStep RunToCompletion()` — tick until done, return the final snapshot.
-- `Dispose()` — unpins the grid (mandatory).
-
-**`SearchStep`** (plain immutable class — *not* disposable, owns plain arrays so snapshots survive):
-`SearchState State`, `bool IsComplete`, `int Iteration`, `Coordinate Current`,
-`IReadOnlyList<SearchNode> Searched`, `int OpenCount`, `int ClosedCount`,
-`IReadOnlyList<Coordinate> Path` (raw, unsmoothed, origin-excluded).
-
-**`SearchNode`** (`readonly struct`): `Coordinate Coordinate`, `SearchNodeState State`,
-`float ScoreG`, `float ScoreH`, `float ScoreF`.
-
-### Grid & geometry types
-
-- **`Cell`** (`struct`): `Coordinate Coordinate`, `bool IsWalkable`, `bool IsOccupied`, `float Weight`,
-  `void Reset()`. **All fields default to their zero value** — `IsWalkable` is `false` and `Weight` is
-  `0` unless you set them. Initialize every cell explicitly.
-- **`Coordinate`** (`struct`, `IEquatable`): `int X`, `int Y`, `bool IsInitialized`, `static Zero`,
-  ctor `(int x, int y)`, operators `== != + -`, implicit `→ (int x, int y)`, explicit `(int,int) →`.
-
-### Interfaces
-
-- **`IAgent`**: `int Size { get; }`
-- **`ICellHolder`**: `Cell CellData { get; }`
-- **`IPathfinderSettings`**: the settings contract (see table below).
-- **`IPathCaching : IDisposable`**: `bool TryGetCachedPath(IAgent, Coordinate from, Coordinate to, out PathResult)`,
-  `void CachePath(IAgent, Coordinate from, Coordinate to, PathResult)`, `void ClearCache()`.
+| Type | Kind | Gist | Details |
+|------|------|------|---------|
+| `PathResult` | result, `IDisposable` | `IsSuccess`, `Length`, `Path` (steps, **origin excluded**), `Get(i)` | [api](api/PathResult.md) |
+| `RangeResult` | result, `IDisposable` | `IsSuccess`, `Length`, `Cells`, `Contains(c)`, `TryGetCost(c, out cost)`, `Get(i)` | [api](api/RangeResult.md) |
+| `ReachableCell` | `readonly struct` | `Coordinate` + `Cost` | [api](api/ReachableCell.md) |
+| `StepwiseSearch` | session, `IDisposable` | `Tick()`, `RunToCompletion()`, `State`, `IsComplete` | [api](api/StepwiseSearch.md) |
+| `SearchStep` | immutable class | Per-tick snapshot: `Searched`, `Open/ClosedCount`, `Current`, `Iteration`, `Path` | [api](api/SearchStep.md) |
+| `SearchNode` | `readonly struct` | `Coordinate` + `State` + `ScoreG/ScoreH/ScoreF` | [api](api/SearchNode.md) |
+| `Cell` | `struct` | Grid square: `Coordinate`, `IsWalkable`, `IsOccupied`, `Weight` — **all default to zero** | [api](api/Cell.md) |
+| `Coordinate` | `struct` | `X`, `Y`, `IsInitialized`, `static Zero`; ctor `(x,y)`; `== != + -`; `↔ (int,int)` | [api](api/Coordinate.md) |
+| `IAgent` | interface | `int Size` (cells; `> 1` ⇒ clearance scan) | [api](api/IAgent.md) |
+| `ICellHolder` | interface | `Cell CellData` — back cells with your own objects | [api](api/ICellHolder.md) |
+| `IPathfinderSettings` · `PathfinderSettings` | settings | See [Settings reference](#settings-reference) below | [api](api/PathfinderSettings.md) |
+| `IPathCaching` · `DefaultPathCaching` | caching | `TryGetCachedPath` / `CachePath` / `ClearCache` | [api](api/IPathCaching.md) |
 
 ### Enums
 
@@ -202,11 +167,11 @@ Pathfinder(ICellHolder[,] cellHoldersMatrix,                               IPath
 
 ---
 
-## Settings reference — `PathfinderSettings` (`: IPathfinderSettings`)
+## Settings reference
 
-Construct with object-initializer syntax and pass to a `Pathfinder` constructor. Converted once into an
-internal fast struct, so changing the instance after construction has **no effect** — build a new
-`Pathfinder` to change settings.
+`PathfinderSettings` (`: IPathfinderSettings`). Construct with object-initializer syntax and pass to a
+`Pathfinder` constructor. Converted once into an internal fast struct, so changing the instance after
+construction has **no effect** — build a new `Pathfinder` to change settings.
 
 | Property | Type | Default | Meaning |
 |----------|------|---------|---------|
@@ -288,7 +253,7 @@ pathfinder.InvalidateCache();                         // NOT automatic
 
 ```csharp
 using Migs.MPath;                                     // PathfindingExtensions
-Coordinate c = transform.position2D.ToCoordinate();   // from Vector2Int
+Coordinate c = someVector2Int.ToCoordinate();
 Vector2Int v = c.ToVector2Int();
 ```
 
@@ -304,16 +269,13 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
    keeps the grid pinned and the pathfinder unusable.
 2. **Reuse the `Pathfinder`; don't recreate it per query.** It is designed as a long-lived instance.
    Dispose it once when you're done with it (or its grid).
-3. **Not thread-safe.** No concurrent queries on one instance, no sharing across threads. One instance
-   per thread.
-4. **`Path` excludes the origin.** It is the sequence of steps *after* `from`. Don't expect `from` as the
-   first element.
+3. **Not thread-safe.** No concurrent queries on one instance, no sharing across threads. One per thread.
+4. **`Path` excludes the origin.** It is the sequence of steps *after* `from`. Don't expect `from` first.
 5. **No path → failure result, not an exception.** Check `IsSuccess`. Only bad arguments throw
    (`agent == null`; `to` outside the grid).
-6. **Grid edits aren't seen automatically.** You mutate your own `Cell` data, but the pathfinder reads a
-   flattened snapshot each query *and* may cache. After changing walkability/occupancy/weight, call
-   `InvalidateCache()` if caching is on. (The pathfinder re-reads the grid each query, but cached results
-   are returned verbatim.)
+6. **Grid edits aren't seen automatically by the cache.** The pathfinder re-reads your grid each query,
+   but cached results are returned verbatim — call `InvalidateCache()` after changing the grid if caching
+   is on.
 7. **Settings are frozen at construction.** Mutating the `PathfinderSettings` object afterward does
    nothing — create a new `Pathfinder`.
 8. **Indexing is `x * Height + y` (X-major).** Relevant only if you build the flat `Cell[]` form
@@ -334,32 +296,6 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
 
 ---
 
-## Where things live (for agents editing this repo)
-
-The library source of truth is **only** `src/mpath-unity-project/Packages/MPath/Source/`. The standalone
-.NET project links those files via a glob — there is no second copy. Keep `Source/` free of
-`UnityEngine`. Full details and build/test commands are in [`CLAUDE.md`](../CLAUDE.md).
-
-- Algorithm: `Source/Pathfinder.cs` (+ `Pathfinder_PathSmoothing.cs`, `_Reachability.cs`, `_Geometry.cs`, `_Stepwise.cs`)
-- Public data types & enums: `Source/Data/`
-- Interfaces: `Source/Interfaces/`
-- Caching: `Source/Caching/`
-- Unity glue: `src/mpath-unity-project/Packages/MPath/Runtime/Code/`
-- Human-facing docs: `docs/api/` (one file per type), `docs/guides/` (task guides)
-
----
-
-## Maintenance contract
-
-This file is **canonical AI-facing documentation** and must not drift from the code. Update it in the
-**same commit/PR** that changes the public API. Specifically, when you:
-
-- **add/rename/remove a public type, method, constructor, property, enum value, or setting** → update the
-  matching section here (API surface, settings table, enums) *and* the per-type page under `docs/api/`;
-- **change a default, a cost formula, or a lifecycle/disposal rule** → update [Settings reference](#settings-reference--pathfindersettings--ipathfindersettings) and/or [Critical rules & gotchas](#critical-rules--gotchas-the-bug-causers);
-- **add a capability** → add a recipe under [Capabilities & recipes](#capabilities--recipes) and a row to the API table;
-- **change namespaces, package ids, or the target framework** → update [At a glance](#at-a-glance) and [Namespaces](#namespaces-what-to-using).
-
-Keep signatures copy-paste-correct: an agent reading this will emit code verbatim. When in doubt, verify
-against `Source/` rather than memory. This contract is also recorded in `CLAUDE.md` so future agents keep
-it in sync.
+*This page mirrors the public API surface and is kept in sync with the source. If a signature here ever
+disagrees with [`docs/api/`](api/README.md) or the code, trust the code. Maintainers: the upkeep rules
+for this file live in [`CLAUDE.md`](../CLAUDE.md).*
