@@ -87,7 +87,7 @@ A custom binary-heap min-priority-queue over `Cell*`. Each `Cell` stores its own
 
 - `Cell` (struct): public fields (`Coordinate`, `IsWalkable`, `IsOccupied`, `Weight`) + `internal` algorithm scratch fields (`ScoreF/G/H`, `Depth`, `ParentCoordinate`, `QueueIndex`, `IsClosed`). `Reset()` clears only the scratch state.
 - `Coordinate` (struct), `PathResult` (`IDisposable`; `IsSuccess`, `Length`, `Get(int)` and a `Path` enumerable over the pooled array), `PathfinderSettings` (public, mutable, implements `IPathfinderSettings`), `PathSmoothingMethod` (enum: `None`, etc.).
-- `RangeResult` (`IDisposable`; result of `Pathfinder.GetReachable`, rents a `ReachableCell[]` from the pool — must be disposed) and `ReachableCell` (readonly struct: `Coordinate` + `Cost`). The reachability search is a budget-bounded uniform-cost (Dijkstra) flood fill in `Pathfinder_Reachability.cs`; per-step cost = straight/diagonal multiplier × cell `Weight` (when weighting is enabled), independent of the A* heuristic.
+- `RangeResult` (`IDisposable`; result of `Pathfinder.GetReachable`, rents a `ReachableCell[]` from the pool — must be disposed) and `ReachableCell` (readonly struct: `Coordinate` + `Cost`). The reachability search is a budget-bounded uniform-cost (Dijkstra) flood fill in `Pathfinder_Reachability.cs`; per-step cost = straight/diagonal multiplier **+** cell `Weight` (added when weighting is enabled, matching the main A*'s additive `GetCellWeightMultiplier` term), independent of the A* heuristic. Weight must be added, not multiplied — `Cell.Weight` defaults to 0, so a multiplier would zero out every step cost and flood the whole board.
 
 ### Settings flow
 

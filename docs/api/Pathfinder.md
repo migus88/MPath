@@ -58,7 +58,7 @@ pathfinder.DisablePathCaching();
 
 `GetReachable` returns every cell an agent can reach from an origin without exceeding a movement budget — useful for tactics/strategy games that highlight where a unit can move. It is a uniform-cost (Dijkstra) flood fill that honours the same movement rules as `GetPath` (diagonal movement, corner-cutting, occupied cells and agent clearance).
 
-Per-step cost is `StraightMovementMultiplier` for cardinal moves and `DiagonalMovementMultiplier` for diagonal moves; when `IsCellWeightEnabled` is set, the step cost is multiplied by the destination cell's `Weight`. The origin is always included with cost `0`.
+Per-step cost is `StraightMovementMultiplier` for cardinal moves and `DiagonalMovementMultiplier` for diagonal moves; when `IsCellWeightEnabled` is set, the destination cell's `Weight` is added to the step cost. The origin is always included with cost `0`.
 
 ```csharp
 using var pathfinder = new Pathfinder(cells, 10, 10);

@@ -20,8 +20,8 @@ namespace Migs.MPath.Core
         /// <param name="budget">
         /// The maximum allowed path cost. Each straight step costs <see cref="IPathfinderSettings.StraightMovementMultiplier"/>
         /// and each diagonal step costs <see cref="IPathfinderSettings.DiagonalMovementMultiplier"/>; when
-        /// <see cref="IPathfinderSettings.IsCellWeightEnabled"/> is set, the step cost is multiplied by the destination
-        /// cell's <see cref="Cell.Weight"/>.
+        /// <see cref="IPathfinderSettings.IsCellWeightEnabled"/> is set, the destination cell's
+        /// <see cref="Cell.Weight"/> is added to the step cost.
         /// </param>
         /// <returns>
         /// A <see cref="RangeResult"/> listing every reachable cell with its cheapest path cost.
@@ -118,9 +118,11 @@ namespace Migs.MPath.Core
         }
 
         /// <summary>
-        /// Calculates the cost of moving from <paramref name="current"/> into <paramref name="neighbor"/>.
-        /// A straight or diagonal travel multiplier is multiplied by the destination cell's weight when
-        /// cell weighting is enabled.
+        /// Calculates the cost of moving from <paramref name="current"/> into <paramref name="neighbor"/>:
+        /// a straight or diagonal travel multiplier plus the destination cell's weight (when cell weighting
+        /// is enabled). The weight is added, mirroring how the main A* pathfinder folds in
+        /// <see cref="GetCellWeightMultiplier"/> — treating it as a multiplier would let a default
+        /// <see cref="Cell.Weight"/> of 0 zero out the step cost and flood the entire board.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private float GetReachableStepCost(Cell* current, Cell* neighbor)
@@ -129,7 +131,7 @@ namespace Migs.MPath.Core
                 current->Coordinate.X, current->Coordinate.Y,
                 neighbor->Coordinate.X, neighbor->Coordinate.Y);
 
-            return _settings.IsCellWeightEnabled ? travel * neighbor->Weight : travel;
+            return travel + GetCellWeightMultiplier(neighbor);
         }
     }
 }

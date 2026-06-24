@@ -187,12 +187,48 @@ namespace Migs.MPath.Tests
 
             using var result = pathfinder.GetReachable(agent, new Coordinate(5, 5), 2f);
 
-            // (6,5) costs 1 * 5 = 5 to enter (> budget), and (7,5) is only reachable through it within budget.
+            // Weight is additive: entering (6,5) costs travel(1) + weight(5) = 6 (> budget), and (7,5)
+            // is only reachable through it within budget.
             result.Contains(new Coordinate(6, 5)).Should().BeFalse();
             result.Contains(new Coordinate(7, 5)).Should().BeFalse();
-            // The opposite (unweighted) direction is still reachable.
+            // A normal neighbour still costs travel(1) + weight(1) = 2 and is reachable.
             result.TryGetCost(new Coordinate(4, 5), out var westCost).Should().BeTrue();
-            westCost.Should().BeApproximately(1f, 0.0001f);
+            westCost.Should().BeApproximately(2f, 0.0001f);
+        }
+
+        [Test]
+        public void GetReachable_WithDefaultZeroWeightAndWeightingEnabled_StaysWithinBudget()
+        {
+            // Regression: Cell.Weight defaults to 0 and IsCellWeightEnabled defaults to true.
+            // A multiplicative weight model would make every step cost travel * 0 = 0, so the budget
+            // would never bite and the flood fill would return the entire walkable board.
+            var cells = new Cell[GridSize * GridSize];
+            for (var x = 0; x < GridSize; x++)
+            {
+                for (var y = 0; y < GridSize; y++)
+                {
+                    cells[x * GridSize + y] = new Cell
+                    {
+                        Coordinate = new Coordinate(x, y),
+                        IsWalkable = true,
+                        IsOccupied = false
+                        // Weight intentionally left at its default of 0.
+                    };
+                }
+            }
+
+            var settings = new PathfinderSettings { IsDiagonalMovementEnabled = false };
+            settings.IsCellWeightEnabled.Should().BeTrue(); // guard the default this test depends on
+
+            using var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
+            var agent = new Agent { Size = 1 };
+
+            using var result = pathfinder.GetReachable(agent, new Coordinate(5, 5), 2f);
+
+            // Step cost is travel(1) + weight(0) = 1, so budget 2 yields the Manhattan diamond (13 cells),
+            // NOT the whole 100-cell board.
+            result.Length.Should().Be(13);
+            result.Length.Should().BeLessThan(GridSize * GridSize);
         }
 
         [Test]
@@ -260,12 +296,12 @@ namespace Migs.MPath.Tests
             var agent = new Agent { Size = 1 };
             var origin = new Coordinate(5, 5);
 
-            using (var first = pathfinder.GetReachable(agent, origin, 1f))
+            using (var first = pathfinder.GetReachable(agent, origin, 3f))
             {
                 first.Length.Should().BeGreaterThan(1);
             }
 
-            using var second = pathfinder.GetReachable(agent, origin, 1f);
+            using var second = pathfinder.GetReachable(agent, origin, 3f);
             second.Length.Should().BeGreaterThan(1);
             second.Contains(origin).Should().BeTrue();
         }

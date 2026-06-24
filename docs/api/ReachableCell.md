@@ -19,5 +19,5 @@ A readonly value type representing a single cell reachable within a movement bud
 
 ## Remarks
 
-- The cost is accumulated from per-step movement costs: `StraightMovementMultiplier` for cardinal moves and `DiagonalMovementMultiplier` for diagonal moves, multiplied by the destination cell's `Weight` when `IsCellWeightEnabled` is set.
+- The cost is accumulated from per-step movement costs: `StraightMovementMultiplier` for cardinal moves and `DiagonalMovementMultiplier` for diagonal moves, plus the destination cell's `Weight` (added) when `IsCellWeightEnabled` is set.
 - This is a `readonly struct`; enumerate it via [RangeResult.Cells](RangeResult.md) or index it with `RangeResult.Get(int)`.

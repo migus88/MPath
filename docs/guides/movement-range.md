@@ -17,7 +17,7 @@ Each step's cost is:
 - `StraightMovementMultiplier` for a cardinal (horizontal/vertical) move
 - `DiagonalMovementMultiplier` for a diagonal move
 
-When `IsCellWeightEnabled` is set, the step cost is multiplied by the destination cell's `Weight` (so a cell with `Weight = 2` is twice as expensive to enter). The origin cell is always included with a cost of `0`.
+When `IsCellWeightEnabled` is set, the destination cell's `Weight` is **added** to the step cost (so a cell with `Weight = 2` costs an extra 2 to enter, on top of the travel cost). Weight is added rather than multiplied — consistent with the main pathfinder, and so that the default `Weight` of 0 leaves the step cost equal to the travel cost instead of zeroing it out. The origin cell is always included with a cost of `0`.
 
 A cell is reachable when the cheapest accumulated cost to it is **less than or equal to** the budget.
 
