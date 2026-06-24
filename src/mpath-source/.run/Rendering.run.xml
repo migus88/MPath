@@ -14,7 +14,7 @@
     <option name="PROJECT_KIND" value="DotNetCore" />
     <option name="PROJECT_TFM" value="net7.0" />
     <method v="2">
-      <option name="Build" default="false" projectName="Atomic.Pathfinding.Benchmarks" projectPath="$PROJECT_DIR$/Atomic.Pathfinding.Benchmarks/Atomic.Pathfinding.Benchmarks.csproj" />
+      <option name="Build" />
     </method>
   </configuration>
 </component>

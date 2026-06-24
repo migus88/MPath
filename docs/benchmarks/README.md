@@ -61,17 +61,32 @@ Allocated : Allocated memory per single operation (managed only, inclusive, 1KB 
 
 ### .NET Benchmarks
 
-To run the benchmarks on your own machine:
+The benchmark project is a small CLI (built with [Spectre.Console](https://spectreconsole.net/)).
+Run it from the repository root and pass a command; add `--help` to see everything available.
 
-1. Clone the repository
-2. Navigate to the benchmark project folder:
-   ```
-   cd src/mpath-source/Migs.MPath.Benchmarks
-   ```
-3. Run the benchmarks:
-   ```
-   dotnet run -c Release
-   ```
+```bash
+# List all commands
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- --help
+
+# Maze comparison vs. other A* libraries (default suite)
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark
+
+# Other suites
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark smoothing
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark internal
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark reachability
+
+# Render result images / print path stats
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- render
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- info smoothing
+```
+
+### Movement-Range (Reachability)
+
+The `reachability` suite measures `Pathfinder.GetReachable` — the bounded Dijkstra flood fill that returns
+every cell within a movement budget. Because the work scales with the size of the reachable set, the suite
+sweeps a small, medium and large budget over the same maze. Allocation stays at a few dozen bytes per query
+thanks to the pooled result buffer.
 
 ### Unity Benchmarks
 

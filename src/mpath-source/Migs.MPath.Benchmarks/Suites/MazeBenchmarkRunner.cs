@@ -1,15 +1,22 @@
 using BenchmarkDotNet.Attributes;
-using Migs.MPath.Benchmarks.MazeBenchmarks;
+using Migs.MPath.Benchmarks.Common;
+using Migs.MPath.Benchmarks.Competitors;
+using Migs.MPath.Core.Data;
 
-namespace Migs.MPath.Benchmarks;
+namespace Migs.MPath.Benchmarks.Suites;
 
+/// <summary>
+/// Head-to-head maze pathfinding benchmark: MPath against other A* libraries over the same maze and
+/// the canonical <see cref="BenchmarkScenario"/> start/destination. Note that LinqToAStar is orders of
+/// magnitude slower than the rest, so a full run takes a while.
+/// </summary>
 [MemoryDiagnoser(false)]
 public class MazeBenchmarkRunner
 {
-    private readonly (int x, int y) _start = (10, 10);
-    private readonly (int x, int y) _destination = (502, 374);
-        
-    private static readonly string AtomicRunner = nameof(MPathMazeBenchmarkRunner);
+    private readonly Coordinate _start = BenchmarkScenario.Start;
+    private readonly Coordinate _destination = BenchmarkScenario.Destination;
+
+    private static readonly string MPathRunner = nameof(MPathMazeBenchmarkRunner);
     private static readonly string RoyTRunner = nameof(RoyTAStarMazeBenchmarkRunner);
     private static readonly string AStarLiteRunner = nameof(AStarLiteBenchmarkRunner);
     private static readonly string LinqToAStarRunner = nameof(LinqToAStarMazeBenchmarkRunner);
@@ -17,12 +24,12 @@ public class MazeBenchmarkRunner
     private readonly Dictionary<string, IMazeBenchmarkRunner> _benchmarkRunners =
         new()
         {
-            [AtomicRunner] = new MPathMazeBenchmarkRunner(),
+            [MPathRunner] = new MPathMazeBenchmarkRunner(),
             [RoyTRunner] = new RoyTAStarMazeBenchmarkRunner(),
             [AStarLiteRunner] = new AStarLiteBenchmarkRunner(),
             [LinqToAStarRunner] = new LinqToAStarMazeBenchmarkRunner(),
         };
-        
+
     public MazeBenchmarkRunner()
     {
         foreach (var benchmarkRunner in _benchmarkRunners.Values)
@@ -39,10 +46,8 @@ public class MazeBenchmarkRunner
         }
     }
 
-    [Benchmark] public void MPath() => _benchmarkRunners[AtomicRunner].FindPath(_start, _destination);
+    [Benchmark] public void MPath() => _benchmarkRunners[MPathRunner].FindPath(_start, _destination);
     [Benchmark] public void RoyTAStar() => _benchmarkRunners[RoyTRunner].FindPath(_start, _destination);
     [Benchmark] public void AStarLite() => _benchmarkRunners[AStarLiteRunner].FindPath(_start, _destination);
-    
-    // This one is so slow that it's not included in the benchmark
     [Benchmark] public void LinqToAStar() => _benchmarkRunners[LinqToAStarRunner].FindPath(_start, _destination);
 }
