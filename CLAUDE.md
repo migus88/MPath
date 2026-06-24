@@ -118,3 +118,9 @@ Opt-in via `EnablePathCaching()`. `GetPath` consults the cache before searching 
 - The library uses `unsafe`/pointers deliberately for speed; `AllowUnsafeBlocks` is on in Core, Tests, and Tools. Keep `Source/` free of `UnityEngine` references.
 - Hot-path methods are annotated `[MethodImpl(MethodImplOptions.AggressiveInlining)]` — follow suit for new per-cell/per-neighbor helpers.
 - Detailed end-user docs live in `docs/` (`docs/api/` mirrors public types, `docs/guides/` covers usage); update them when changing public API surface.
+- `docs/llms.md` is the **customer-facing AI-agent / LLM reference** — a single, machine-first page for agents that *use* the library (this `CLAUDE.md` is the counterpart for agents *editing* this repo). It mirrors the public API surface, capabilities, usage recipes, and the disposal/thread-safety/lifecycle rules so an agent can write correct MPath code without reading the whole docs tree. Keep it **purely consumer-facing** — no repo-layout or maintenance content (that all lives here). It is **canonical and must be kept in sync**: in the **same change** that alters a public type, method, constructor, property, enum value, setting, default, cost formula, or lifecycle/disposal rule, update `docs/llms.md` *and* the matching `docs/api/` page. Specifically:
+  - new/renamed/removed type → update the **type map** (one row, linking to `docs/api/`) and/or the `Pathfinder` method table; do **not** add a full per-member dump — exhaustive signatures stay in `docs/api/` so this file stays lean and growth stays capped at ~one row per type;
+  - changed default / cost formula / lifecycle rule → update the **Settings reference** and/or **Critical rules & gotchas**;
+  - new capability → add a recipe under **Capabilities & recipes**.
+
+  Keep signatures copy-paste-correct — agents emit them verbatim; verify against `Source/`, not memory.

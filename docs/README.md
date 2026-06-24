@@ -14,6 +14,7 @@ MPath provides a robust implementation of the A* pathfinding algorithm with seve
 
 ## Documentation Sections
 
+- [AI Agent & LLM Reference](llms.md) - Single-file, machine-first API reference for AI coding agents
 - [Getting Started](guides/getting-started.md) - Basic setup and usage
 - [Core Concepts](guides/core-concepts.md) - Understanding the key components
 - [Grid Setup Guide](guides/grid-setup.md) - Methods for creating and managing grids

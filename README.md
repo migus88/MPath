@@ -211,6 +211,7 @@ MPath comes with comprehensive documentation:
 - [Getting Started Guide](docs/README.md) - Overview and basic usage
 - [API Reference](docs/api/README.md) - Detailed class and interface documentation
 - [Integration Guides](docs/guides/) - Specific guides for Unity and .NET projects
+- [AI Agent & LLM Reference](docs/llms.md) - A single, machine-first page so AI coding agents can use MPath correctly without reading the whole docs tree
 
 The API reference provides detailed information about all public classes, interfaces, and methods, with examples for each component.
 
