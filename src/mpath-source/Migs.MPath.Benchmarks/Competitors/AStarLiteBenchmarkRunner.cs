@@ -5,7 +5,7 @@ using AStar;
 using AStar.Options;
 using Position = AStar.Position;
 
-namespace Migs.MPath.Benchmarks.MazeBenchmarks;
+namespace Migs.MPath.Benchmarks.Competitors;
 
 public class AStarLiteBenchmarkRunner : BaseMazeBenchmarkRunner
 {

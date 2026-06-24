@@ -47,16 +47,18 @@ CI (`.github/workflows/run-tests.yml`) runs restore → build → test on PRs to
 
 ### Benchmarks
 
-The Benchmarks project is a console app (BenchmarkDotNet) driven by a **required first argument**. Build Release and run the produced executable, or:
+The Benchmarks project is a BenchmarkDotNet console app with a **Spectre.Console.Cli** front end (commands live in `Commands/`, dispatched from a thin `Program.cs`). Running with no command — or `--help` — prints usage instead of throwing.
 
 ```bash
-dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark            # full maze comparison vs other A* libs
-dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark smoothing  # path-smoothing benchmark
-dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark internal   # internal micro-benchmarks
-dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- debug                # single run, for profiling/debugging
-dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- render               # render result images (SkiaSharp)
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark               # maze comparison vs other A* libs (default)
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark smoothing      # path-smoothing benchmark
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark internal       # internal micro-benchmarks
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark reachability    # GetReachable movement-range flood fill
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- render                    # render result images (SkiaSharp)
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- info smoothing            # print smoothed path lengths
 ```
-Running with no argument throws. `Migs.MPath.Tools` (uses SkiaSharp) provides maze loading/rendering used by tests and benchmarks.
+
+Project layout: `Suites/` holds the BenchmarkDotNet `[Benchmark]` classes, `Competitors/` holds the rival-library adapters (`IMazeBenchmarkRunner`) compared in the maze suite, `Commands/` holds the CLI commands, and `Common/` holds the shared `BenchmarkAgent` and `BenchmarkScenario` (maze path + canonical start/destination, all resolved against the assembly base directory so commands work from any working directory). `Migs.MPath.Tools` (uses SkiaSharp) provides the maze loading/rendering used by tests and benchmarks.
 
 ## Release pipeline
 

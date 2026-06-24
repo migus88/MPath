@@ -1,10 +1,11 @@
 using System.Reflection;
+using Migs.MPath.Benchmarks.Common;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
 using Migs.MPath.Tools;
 
-namespace Migs.MPath.Benchmarks.MazeBenchmarks;
+namespace Migs.MPath.Benchmarks.Competitors;
 
 public class MPathMazeBenchmarkRunner : BaseMazeBenchmarkRunner
 {
@@ -16,7 +17,7 @@ public class MPathMazeBenchmarkRunner : BaseMazeBenchmarkRunner
     public override void Init(Maze maze)
     {
         base.Init(maze);
-        _agent = new Agent();
+        _agent = new BenchmarkAgent();
 
         _pathfinder = new Pathfinder(_maze.Cells);
     }

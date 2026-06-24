@@ -5,7 +5,7 @@ using Migs.MPath.Tools;
 using Point = System.Drawing.Point;
 using Rectangle = System.Drawing.Rectangle;
 
-namespace Migs.MPath.Benchmarks.MazeBenchmarks;
+namespace Migs.MPath.Benchmarks.Competitors;
 
 public class LinqToAStarMazeBenchmarkRunner : BaseMazeBenchmarkRunner
 {

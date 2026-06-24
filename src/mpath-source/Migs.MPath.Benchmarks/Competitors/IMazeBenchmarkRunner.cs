@@ -1,6 +1,6 @@
 using Migs.MPath.Tools;
 
-namespace Migs.MPath.Benchmarks.MazeBenchmarks;
+namespace Migs.MPath.Benchmarks.Competitors;
 
 public interface IMazeBenchmarkRunner
 {

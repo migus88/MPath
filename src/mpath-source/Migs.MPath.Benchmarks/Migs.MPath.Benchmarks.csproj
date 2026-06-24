@@ -6,6 +6,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>disable</Nullable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <!-- Spectre.Console pulls Microsoft.Bcl.TimeProvider, which only warns (harmlessly) on net7. -->
+        <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
     </PropertyGroup>
 
     <ItemGroup>
@@ -13,12 +15,7 @@
       <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
       <PackageReference Include="linq-to-astar" Version="1.2.1" />
       <PackageReference Include="RoyT.AStar" Version="3.0.2" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Content Update="cavern.gif">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
+      <PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
     </ItemGroup>
 
     <ItemGroup>
@@ -30,10 +27,6 @@
       <None Update="Mazes\cavern.png">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Mazes\" />
     </ItemGroup>
 
 </Project>

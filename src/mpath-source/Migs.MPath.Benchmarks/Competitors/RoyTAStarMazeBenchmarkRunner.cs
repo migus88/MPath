@@ -6,7 +6,7 @@ using Roy_T.AStar.Paths;
 using Roy_T.AStar.Primitives;
 using Path = Roy_T.AStar.Paths.Path;
 
-namespace Migs.MPath.Benchmarks.MazeBenchmarks;
+namespace Migs.MPath.Benchmarks.Competitors;
 
 public class RoyTAStarMazeBenchmarkRunner : BaseMazeBenchmarkRunner
 {
