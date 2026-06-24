@@ -1,3 +1,7 @@
 .DS_Store
 [Bb]uilds/*
 *.log
+
+# Local secrets for `make publish-*`; keep the .example template tracked.
+.env
+!.env.example
