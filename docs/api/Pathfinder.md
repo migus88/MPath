@@ -34,6 +34,8 @@ A high-performance A* pathfinding implementation for grid-based environments.
 - Uses unsafe code and array pooling internally to minimize garbage collection.
 - The pathfinding algorithm is optimized for speed and memory efficiency.
 - For larger grids, reuse the same `Pathfinder` instance for multiple path calculations.
+- `GetPath` and `BeginStepwiseSearch` throw `ArgumentException` when `from` or `to` is outside the grid.
+- A destination the agent cannot enter (not walkable, occupied while `IsCalculatingOccupiedCells` is enabled, or without clearance for the agent's size) fails immediately without searching: `GetPath` returns a failure result and a `StepwiseSearch` starts complete in the `Failure` state. A query from a cell to itself always succeeds with an empty path.
 - Path caching is disabled by default but can be enabled for improved performance when the same paths are requested multiple times.
 
 ## Examples

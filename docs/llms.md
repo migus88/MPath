@@ -125,7 +125,7 @@ cells with your own objects (e.g. Unity `MonoBehaviour`s) via `Cell CellData { g
 
 | Signature | Returns | Notes |
 |-----------|---------|-------|
-| `GetPath(IAgent agent, Coordinate from, Coordinate to)` | `PathResult` | Core A* query. Throws `ArgumentNullException` if `agent` is null, `ArgumentException` if `to` is outside the grid. Returns a **failure** result (not an exception) when no path exists. |
+| `GetPath(IAgent agent, Coordinate from, Coordinate to)` | `PathResult` | Core A* query. Throws `ArgumentNullException` if `agent` is null, `ArgumentException` if `from` or `to` is outside the grid. Returns a **failure** result (not an exception) when no path exists; a destination the agent can't enter (unwalkable, occupied while `IsCalculatingOccupiedCells`, or no clearance for its size) fails immediately without searching, unless `from == to`. |
 | `GetReachable(IAgent agent, Coordinate from, float budget)` | `RangeResult` | Every cell reachable for total cost `<= budget` ("where can this unit move?"). Uniform-cost flood fill. |
 | `HasLineOfSight(Coordinate from, Coordinate to, LineOfSightMode mode = BlockedByUnwalkableCells)` | `bool` | Single-cell Bresenham ray. Endpoints not tested; agent size ignored. |
 | `static GetManhattanDistance(Coordinate from, Coordinate to)` | `int` | `|dx| + |dy|`. Pure metric, allocation-free. |
@@ -272,7 +272,7 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
 3. **Not thread-safe.** No concurrent queries on one instance, no sharing across threads. One per thread.
 4. **`Path` excludes the origin.** It is the sequence of steps *after* `from`. Don't expect `from` first.
 5. **No path → failure result, not an exception.** Check `IsSuccess`. Only bad arguments throw
-   (`agent == null`; `to` outside the grid).
+   (`agent == null`; `from` or `to` outside the grid).
 6. **Grid edits aren't seen automatically by the cache.** The pathfinder re-reads your grid each query,
    but cached results are returned verbatim — call `InvalidateCache()` after changing the grid if caching
    is on.

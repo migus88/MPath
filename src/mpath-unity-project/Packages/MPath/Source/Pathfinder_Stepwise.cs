@@ -131,7 +131,10 @@ namespace Migs.MPath.Core
                     pathfinder._openSet.Enqueue(start, start->ScoreH);
                     MarkDiscovered(start);
 
-                    _state = SearchState.InProgress;
+                    // Like GetPath, a destination the agent cannot enter fails before the first expansion.
+                    _state = pathfinder.IsDestinationEnterable(_cells, from, to, _agentSize)
+                        ? SearchState.InProgress
+                        : SearchState.Failure;
                     _current = from;
                     _lastStep = BuildStep(Array.Empty<Coordinate>());
                 }
@@ -148,7 +151,8 @@ namespace Migs.MPath.Core
             public SearchState State => _state;
 
             /// <summary>
-            /// Gets a value indicating whether the search has finished (succeeded or failed).
+            /// Gets a value indicating whether the search has finished (succeeded or failed). A search whose
+            /// destination the agent cannot enter is complete (failed) before the first tick.
             /// </summary>
             public bool IsComplete => _state != SearchState.InProgress;
 
