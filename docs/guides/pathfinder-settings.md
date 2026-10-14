@@ -93,7 +93,7 @@ settings.CornerBlocking = CornerBlocking.WallAndWall | CornerBlocking.WallAndOpe
 
 Flags: `WallAndWall`, `WallAndOccupied`, `OccupiedAndOccupied`, `WallAndOpen`, `OccupiedAndOpen`. Presets: `None`, `BetweenBlockedCells` (default), `BetweenWalls`, `AnyWall`, `All`.
 
-For agents with `Size > 1`, a flanking cell is the agent's whole footprint at that position: a wall if any of its cells is a wall, else occupied if any is occupied. The rule applies to `GetPath`, `GetReachable` and the stepwise search; it is read once at construction, so it costs nothing per query.
+For agents with `Size > 1`, a flanking cell is the agent's whole footprint at that position: a wall if any of its cells is a wall, else occupied if any is occupied. The rule applies to `GetPath`, `GetReachable`, the stepwise search and `StringPulling` smoothing; it is read once at construction, so it costs nothing per query.
 
 #### PathSmoothingMethod
 

@@ -259,7 +259,7 @@ var settings = new PathfinderSettings
 };
 ```
 
-Applies to `GetPath`, `GetReachable` and stepwise search. For `Size > 1` a flank is the agent's footprint
+Applies to `GetPath`, `GetReachable`, stepwise search and `StringPulling` smoothing. For `Size > 1` a flank is the agent's footprint
 (wall if any cell is a wall, else occupied if any is occupied). `HasLineOfSight` ignores it.
 
 ### Multi-cell agents & terrain cost
