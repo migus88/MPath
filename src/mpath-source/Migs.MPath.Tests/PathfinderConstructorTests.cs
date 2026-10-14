@@ -23,7 +23,6 @@ namespace Migs.MPath.Tests
             {
                 cells[i] = new Cell
                 {
-                    Coordinate = new Coordinate(i / TestHeight, i % TestHeight),
                     IsWalkable = true
                 };
             }
@@ -79,7 +78,6 @@ namespace Migs.MPath.Tests
             {
                 var cell = new Cell
                 {
-                    Coordinate = new Coordinate(i / TestHeight, i % TestHeight),
                     IsWalkable = true
                 };
                 
@@ -117,7 +115,6 @@ namespace Migs.MPath.Tests
                 {
                     cellsMatrix[x, y] = new Cell
                     {
-                        Coordinate = new Coordinate(x, y),
                         IsWalkable = true
                     };
                 }
@@ -152,7 +149,6 @@ namespace Migs.MPath.Tests
                 {
                     var cell = new Cell
                     {
-                        Coordinate = new Coordinate(x, y),
                         IsWalkable = true
                     };
                     
@@ -189,7 +185,6 @@ namespace Migs.MPath.Tests
             {
                 cells[i] = new Cell
                 {
-                    Coordinate = new Coordinate(i / TestHeight, i % TestHeight),
                     IsWalkable = true
                 };
             }

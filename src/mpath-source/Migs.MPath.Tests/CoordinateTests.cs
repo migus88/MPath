@@ -142,13 +142,6 @@ namespace Migs.MPath.Tests
         }
         
         [Test]
-        public void CellLayout_ShouldBeSixteenBytes()
-        {
-            // Act & Assert
-            Unsafe.SizeOf<Cell>().Should().Be(16);
-        }
-        
-        [Test]
         public void ToString_ShouldReturnFormattedString()
         {
             // Arrange

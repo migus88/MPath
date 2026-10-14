@@ -20,14 +20,13 @@ namespace Migs.Mpath.Examples
             Battlefield.Instance.CellClicked += OnCellClicked;
         }
 
-        private void OnCellClicked(Cell cell)
+        private void OnCellClicked(Coordinate destination)
         {
             if (_isMoving)
             {
                 return;
             }
             
-            var destination = cell.Coordinate;
             var result = Battlefield.Instance.Pathfinder.GetPath(Coordinate, destination, Size);
             
             if(result.IsSuccess)
@@ -54,7 +53,7 @@ namespace Migs.Mpath.Examples
                 }
 
                 transform.position = waypoint;
-                Coordinate = cell.CellData.Coordinate;
+                Coordinate = coordinate;
             }
 
             _isMoving = false;

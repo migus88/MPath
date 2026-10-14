@@ -8,6 +8,7 @@ namespace Migs.Mpath.Examples
     public class FieldCell : MonoBehaviour, ICellHolder
     {
         public Cell CellData { get; private set; }
+        public Vector2Int Position => _position;
         
         public event Action<FieldCell> CellClicked;
 
@@ -27,7 +28,6 @@ namespace Migs.Mpath.Examples
         {
             CellData = new Cell
             {
-                Coordinate = new Coordinate(_position.x, _position.y),
                 IsWalkable = _isWalkable,
                 Weight = Mathf.RoundToInt(_weight * CostScale)
             };

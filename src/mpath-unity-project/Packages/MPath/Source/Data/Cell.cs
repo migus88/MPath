@@ -2,16 +2,13 @@
 namespace Migs.MPath.Core.Data
 {
     /// <summary>
-    /// Represents a single cell in the pathfinding grid: its coordinate and the data a search reads (walkability,
-    /// occupancy and weight). Searches only read cells; their state lives in the pathfinder.
+    /// Represents a single cell in the pathfinding grid: the data a search reads (walkability, occupancy and
+    /// weight), 8 bytes. A cell does not carry its position: its slot in the grid is its position (<c>[x, y]</c> in
+    /// a matrix, the index under <see cref="IPathfinderSettings.CellLayout"/> in an array). Searches only read cells;
+    /// their state lives in the pathfinder.
     /// </summary>
     public struct Cell
     {
-        /// <summary>
-        /// Gets or sets the coordinate position of this cell in the grid.
-        /// </summary>
-        public Coordinate Coordinate { get; set; }
-        
         /// <summary>
         /// Gets or sets a value indicating whether an agent can traverse this cell.
         /// </summary>

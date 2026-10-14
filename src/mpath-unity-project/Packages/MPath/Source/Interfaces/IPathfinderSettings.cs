@@ -54,20 +54,20 @@ namespace Migs.MPath.Core.Interfaces
         PathSmoothingMethod PathSmoothingMethod { get; }
 
         /// <summary>
-        /// When a pathfinder built over a <see cref="Cell"/>[,] matrix, over cell holders or over an unordered
-        /// <see cref="Cell"/>[] array copies the caller's grid into its internal snapshot: before every query
-        /// (<see cref="Data.GridSnapshotMode.PerQuery"/>), or once and then only after <see cref="Pathfinder.Refresh"/>
-        /// (<see cref="Data.GridSnapshotMode.Manual"/>). Has no effect on a row- or column-major <see cref="Cell"/>[].
+        /// When a pathfinder built over a <see cref="Cell"/>[,] matrix or over cell holders copies the caller's grid
+        /// into its internal snapshot: before every query (<see cref="Data.GridSnapshotMode.PerQuery"/>), or once and
+        /// then only after <see cref="Pathfinder.Refresh"/> (<see cref="Data.GridSnapshotMode.Manual"/>). Has no
+        /// effect on a <see cref="Cell"/>[], which is searched in place.
         /// <see cref="Data.GridSnapshotMode.PerQuery"/> is the usual default.
         /// </summary>
         GridSnapshotMode GridSnapshotMode { get; }
 
         /// <summary>
-        /// Where a pathfinder built over a <see cref="Cell"/>[] array finds the cell at (X, Y): column-major
-        /// (<c>X * fieldHeight + Y</c>), row-major (<c>Y * fieldWidth + X</c>), unordered (each cell's coordinate
-        /// says where it is), or detected at the first query (<see cref="Data.CellLayout.Auto"/>). Queries never
-        /// reorder the array. Has no effect on the <see cref="Cell"/>[,] and cell holder constructors.
-        /// <see cref="Data.CellLayout.Auto"/> is the usual default.
+        /// Which index of a <see cref="Cell"/>[] or <see cref="ICellHolder"/>[] array holds the cell at (X, Y):
+        /// column-major (<c>X * fieldHeight + Y</c>) or row-major (<c>Y * fieldWidth + X</c>). Queries never reorder
+        /// the array. Has no effect on the <see cref="Cell"/>[,] and <see cref="ICellHolder"/>[,] constructors.
+        /// <see cref="Data.CellLayout.ColumnMajor"/> is the usual default; any value but the two is rejected with an
+        /// <see cref="System.ArgumentOutOfRangeException"/> when the pathfinder is built.
         /// </summary>
         CellLayout CellLayout { get; }
 

@@ -120,26 +120,32 @@ namespace Migs.MPath.Tests
                 SetWall(cells, wall.X, wall.Y);
             }
 
-            var random = new Random(7);
-            var shuffled = cells.OrderBy(_ => random.Next()).ToArray();
+            var rowMajor = new Cell[Width * Height];
             var matrix = new Cell[Width, Height];
-            foreach (var cell in cells)
+            for (var x = 0; x < Width; x++)
             {
-                matrix[cell.Coordinate.X, cell.Coordinate.Y] = cell;
+                for (var y = 0; y < Height; y++)
+                {
+                    rowMajor[y * Width + x] = cells[x * Height + y];
+                    matrix[x, y] = cells[x * Height + y];
+                }
             }
+
+            var rowMajorSettings = CreateSettings(tieBreaking, 1, 1);
+            rowMajorSettings.CellLayout = CellLayout.RowMajor;
 
             var from = new Coordinate(1, 3);
             var to = new Coordinate(12, 8);
             using var arrayPathfinder = new Pathfinder(cells, Width, Height, settings);
-            using var shuffledPathfinder = new Pathfinder(shuffled, Width, Height, settings);
+            using var rowMajorPathfinder = new Pathfinder(rowMajor, Width, Height, rowMajorSettings);
             using var matrixPathfinder = new Pathfinder(matrix, settings);
 
             using var expected = arrayPathfinder.GetPath(from, to);
-            using var shuffledPath = shuffledPathfinder.GetPath(from, to);
+            using var rowMajorPath = rowMajorPathfinder.GetPath(from, to);
             using var matrixPath = matrixPathfinder.GetPath(from, to);
 
             expected.IsSuccess.Should().BeTrue();
-            shuffledPath.Path.Should().Equal(expected.Path);
+            rowMajorPath.Path.Should().Equal(expected.Path);
             matrixPath.Path.Should().Equal(expected.Path);
         }
 
@@ -381,7 +387,7 @@ namespace Migs.MPath.Tests
             {
                 for (var y = 0; y < height; y++)
                 {
-                    cells[x * height + y] = new Cell { Coordinate = C(x, y), IsWalkable = true };
+                    cells[x * height + y] = new Cell { IsWalkable = true };
                 }
             }
 

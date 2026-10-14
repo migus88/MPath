@@ -32,14 +32,14 @@ namespace Migs.MPath.Tests.Caching
                 {
                     var cell = new Cell
                     {
-                        Coordinate = new Coordinate(x, y),
                         IsWalkable = true
                     };
                     _cells[y * FieldSize + x] = cell;
                 }
             }
             
-            _pathfinder = new Pathfinder(_cells, FieldSize, FieldSize);
+            _pathfinder = new Pathfinder(_cells, FieldSize, FieldSize,
+                new PathfinderSettings { CellLayout = CellLayout.RowMajor });
         }
         
         [TearDown]

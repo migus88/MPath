@@ -54,10 +54,9 @@ the grid size. Searches never write into your cells.
 
 The grid representation affects performance:
 
-1. **Flat Cell Array**: Fastest option when the array is row- or column-major: it is searched in place, so a query
-   never copies the grid (declare the order with [`CellLayout`](../api/CellLayout.md); `Auto` detects it once). An
-   unordered array is copied per query like a matrix.
-2. **Cell Matrix**: Copied into a snapshot per query (see `GridSnapshotMode` below)
+1. **Flat Cell Array**: Fastest option: it is searched in place, so a query never copies the grid (declare its order
+   with [`CellLayout`](../api/CellLayout.md): column-major by default, or row-major).
+2. **Cell Matrix**: Copied into a snapshot per query, in one block copy (see `GridSnapshotMode` below)
 3. **Cell Holder Array**: Additional overhead from interface calls
 4. **Cell Holder Matrix**: Most overhead but most convenient
 

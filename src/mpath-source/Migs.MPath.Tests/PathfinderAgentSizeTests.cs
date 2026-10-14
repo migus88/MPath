@@ -249,7 +249,6 @@ namespace Migs.MPath.Tests
                 {
                     cells[x, y] = new Cell
                     {
-                        Coordinate = new Coordinate(x, y),
                         IsWalkable = y != WallRow || x == NarrowGapX || x == WideGapX || x == WideGapX + 1
                     };
                 }

@@ -13,14 +13,12 @@ public class GridCell : MonoBehaviour, ICellHolder
     public Cell CellData { get; private set; }
     
     [SerializeField] private bool _isWalkable = true;
-    [SerializeField] private Vector2Int _position;
     [SerializeField, Range(0, 10)] private float _weight = 1.0f; // in straight steps
     
     private void Awake()
     {
         CellData = new Cell
         {
-            Coordinate = new Coordinate(_position.x, _position.y),
             IsWalkable = _isWalkable,
             Weight = Mathf.RoundToInt(_weight * 100) // costs are ints: 100 per straight step by default
         };
@@ -57,14 +55,15 @@ public class UnitAgent : MonoBehaviour
 
 // In your game controller
 [SerializeField] private ScriptablePathfinderSettings _settings;
-[SerializeField] private GridCell[] _gridCells;
+[SerializeField] private GridCell[] _gridCells; // column-major: the cell at (x, y) is _gridCells[x * height + y]
 [SerializeField] private Vector2Int _gridSize;
 
 private Pathfinder _pathfinder;
 
 private void Start()
 {
-    // Initialize the pathfinder with the grid cells
+    // Initialize the pathfinder with the grid cells. A holder's index is its position (CellLayout, column-major by
+    // default); a missing (null) holder is a wall.
     _pathfinder = new Pathfinder(_gridCells, _gridSize.x, _gridSize.y, _settings);
 }
 

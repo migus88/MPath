@@ -138,15 +138,15 @@ namespace Migs.MPath.Core
             while (_openSet.Count > 0)
             {
                 var current = _openSet.Dequeue();
-                var currentCell = cells + current;
                 var currentNode = nodes + current;
 
                 // In Dijkstra's algorithm the cost of a cell is final once it is dequeued.
                 currentNode->QueueIndex = PathNode.ClosedQueueIndex;
-                reachable[count++] = new ReachableCell(currentCell->Coordinate, currentNode->ScoreG,
+                GetPosition(current, out var x, out var y);
+                reachable[count++] = new ReachableCell(new Coordinate(x, y), currentNode->ScoreG,
                     currentNode->Depth, currentNode->DiagonalSteps);
 
-                PopulateNeighbors(cells, currentCell, agentSize, neighbors);
+                PopulateNeighbors(cells, x, y, agentSize, neighbors);
 
                 // Cells that cannot be entered within the budget (and the overflow headroom) are pruned.
                 var headroom = maxCost - currentNode->ScoreG;

@@ -108,7 +108,7 @@ namespace Migs.MPath.Tests
             {
                 for (var y = 0; y < Height; y++)
                 {
-                    cells[x * Height + y] = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true };
+                    cells[x * Height + y] = new Cell { IsWalkable = true };
                 }
             }
 

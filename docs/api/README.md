@@ -25,8 +25,8 @@ MPath uses a single codebase for both Unity and .NET:
 | [TieBreaking](TieBreaking.md) | Which route wins among equal-cost routes (fewer diagonals / fewer turns) |
 | [QueryOptions](QueryOptions.md) | Per-query overrides: occupancy rule and always-enterable cells |
 | [OccupancyRule](OccupancyRule.md) | Whether occupied cells block in one query (`UseSettings` / `Block` / `Ignore`) |
-| [GridSnapshotMode](GridSnapshotMode.md) | When a `Cell[,]`/holder/unordered `Cell[]` pathfinder copies the grid (`PerQuery` / `Manual`) |
-| [CellLayout](CellLayout.md) | Where a `Cell[]` pathfinder finds cell (X, Y) (`Auto` / `ColumnMajor` / `RowMajor` / `Unordered`) |
+| [GridSnapshotMode](GridSnapshotMode.md) | When a `Cell[,]`/holder pathfinder copies the grid (`PerQuery` / `Manual`) |
+| [CellLayout](CellLayout.md) | Which index of a `Cell[]`/`ICellHolder[]` holds cell (X, Y) (`ColumnMajor` / `RowMajor`) |
 | [LineOfSightMode](LineOfSightMode.md) | Controls whether unwalkable cells block `HasLineOfSight` |
 | [ICellHolder](ICellHolder.md) | Interface for objects that hold cell data |
 | [IPathfinderSettings](IPathfinderSettings.md) | Interface for configuring pathfinding behavior |

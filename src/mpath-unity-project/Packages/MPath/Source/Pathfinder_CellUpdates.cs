@@ -8,34 +8,22 @@ namespace Migs.MPath.Core
     public sealed unsafe partial class Pathfinder
     {
         /// <summary>
-        /// Returns the index of the cell at <paramref name="coordinate"/>. In <see cref="Cell"/>[] mode it is the
-        /// cell's index in the caller's array, by <see cref="IPathfinderSettings.CellLayout"/>:
-        /// <c>X * fieldHeight + Y</c> (column-major) or <c>Y * fieldWidth + X</c> (row-major), and for an unordered
-        /// array wherever the cell with that coordinate is. In the other modes it is the column-major index
-        /// <c>X * fieldHeight + Y</c> of the pathfinder's own snapshot.
+        /// Returns the index of the cell at <paramref name="coordinate"/>. For a <see cref="Cell"/>[] or
+        /// <see cref="ICellHolder"/>[] array it is the cell's index in the caller's array, by
+        /// <see cref="IPathfinderSettings.CellLayout"/>: <c>X * fieldHeight + Y</c> (column-major) or
+        /// <c>Y * fieldWidth + X</c> (row-major). For a matrix it is the column-major index
+        /// <c>X * fieldHeight + Y</c>. It is always the index <see cref="RangeResult.CopyCostsTo"/> writes the cell's
+        /// cost at.
         /// </summary>
-        /// <remarks>
-        /// Queries never reorder the caller's array, so <c>cells[GetIndex(c)]</c> stays valid. With
-        /// <see cref="CellLayout.Auto"/> the layout is detected at the first query; until then this reports the
-        /// column-major index, so declare the layout to use it before the first query on a row-major array. For an
-        /// unordered array it is O(1) after a query has copied the array and a linear search before.
-        /// </remarks>
+        /// <remarks>O(1). Queries never reorder the caller's array, so <c>cells[GetIndex(c)]</c> stays valid.</remarks>
         /// <param name="coordinate">A coordinate inside the grid.</param>
         /// <returns>The index of the cell at <paramref name="coordinate"/>.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="coordinate"/> is outside the grid.</exception>
-        /// <exception cref="InvalidOperationException">
-        /// Thrown when an unordered array holds no cell with that coordinate.
-        /// </exception>
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         public int GetIndex(Coordinate coordinate)
         {
             ThrowIfDisposed();
             ThrowIfOutsideGrid(coordinate);
-
-            if (_isArraySnapshotted)
-            {
-                return FindArrayIndex(coordinate);
-            }
 
             return GetLayoutIndex(coordinate.X, coordinate.Y);
         }
@@ -43,33 +31,39 @@ namespace Migs.MPath.Core
         /// <summary>
         /// Returns the current cell data at <paramref name="coordinate"/>, read from the grid the pathfinder was
         /// built from: the caller's <see cref="Cell"/>[] or <see cref="Cell"/>[,], or the matching
-        /// <see cref="ICellHolder.CellData"/>.
+        /// <see cref="ICellHolder.CellData"/> (a <c>null</c> holder reads as a <c>default</c>, non-walkable cell).
         /// </summary>
         /// <param name="coordinate">A coordinate inside the grid.</param>
         /// <returns>A copy of the cell.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="coordinate"/> is outside the grid.</exception>
-        /// <exception cref="InvalidOperationException">Thrown when the grid holds no cell with that coordinate.</exception>
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         public Cell GetCell(Coordinate coordinate)
         {
             ThrowIfDisposed();
             ThrowIfOutsideGrid(coordinate);
 
+            ICellHolder holder;
+
             switch (_initializationMode)
             {
                 case InitializationMode.CellsArray:
-                    return _sourceCells[FindArrayIndex(coordinate)];
+                    return _cells[GetLayoutIndex(coordinate.X, coordinate.Y)];
                 case InitializationMode.CellsMatrix:
-                    FindMatrixPosition(coordinate, out var x, out var y);
-                    return _cellsMatrix[x, y];
+                    return _cellsMatrix[coordinate.X, coordinate.Y];
+                case InitializationMode.CellHoldersMatrix:
+                    holder = _cellHoldersMatrix[coordinate.X, coordinate.Y];
+                    break;
                 default:
-                    return FindHolder(coordinate).CellData;
+                    holder = _cellHolders[GetLayoutIndex(coordinate.X, coordinate.Y)];
+                    break;
             }
+
+            return holder == null ? default : holder.CellData;
         }
 
         /// <summary>
         /// Replaces the walkability, occupancy and weight of the cell at <paramref name="coordinate"/> with those of
-        /// <paramref name="cell"/>. The cell keeps its coordinate: <c>cell.Coordinate</c> is ignored.
+        /// <paramref name="cell"/>.
         /// </summary>
         /// <param name="coordinate">A coordinate inside the grid.</param>
         /// <param name="cell">The new cell values. Its <see cref="Cell.Weight"/> must not be negative.</param>
@@ -91,9 +85,7 @@ namespace Migs.MPath.Core
         /// <param name="coordinate">A coordinate inside the grid.</param>
         /// <param name="isWalkable">The new walkability.</param>
         /// <remarks>
-        /// O(1) and allocation-free while the grid is in layout (see <see cref="GetIndex"/>), and for an unordered
-        /// <see cref="Cell"/>[] once a query has copied it; otherwise the cell is searched for once per call. The
-        /// caller's grid is never reordered. The change is written to the caller's
+        /// O(1) and allocation-free. The caller's grid is never reordered. The change is written to the caller's
         /// <see cref="Cell"/>[] or <see cref="Cell"/>[,], so the caller's grid and the pathfinder stay in sync, and
         /// the next query sees it. When the value changes in a way cached paths depend on, the path cache is
         /// cleared, as by <see cref="InvalidateCache"/>; setting the current value again does nothing. Not
@@ -102,7 +94,6 @@ namespace Migs.MPath.Core
         /// <see cref="InvalidateCache"/> when caching is enabled).
         /// </remarks>
         /// <exception cref="ArgumentException">Thrown when <paramref name="coordinate"/> is outside the grid.</exception>
-        /// <exception cref="InvalidOperationException">Thrown when the grid holds no cell with that coordinate.</exception>
         /// <exception cref="NotSupportedException">Thrown when the pathfinder was built from <see cref="ICellHolder"/>s.</exception>
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         public void SetWalkable(Coordinate coordinate, bool isWalkable)
@@ -147,8 +138,8 @@ namespace Migs.MPath.Core
         }
 
         /// <summary>
-        /// Writes the user fields to the source cell (and, in matrix mode and for an unordered array, to the snapshot the running or next
-        /// query reads), then clears the path cache when a field cached paths depend on changed. Occupancy and
+        /// Writes the user fields to the source cell (and, in matrix mode, to the snapshot the running or next query
+        /// reads), then clears the path cache when a field cached paths depend on changed. Occupancy and
         /// weight only matter to cached paths when the settings enable them, since cached queries always run under
         /// the settings' own rules.
         /// </summary>
@@ -160,7 +151,7 @@ namespace Migs.MPath.Core
 
             WriteUserFields(ref target, isWalkable, isOccupied, weight);
 
-            if (_initializationMode == InitializationMode.CellsMatrix || _isArraySnapshotted)
+            if (_initializationMode == InitializationMode.CellsMatrix)
             {
                 WriteUserFields(ref _cells[GetLayoutIndex(coordinate.X, coordinate.Y)], isWalkable, isOccupied, weight);
             }
@@ -200,114 +191,14 @@ namespace Migs.MPath.Core
             switch (_initializationMode)
             {
                 case InitializationMode.CellsArray:
-                    return ref _sourceCells[FindArrayIndex(coordinate)];
+                    return ref _cells[GetLayoutIndex(coordinate.X, coordinate.Y)];
                 case InitializationMode.CellsMatrix:
-                    FindMatrixPosition(coordinate, out var x, out var y);
-                    return ref _cellsMatrix[x, y];
+                    return ref _cellsMatrix[coordinate.X, coordinate.Y];
                 default:
                     throw new NotSupportedException(
                         "Cell holders are the source the pathfinder reads: update the holder instead " +
                         "(and call Refresh with GridSnapshotMode.Manual, and InvalidateCache when path caching is enabled).");
             }
-        }
-
-        /// <summary>
-        /// The index of <paramref name="coordinate"/> in the caller's <see cref="Cell"/>[]: its layout index when the
-        /// array is in layout, for an unordered array the index the last snapshot recorded, otherwise (or when that
-        /// cell has moved since) a linear search that leaves the order untouched.
-        /// </summary>
-        private int FindArrayIndex(Coordinate coordinate)
-        {
-            var index = GetLayoutIndex(coordinate.X, coordinate.Y);
-
-            if (_isArraySnapshotted)
-            {
-                index = _arraySourceIndexes[index];
-            }
-
-            if (_sourceCells[index].Coordinate == coordinate)
-            {
-                return index;
-            }
-
-            for (var i = 0; i < Size; i++)
-            {
-                if (_sourceCells[i].Coordinate == coordinate)
-                {
-                    return i;
-                }
-            }
-
-            throw MissingCell(coordinate);
-        }
-
-        /// <summary>
-        /// The position of <paramref name="coordinate"/> in the caller's <see cref="Cell"/>[,]: <c>[X, Y]</c> when
-        /// that element carries the coordinate, otherwise a linear search (queries place cells by their own
-        /// coordinate, not by their matrix position).
-        /// </summary>
-        private void FindMatrixPosition(Coordinate coordinate, out int x, out int y)
-        {
-            if (_cellsMatrix[coordinate.X, coordinate.Y].Coordinate == coordinate)
-            {
-                x = coordinate.X;
-                y = coordinate.Y;
-                return;
-            }
-
-            for (x = 0; x < Width; x++)
-            {
-                for (y = 0; y < Height; y++)
-                {
-                    if (_cellsMatrix[x, y].Coordinate == coordinate)
-                    {
-                        return;
-                    }
-                }
-            }
-
-            throw MissingCell(coordinate);
-        }
-
-        private ICellHolder FindHolder(Coordinate coordinate)
-        {
-            if (_initializationMode == InitializationMode.CellHoldersMatrix)
-            {
-                var holder = _cellHoldersMatrix[coordinate.X, coordinate.Y];
-
-                if (holder != null && holder.CellData.Coordinate == coordinate)
-                {
-                    return holder;
-                }
-
-                foreach (var candidate in _cellHoldersMatrix)
-                {
-                    if (candidate != null && candidate.CellData.Coordinate == coordinate)
-                    {
-                        return candidate;
-                    }
-                }
-
-                throw MissingCell(coordinate);
-            }
-
-            var index = GetLayoutIndex(coordinate.X, coordinate.Y);
-
-            if (index < _cellHolders.Length && _cellHolders[index] != null &&
-                _cellHolders[index].CellData.Coordinate == coordinate)
-            {
-                return _cellHolders[index];
-            }
-
-            foreach (var candidate in _cellHolders)
-            {
-                if (candidate != null && candidate.CellData.Coordinate == coordinate)
-                {
-                    return candidate;
-                }
-            }
-
-            throw MissingCell(coordinate);
         }
 
         private void ThrowIfOutsideGrid(Coordinate coordinate)
@@ -317,11 +208,6 @@ namespace Migs.MPath.Core
                 throw new ArgumentException($"Coordinate {coordinate} is outside the valid field range",
                     nameof(coordinate));
             }
-        }
-
-        private static InvalidOperationException MissingCell(Coordinate coordinate)
-        {
-            return new InvalidOperationException($"The grid holds no cell with coordinate {coordinate}.");
         }
     }
 }

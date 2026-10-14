@@ -15,6 +15,9 @@ Represents an object that contains cell data used in the pathfinding system.
 - Abstracts the ownership of cell data from grid representation
 - Allows game objects to provide cell information without directly managing the data
 - Used with `Pathfinder` constructors that accept `ICellHolder` arrays or matrices
+- A holder's slot is its cell's position: `[x, y]` in an `ICellHolder[,]`, the index under [`CellLayout`](CellLayout.md) in an `ICellHolder[]` (column-major by default). The cell itself carries no coordinate.
+- A `null` holder is a non-walkable cell.
+- An `ICellHolder[]` must hold at least `fieldWidth * fieldHeight` holders; a shorter one throws `ArgumentException`.
 
 ## Example
 
@@ -25,22 +28,20 @@ public class GridTile : ICellHolder
     private Cell _cell;
     public Cell CellData => _cell;
     
-    public GridTile(int x, int y, bool isWalkable, int weight = 0)
+    public GridTile(bool isWalkable, int weight = 0)
     {
         _cell = new Cell
         {
-            Coordinate = new Coordinate(x, y),
             IsWalkable = isWalkable,
             Weight = weight
         };
     }
 }
 
-// Unity MonoBehaviour implementation
+// Unity MonoBehaviour implementation: put it at holders[x, y] (or at its column-major index in an array)
 public class GridCell : MonoBehaviour, ICellHolder
 {
     [SerializeField] private bool _isWalkable = true;
-    [SerializeField] private Vector2Int _position;
     [SerializeField] private int _weight = 0;
     
     private Cell _cellData;
@@ -50,7 +51,6 @@ public class GridCell : MonoBehaviour, ICellHolder
     {
         _cellData = new Cell
         {
-            Coordinate = new Coordinate(_position.x, _position.y),
             IsWalkable = _isWalkable,
             Weight = _weight
         };

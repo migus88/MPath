@@ -104,7 +104,7 @@ namespace Migs.MPath.Tests
             var cells = new Cell[GridSize * GridSize];
             for (var i = 0; i < cells.Length; i++)
             {
-                cells[i] = new Cell { Coordinate = new Coordinate(i / GridSize, i % GridSize), IsWalkable = true };
+                cells[i] = new Cell { IsWalkable = true };
             }
 
             var pathfinder = new Pathfinder(cells, GridSize, GridSize);
@@ -138,7 +138,7 @@ namespace Migs.MPath.Tests
             {
                 for (var y = 0; y < GridSize; y++)
                 {
-                    matrix[x, y] = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true };
+                    matrix[x, y] = new Cell { IsWalkable = true };
                 }
             }
 

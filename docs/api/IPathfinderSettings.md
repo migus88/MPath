@@ -16,10 +16,10 @@ Defines the configuration settings for the MPath pathfinding system. This interf
 | `DiagonalStepCost` | `int` | The cost of a diagonal step, at least 1 (only used with diagonal movement). |
 | `PathSmoothingMethod` | `PathSmoothingMethod` | The method used to smooth the calculated path. |
 | `TieBreaking` | [`TieBreaking`](TieBreaking.md) | Which route to return when several cost the same. Usual default: `None`. |
-| `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | When a `Cell[,]`, cell-holder or unordered `Cell[]` pathfinder copies the grid: every query (`PerQuery`) or once and after `Refresh()` (`Manual`). Usual default: `PerQuery`. |
-| `CellLayout` | [`CellLayout`](CellLayout.md) | Where a `Cell[]` pathfinder finds cell (X, Y): column-major, row-major, unordered, or detected (`Auto`). Usual default: `Auto`. |
+| `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | When a `Cell[,]` or cell-holder pathfinder copies the grid: every query (`PerQuery`) or once and after `Refresh()` (`Manual`). Usual default: `PerQuery`. |
+| `CellLayout` | [`CellLayout`](CellLayout.md) | Which index of a `Cell[]` or `ICellHolder[]` holds cell (X, Y): `ColumnMajor` or `RowMajor`; any other value throws at construction. Usual default: `ColumnMajor`. |
 
-Every member is required: a custom implementation returns a value for each, with no default bodies to fall back on. `PathfinderSettings`'s defaults (`BetweenBlockedCells`, `PerQuery`, `Auto`, `None`) are a safe starting point.
+Every member is required: a custom implementation returns a value for each, with no default bodies to fall back on. `PathfinderSettings`'s defaults (`BetweenBlockedCells`, `PerQuery`, `ColumnMajor`, `None`) are a safe starting point.
 
 ## Implementations
 

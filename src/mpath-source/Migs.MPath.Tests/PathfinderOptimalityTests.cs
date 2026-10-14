@@ -218,8 +218,8 @@ namespace Migs.MPath.Tests
                 var random = new Random(seed);
                 var grid = ReferenceGrid.CreateRandom(random, scenario);
                 using var pathfinder = new Pathfinder(grid.ToCells(), GridWidth, GridHeight, grid.Settings);
-                using var shuffledPathfinder = new Pathfinder(grid.ToShuffledCells(random), GridWidth, GridHeight,
-                    grid.Settings);
+                using var rowMajorPathfinder = new Pathfinder(grid.ToRowMajorCells(), GridWidth, GridHeight,
+                    grid.RowMajorSettings());
 
                 for (var query = 0; query < QueriesPerGrid; query++)
                 {
@@ -237,9 +237,9 @@ namespace Migs.MPath.Tests
                         : grid.GetFewestDiagonalLabels(from);
 
                     using var path = pathfinder.GetPath(from, to, agentSize);
-                    using var shuffledPath = shuffledPathfinder.GetPath(from, to, agentSize);
+                    using var rowMajorPath = rowMajorPathfinder.GetPath(from, to, agentSize);
 
-                    shuffledPath.Path.Should().Equal(path.Path, $"the route depends on the grid only ({context})");
+                    rowMajorPath.Path.Should().Equal(path.Path, $"the route depends on the grid only ({context})");
 
                     if (!expected.TryGetValue(to, out var best))
                     {
@@ -424,32 +424,47 @@ namespace Migs.MPath.Tests
 
             public Cell[] ToCells()
             {
+                return ToCells(isRowMajor: false);
+            }
+
+            /// <summary>The cells of <see cref="ToCells"/> in row-major order (<c>y * width + x</c>).</summary>
+            public Cell[] ToRowMajorCells()
+            {
+                return ToCells(isRowMajor: true);
+            }
+
+            /// <summary>The <see cref="Settings"/> with <see cref="CellLayout.RowMajor"/>.</summary>
+            public PathfinderSettings RowMajorSettings()
+            {
+                return new PathfinderSettings
+                {
+                    IsDiagonalMovementEnabled = Settings.IsDiagonalMovementEnabled,
+                    AreOccupiedCellsBlocking = Settings.AreOccupiedCellsBlocking,
+                    CornerBlocking = Settings.CornerBlocking,
+                    IsCellWeightEnabled = Settings.IsCellWeightEnabled,
+                    StraightStepCost = Settings.StraightStepCost,
+                    DiagonalStepCost = Settings.DiagonalStepCost,
+                    PathSmoothingMethod = Settings.PathSmoothingMethod,
+                    GridSnapshotMode = Settings.GridSnapshotMode,
+                    TieBreaking = Settings.TieBreaking,
+                    CellLayout = CellLayout.RowMajor
+                };
+            }
+
+            private Cell[] ToCells(bool isRowMajor)
+            {
                 var cells = new Cell[GridWidth * GridHeight];
                 for (var x = 0; x < GridWidth; x++)
                 {
                     for (var y = 0; y < GridHeight; y++)
                     {
-                        cells[x * GridHeight + y] = new Cell
+                        cells[isRowMajor ? y * GridWidth + x : x * GridHeight + y] = new Cell
                         {
-                            Coordinate = new Coordinate(x, y),
                             IsWalkable = !Walls[x, y],
                             IsOccupied = Occupied[x, y],
                             Weight = Weights[x, y]
                         };
                     }
-                }
-
-                return cells;
-            }
-
-            /// <summary>The cells of <see cref="ToCells"/> in a random order.</summary>
-            public Cell[] ToShuffledCells(Random random)
-            {
-                var cells = ToCells();
-                for (var i = cells.Length - 1; i > 0; i--)
-                {
-                    var j = random.Next(i + 1);
-                    (cells[i], cells[j]) = (cells[j], cells[i]);
                 }
 
                 return cells;

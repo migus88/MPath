@@ -290,7 +290,6 @@ namespace Migs.MPath.Tests
                 {
                     grid[x, y] = new Cell
                     {
-                        Coordinate = new Coordinate(x, y),
                         IsWalkable = random.NextDouble() >= 0.25,
                         IsOccupied = random.NextDouble() < 0.05,
                         Weight = random.Next(3) * 100
@@ -326,7 +325,7 @@ namespace Migs.MPath.Tests
                 {
                     for (var y = 0; y < Height; y++)
                     {
-                        var cell = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true };
+                        var cell = new Cell { IsWalkable = true };
                         _matrix[x, y] = cell;
                         _holders[x, y] = new Holder { CellData = cell };
                     }

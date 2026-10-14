@@ -64,5 +64,5 @@ Coordinate fromTuple = (Coordinate)(3, 4);
 - The struct implements `IEquatable<Coordinate>` for efficient equality comparison.
 - Coordinates are used throughout the MPath system to identify positions in the grid.
 - `Coordinate` is immutable and has no "uninitialized" state: `default(Coordinate)` is (0,0) and equals `Coordinate.Zero`. To represent "no coordinate", use `Coordinate?` or your own sentinel.
-- Being 8 bytes, it keeps `Cell` at 16 bytes and `PathResult` waypoint arrays compact.
+- Being 8 bytes, it keeps `PathResult` waypoint arrays compact. `Cell` does not hold one: a cell's position is its slot in the grid.
 - The tuple conversion operators provide convenient interoperability with C# tuple syntax. 

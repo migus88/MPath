@@ -66,11 +66,12 @@ namespace Migs.MPath.Core
         {
             OpenOriginKeyed(nodes, from, GetH(from.X, from.Y, to.X, to.Y));
 
+            var toIndex = GetLayoutIndex(to.X, to.Y);
             var neighbors = stackalloc Cell*[MaxNeighbors];
 
             while (_keyedOpenSet.Count > 0)
             {
-                if (ExpandNextKeyed(cells, nodes, to, agentSize, neighbors, out var current))
+                if (ExpandNextKeyed(cells, nodes, to, toIndex, agentSize, neighbors, out var current))
                 {
                     return ReconstructKeyedPath(current, cells, from, agentSize);
                 }
@@ -82,22 +83,21 @@ namespace Migs.MPath.Core
         /// <summary>
         /// The keyed counterpart of <see cref="ExpandNext"/>: one expansion of the keyed search.
         /// </summary>
-        private bool ExpandNextKeyed(Cell* cells, PathNode* nodes, Coordinate to, int agentSize, Cell** neighbors,
-            out int current)
+        private bool ExpandNextKeyed(Cell* cells, PathNode* nodes, Coordinate to, int toIndex, int agentSize,
+            Cell** neighbors, out int current)
         {
             current = _keyedOpenSet.Dequeue();
 
-            var cell = cells + current;
-
-            if (cell->Coordinate == to)
+            if (current == toIndex)
             {
                 return true;
             }
 
             nodes[current].QueueIndex = PathNode.ClosedQueueIndex;
 
-            PopulateNeighbors(cells, cell, agentSize, neighbors);
-            ProcessNeighborsKeyed(cells, nodes, current, neighbors, to);
+            GetPosition(current, out var x, out var y);
+            PopulateNeighbors(cells, x, y, agentSize, neighbors);
+            ProcessNeighborsKeyed(cells, nodes, current, x, y, neighbors, to);
 
             return false;
         }
@@ -105,8 +105,10 @@ namespace Migs.MPath.Core
         /// <summary>
         /// Relaxes the neighbours of <paramref name="current"/> in the keyed search: the tie-break counterpart of
         /// <see cref="ProcessNeighbors"/>, with the same <see cref="FastPathfinderSettings.MaxCost"/> headroom.
+        /// (<paramref name="x"/>, <paramref name="y"/>) is the position of <paramref name="current"/>.
         /// </summary>
-        private void ProcessNeighborsKeyed(Cell* cells, PathNode* nodes, int current, Cell** neighbors, Coordinate to)
+        private void ProcessNeighborsKeyed(Cell* cells, PathNode* nodes, int current, int x, int y,
+            Cell** neighbors, Coordinate to)
         {
             var isCountingTurns = _settings.TieBreaking == TieBreaking.FewerTurns;
             var currentNode = nodes + current;
@@ -151,8 +153,7 @@ namespace Migs.MPath.Core
                     SetLabel(node, cost, tieKey, depth);
                     _arrivalsPointer[index] = direction;
 
-                    var neighborCoord = neighbor->Coordinate;
-                    _keyedOpenSet.Enqueue(index, cost + GetH(neighborCoord.X, neighborCoord.Y, to.X, to.Y),
+                    _keyedOpenSet.Enqueue(index, cost + GetH(x + GetOffsetX(n), y + GetOffsetY(n), to.X, to.Y),
                         tieKey, cost);
                     continue;
                 }
@@ -164,9 +165,8 @@ namespace Migs.MPath.Core
                     SetLabel(node, cost, tieKey, depth);
                     _arrivalsPointer[index] = direction;
 
-                    var neighborCoord = neighbor->Coordinate;
                     _keyedOpenSet.UpdatePriority(index,
-                        cost + GetH(neighborCoord.X, neighborCoord.Y, to.X, to.Y), tieKey, cost);
+                        cost + GetH(x + GetOffsetX(n), y + GetOffsetY(n), to.X, to.Y), tieKey, cost);
                 }
                 else if (comparison == 0)
                 {
@@ -201,16 +201,16 @@ namespace Migs.MPath.Core
             var steps = 0;
             var nextDirection = -1;
             var index = lastIndex;
+            var coordinate = GetCoordinate(lastIndex);
             diagonalSteps = 0;
 
-            while (cells[index].Coordinate != from)
+            while (coordinate != from)
             {
                 var directions = _arrivalsPointer[index];
                 var direction = nextDirection >= 0 && (directions & (1 << nextDirection)) != 0
                     ? nextDirection
                     : GetFirstDirection(directions);
 
-                var coordinate = cells[index].Coordinate;
                 steps++;
 
                 if (path != null)
@@ -223,7 +223,8 @@ namespace Migs.MPath.Core
                     diagonalSteps++;
                 }
 
-                index = GetLayoutIndex(coordinate.X - GetOffsetX(direction), coordinate.Y - GetOffsetY(direction));
+                coordinate = new Coordinate(coordinate.X - GetOffsetX(direction), coordinate.Y - GetOffsetY(direction));
+                index = GetLayoutIndex(coordinate.X, coordinate.Y);
                 nextDirection = direction;
             }
 
@@ -253,14 +254,14 @@ namespace Migs.MPath.Core
             while (_keyedOpenSet.Count > 0)
             {
                 var current = _keyedOpenSet.Dequeue();
-                var currentCell = cells + current;
                 var currentNode = nodes + current;
 
                 currentNode->QueueIndex = PathNode.ClosedQueueIndex;
-                reachable[count++] = new ReachableCell(currentCell->Coordinate, currentNode->ScoreG,
+                GetPosition(current, out var x, out var y);
+                reachable[count++] = new ReachableCell(new Coordinate(x, y), currentNode->ScoreG,
                     currentNode->Depth, currentNode->TieKey);
 
-                PopulateNeighbors(cells, currentCell, agentSize, neighbors);
+                PopulateNeighbors(cells, x, y, agentSize, neighbors);
 
                 var depth = currentNode->Depth + 1;
                 var headroom = maxCost - currentNode->ScoreG;

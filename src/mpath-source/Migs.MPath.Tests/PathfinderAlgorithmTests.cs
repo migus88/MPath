@@ -496,7 +496,6 @@ namespace Migs.MPath.Tests
                     var index = x * height + y;
                     cells[index] = new Cell
                     {
-                        Coordinate = new Coordinate(x, y),
                         IsWalkable = true,
                         IsOccupied = false,
                         Weight = 100

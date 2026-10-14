@@ -94,7 +94,7 @@ namespace Migs.MPath.Tests
             {
                 for (var y = 0; y < GridSize; y++)
                 {
-                    cells[x, y] = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true };
+                    cells[x, y] = new Cell { IsWalkable = true };
                 }
             }
 

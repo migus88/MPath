@@ -24,10 +24,9 @@ for (int y = 0; y < height; y++)
 {
     for (int x = 0; x < width; x++)
     {
-        int index = y * width + x;
+        int index = y * width + x; // row-major: the slot is the position
         cells[index] = new Cell
         {
-            Coordinate = new Coordinate(x, y),
             IsWalkable = true,  // All cells are walkable by default
             IsOccupied = false, // No cells are occupied by default
             Weight = 100        // Extra cost to enter, in step-cost units (100 = one straight step by default)
@@ -58,8 +57,9 @@ Now, create a pathfinder with your grid:
 IPathfinderSettings settings = new PathfinderSettings
 {
     IsDiagonalMovementEnabled = true,      // Allow diagonal movement
-    AreOccupiedCellsBlocking = true,     // Consider occupied cells as blocked
-    CornerBlocking = CornerBlocking.BetweenBlockedCells // Don't squeeze between two blocked corners
+    AreOccupiedCellsBlocking = true,       // Consider occupied cells as blocked
+    CornerBlocking = CornerBlocking.BetweenBlockedCells, // Don't squeeze between two blocked corners
+    CellLayout = CellLayout.RowMajor       // cells[y * width + x], as filled above (the default is x * height + y)
 };
 
 // Create the pathfinder with your grid and settings
