@@ -41,7 +41,7 @@ Represents the result of a movement-range (reachability) query produced by `Path
 
 ```csharp
 // Find every cell an agent can reach within 5 movement points
-using (var range = pathfinder.GetReachable(agent, new Coordinate(4, 4), 500))
+using (var range = pathfinder.GetReachable(new Coordinate(4, 4), 500))
 {
     Console.WriteLine($"{range.Length} cells reachable");
 

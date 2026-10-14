@@ -1,56 +1,28 @@
 # Agent Configuration
 
-This guide explains how to configure and use agents with MPath for pathfinding.
+This guide explains how to path agents of different sizes with MPath.
 
 ## What is an Agent?
 
-In MPath, an agent is any entity that needs to find a path through the grid. The only property that affects pathfinding is its **size**: the side of the square of cells it occupies. You pass it to a query either as a number or through the `IAgent` interface.
+In MPath, an agent is any entity that needs to find a path through the grid. The only property that affects pathfinding is its **size**: the side of the square of cells it occupies, anchored at its top-left cell. You pass it to every query as `int agentSize`. MPath has no agent type to implement: keep your own unit types and pass their size.
 
-## Agent Size Without an IAgent
+## Passing the Size
 
-Every query takes a trailing `int agentSize` that defaults to `1`, so single-cell units need no agent type at all:
-
-```csharp
-using var path  = pathfinder.GetPath(start, end);                  // 1x1 agent
-using var truck = pathfinder.GetPath(start, end, agentSize: 2);    // 2x2 agent
-using var range = pathfinder.GetReachable(start, 500, agentSize: 2);
-using var search = pathfinder.BeginStepwiseSearch(start, end, agentSize: 2);
-
-// With per-query options, the size comes last
-using var attack = pathfinder.GetPath(start, target,
-    new QueryOptions(isDestinationAlwaysEnterable: true), agentSize: 2);
-```
-
-`agentSize` must be at least `1` (`ArgumentOutOfRangeException` otherwise). The rest of this guide uses `IAgent`, which is handy when your unit types already know their size; both forms find the same paths and share path cache entries.
-
-## Basic Agent Implementation
-
-The simplest agent implementation only needs to specify its size:
+`agentSize` is always the **third** argument. It defaults to `1`, so single-cell units pass nothing:
 
 ```csharp
-public class SimpleAgent : IAgent
-{
-    public int Size => 1; // Agent occupies a single cell
-}
+using var path   = pathfinder.GetPath(start, end);                // 1x1 agent
+using var truck  = pathfinder.GetPath(start, end, 2);             // 2x2 agent
+using var range  = pathfinder.GetReachable(start, 500, 2);
+using var search = pathfinder.BeginStepwiseSearch(start, end, 2);
+
+// With per-query options, the options follow the size
+using var attack = pathfinder.GetPath(start, target, 2,
+    new QueryOptions(isDestinationAlwaysEnterable: true));
 ```
 
-This creates an agent that occupies a single cell on the grid.
-
-## Agent Size and Multi-Cell Agents
-
-The `Size` property determines how many cells the agent occupies in both width and height. For example:
-
-```csharp
-public class LargeAgent : IAgent
-{
-    public int Size => 2; // Agent occupies a 2x2 square of cells
-}
-
-public class MassiveAgent : IAgent
-{
-    public int Size => 3; // Agent occupies a 3x3 square of cells
-}
-```
+- `agentSize` must be at least `1` (`ArgumentOutOfRangeException` otherwise). A bare `default` in the third position is a size of 0 and throws; there is no overload with options in that position.
+- The path cache is keyed by `(agentSize, from, to)`, so a size-1 and a size-2 query of the same pair never share an entry.
 
 When calculating paths for multi-cell agents, MPath ensures that:
 
@@ -73,178 +45,51 @@ Size 1 (1x1):    Size 2 (2x2):    Size 3 (3x3):
                                   └───┴───┴───┘
 ```
 
-## Dynamic Agent Properties
+## Sizes That Change
 
-You can create agents with dynamic properties that change during gameplay:
-
-```csharp
-public class DynamicAgent : IAgent
-{
-    private int _size = 1;
-    
-    public int Size => _size;
-    
-    public void Grow()
-    {
-        _size = 2;
-    }
-    
-    public void Shrink()
-    {
-        _size = 1;
-    }
-}
-```
-
-When the agent's properties change, you need to recalculate its path:
+The size is read per query, so an agent whose size changes during play just passes its current size on the next query:
 
 ```csharp
-var agent = new DynamicAgent();
-using var path = pathfinder.GetPath(agent, start, end);
+using var path = pathfinder.GetPath(start, end, unit.Size);
 
-// Later in the game
-agent.Grow();
-// Recalculate path with the new agent size
-using var newPath = pathfinder.GetPath(agent, start, end);
+unit.Grow();
+using var newPath = pathfinder.GetPath(start, end, unit.Size); // recalculated for the new size
 ```
 
-## Advanced: Creating Context-Aware Agents
-
-You can create more sophisticated agents that adapt to the game context:
-
-```csharp
-public class ContextAwareAgent : IAgent
-{
-    private readonly GameState _gameState;
-    
-    public ContextAwareAgent(GameState gameState)
-    {
-        _gameState = gameState;
-    }
-    
-    // Size changes based on the agent's game state
-    public int Size => _gameState.IsVehicleMode ? 2 : 1;
-}
-```
-
-## Unity MonoBehaviour Agent Example
-
-For Unity games, you can implement the `IAgent` interface on your MonoBehaviours. Here's a simple example:
+## Unity Example
 
 ```csharp
 using UnityEngine;
-using Migs.MPath.Core.Interfaces;
+using Migs.MPath.Core;
+using Migs.MPath.Core.Data;
 
-public class SimpleCharacter : MonoBehaviour, IAgent
-{
-    [SerializeField] private int _agentSize = 1;
-    
-    // IAgent implementation
-    public int Size => _agentSize;
-    
-    // You can modify the size at runtime if needed
-    public void SetSize(int newSize)
-    {
-        if (newSize < 1) newSize = 1;
-        _agentSize = newSize;
-        
-        // You might also want to update visuals or other components
-        transform.localScale = Vector3.one * _agentSize;
-    }
-}
-```
-
-You can also use scriptable objects for certain types of agents:
-
-```csharp
-using UnityEngine;
-using Migs.MPath.Core.Interfaces;
-
-[CreateAssetMenu(fileName = "NewAgentType", menuName = "Game/Agent Type")]
-public class AgentType : ScriptableObject, IAgent
-{
-    [SerializeField] private int _size = 1;
-    [SerializeField] private string _displayName;
-    [SerializeField] private Sprite _icon;
-    
-    public int Size => _size;
-    public string DisplayName => _displayName;
-    public Sprite Icon => _icon;
-}
-
-// Usage in a character class
 public class Character : MonoBehaviour
 {
-    [SerializeField] private AgentType _agentType;
-    
-    public IAgent Agent => _agentType;
-    
-    public void FindPath(Coordinate destination)
+    [SerializeField, Min(1)] private int _size = 1;
+
+    public PathResult FindPath(Pathfinder pathfinder, Coordinate from, Coordinate destination)
     {
-        using var path = _pathfinder.GetPath(_agentType, CurrentPosition, destination);
-        // Process path...
+        return pathfinder.GetPath(from, destination, _size); // dispose the result when done
     }
 }
 ```
 
-## Practical Examples
-
-### Example 1: Simple Character in a Game
-
-```csharp
-public class PlayerCharacter : IAgent
-{
-    // Most characters only occupy one cell
-    public int Size => 1;
-}
-
-// Using the agent
-var player = new PlayerCharacter();
-var path = pathfinder.GetPath(player, playerPosition, targetPosition);
-
-// Process the path
-if (path.IsSuccess)
-{
-    // Move the player along the path
-    foreach (var coordinate in path.Path)
-    {
-        // Move logic
-    }
-}
-```
-
-### Example 2: Vehicle with Different Sizes
+## Example: Vehicles of Different Sizes
 
 ```csharp
 public enum VehicleType { Car, Truck, Tank }
 
-public class Vehicle : IAgent
+public static int GetSize(VehicleType type) => type switch
 {
-    private VehicleType _type;
-    
-    public Vehicle(VehicleType type)
-    {
-        _type = type;
-    }
-    
-    public int Size => _type switch
-    {
-        VehicleType.Car => 1,
-        VehicleType.Truck => 2,
-        VehicleType.Tank => 3,
-        _ => 1
-    };
-}
+    VehicleType.Truck => 2,
+    VehicleType.Tank => 3,
+    _ => 1
+};
 
-// Using different vehicles
-var car = new Vehicle(VehicleType.Car);
-var truck = new Vehicle(VehicleType.Truck);
-var tank = new Vehicle(VehicleType.Tank);
-
-// Each vehicle will get a path appropriate for its size
-var carPath = pathfinder.GetPath(car, start, end);
-var truckPath = pathfinder.GetPath(truck, start, end);
-var tankPath = pathfinder.GetPath(tank, start, end);
+// Each vehicle gets a path appropriate for its size
+using var carPath   = pathfinder.GetPath(start, end, GetSize(VehicleType.Car));
+using var truckPath = pathfinder.GetPath(start, end, GetSize(VehicleType.Truck));
+using var tankPath  = pathfinder.GetPath(start, end, GetSize(VehicleType.Tank));
 ```
 
 ## Important Considerations

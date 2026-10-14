@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Migs.MPath.Core.Data;
-using Migs.MPath.Core.Interfaces;
 using Migs.MPath.Core.Internal;
 
 namespace Migs.MPath.Core
@@ -14,48 +13,25 @@ namespace Migs.MPath.Core
         private StepwiseSearch _activeSearch;
 
         /// <summary>
-        /// Begins a stepwise (tick-by-tick) A* search that can be advanced one expansion at a time, exposing
+        /// Begins a stepwise (tick-by-tick) A* search for an agent that occupies an <paramref name="agentSize"/> x
+        /// <paramref name="agentSize"/> square of cells, which can be advanced one expansion at a time, exposing
         /// the accumulated searched area and — once it succeeds — the resulting path. This is an
         /// <b>educational / visualization</b> facility for showing how the algorithm explores the grid; the
-        /// regular <see cref="GetPath"/> remains the way to compute a path in one shot.
+        /// regular <see cref="GetPath(Coordinate, Coordinate, int)"/> remains the way to compute a path in one shot.
         /// </summary>
         /// <remarks>
-        /// The returned <see cref="StepwiseSearch"/> drives the very same A* expansion as <see cref="GetPath"/>
-        /// (it shares this instance's open set and buffers), so it produces an identical path; it simply
-        /// pauses between expansions. Because it pins this instance's cell and search-state buffers for the
-        /// lifetime of the search, the session <b>must be disposed</b> (wrap it in <c>using</c>), and the owning
-        /// <see cref="Pathfinder"/> must not be used for any other query — including a second
-        /// <see cref="BeginStepwiseSearch"/> — until the session is disposed.
+        /// The returned <see cref="StepwiseSearch"/> drives the very same A* expansion as
+        /// <see cref="GetPath(Coordinate, Coordinate, int)"/> (it shares this instance's open set and buffers), so it
+        /// produces an identical path; it simply pauses between expansions. Because it pins this instance's cell and
+        /// search-state buffers for the lifetime of the search, the session <b>must be disposed</b> (wrap it in
+        /// <c>using</c>), and the owning <see cref="Pathfinder"/> must not be used for any other query — including a
+        /// second <c>BeginStepwiseSearch</c> — until the session is disposed.
         /// </remarks>
-        /// <param name="agent">The agent for which to search. Cannot be null.</param>
         /// <param name="from">The origin coordinate. Must be inside the grid.</param>
         /// <param name="to">The destination coordinate. Must be inside the grid.</param>
-        /// <returns>A disposable <see cref="StepwiseSearch"/> positioned before the first expansion.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="agent"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="from"/> or <paramref name="to"/> is outside the grid.</exception>
-        /// <exception cref="InvalidOperationException">Thrown when a stepwise search is already active on this instance.</exception>
-        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
-        public StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to)
-        {
-            ThrowIfDisposed();
-
-            if (agent == null)
-            {
-                throw new ArgumentNullException(nameof(agent));
-            }
-
-            return BeginStepwiseSearch(agent.Size, from, to, OccupancyRule.UseSettings, Array.Empty<Coordinate>(),
-                false);
-        }
-
-        /// <summary>
-        /// Begins a stepwise search like <see cref="BeginStepwiseSearch(IAgent, Coordinate, Coordinate)"/> for an
-        /// agent that occupies an <paramref name="agentSize"/> x <paramref name="agentSize"/> square of cells,
-        /// without an <see cref="IAgent"/>. The session must be disposed.
-        /// </summary>
-        /// <param name="from">The origin coordinate. Must be inside the grid.</param>
-        /// <param name="to">The destination coordinate. Must be inside the grid.</param>
-        /// <param name="agentSize">The agent's square size in cells. Defaults to a single-cell agent.</param>
+        /// <param name="agentSize">
+        /// The agent's square size in cells (anchored at its top-left cell). Defaults to a single-cell agent.
+        /// </param>
         /// <returns>A disposable <see cref="StepwiseSearch"/> positioned before the first expansion.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="agentSize"/> is less than 1.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="from"/> or <paramref name="to"/> is outside the grid.</exception>
@@ -71,49 +47,21 @@ namespace Migs.MPath.Core
         }
 
         /// <summary>
-        /// Begins a stepwise search like <see cref="BeginStepwiseSearch(IAgent, Coordinate, Coordinate)"/>, with
+        /// Begins a stepwise search like <see cref="BeginStepwiseSearch(Coordinate, Coordinate, int)"/>, with
         /// movement rules overridden by <paramref name="options"/> for the whole search. The options are copied when
         /// the search begins and applied on every tick, so it explores exactly as
-        /// <see cref="GetPath(IAgent, Coordinate, Coordinate, QueryOptions)"/> with the same options would.
-        /// </summary>
-        /// <param name="agent">The agent for which to search. Cannot be null.</param>
-        /// <param name="from">The origin coordinate. Must be inside the grid.</param>
-        /// <param name="to">The destination coordinate. Must be inside the grid.</param>
-        /// <param name="options">The per-query rules. <c>default</c> behaves exactly like the overload without options.</param>
-        /// <returns>A disposable <see cref="StepwiseSearch"/> positioned before the first expansion.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="agent"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="from"/> or <paramref name="to"/> is outside the grid.</exception>
-        /// <exception cref="InvalidOperationException">Thrown when a stepwise search is already active on this instance.</exception>
-        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
-        public StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)
-        {
-            ThrowIfDisposed();
-
-            if (agent == null)
-            {
-                throw new ArgumentNullException(nameof(agent));
-            }
-
-            return BeginStepwiseSearch(agent.Size, from, to, options.Occupancy, options.AlwaysEnterable.ToArray(),
-                options.IsDestinationAlwaysEnterable);
-        }
-
-        /// <summary>
-        /// Begins a stepwise search like <see cref="BeginStepwiseSearch(Coordinate, Coordinate, int)"/>, with
-        /// movement rules overridden by <paramref name="options"/> for the whole search, exactly as
-        /// <see cref="GetPath(Coordinate, Coordinate, QueryOptions, int)"/> with the same options would.
+        /// <see cref="GetPath(Coordinate, Coordinate, int, QueryOptions)"/> with the same options would.
         /// </summary>
         /// <param name="from">The origin coordinate. Must be inside the grid.</param>
         /// <param name="to">The destination coordinate. Must be inside the grid.</param>
+        /// <param name="agentSize">The agent's square size in cells; pass 1 for a single-cell agent.</param>
         /// <param name="options">The per-query rules. <c>default</c> behaves exactly like the overload without options.</param>
-        /// <param name="agentSize">The agent's square size in cells. Defaults to a single-cell agent.</param>
         /// <returns>A disposable <see cref="StepwiseSearch"/> positioned before the first expansion.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="agentSize"/> is less than 1.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="from"/> or <paramref name="to"/> is outside the grid.</exception>
         /// <exception cref="InvalidOperationException">Thrown when a stepwise search is already active on this instance.</exception>
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
-        public StepwiseSearch BeginStepwiseSearch(Coordinate from, Coordinate to, QueryOptions options,
-            int agentSize = SingleCellAgentSize)
+        public StepwiseSearch BeginStepwiseSearch(Coordinate from, Coordinate to, int agentSize, QueryOptions options)
         {
             ThrowIfDisposed();
             ThrowIfInvalidAgentSize(agentSize);

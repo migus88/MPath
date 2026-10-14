@@ -30,9 +30,9 @@ MPath is flexible in how you represent your grid:
 
 ### 2. Agents
 
-An agent is any entity that needs to find a path through the grid. In MPath, agents implement the `IAgent` interface, which defines:
+An agent is any entity that needs to find a path through the grid. MPath needs only its **size**, passed to every query as `int agentSize` (the third argument, 1 by default):
 
-- **Size**: The number of cells the agent occupies (e.g., 1 for a single-cell agent, 2 for a 2x2 agent)
+- **Size**: The side of the square of cells the agent occupies (e.g., 1 for a single-cell agent, 2 for a 2x2 agent)
 
 The agent's size affects which paths are considered valid, as the pathfinder ensures all cells along the path can accommodate the agent.
 
@@ -67,7 +67,7 @@ A `PathResult` represents the outcome of a pathfinding operation and contains:
 The typical usage flow of MPath is:
 
 1. Set up your grid with appropriate cell data
-2. Configure an agent with the required properties
+2. Know your agent's size (1 for single-cell agents, the default)
 3. Create a pathfinder instance with your grid and settings
 4. Request a path for your agent between two points
 5. Use the resulting path in your application

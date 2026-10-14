@@ -14,15 +14,15 @@ Default implementation of the [IPathCaching](IPathCaching.md) interface that sto
 
 | Method | Description |
 |--------|-------------|
-| `bool TryGetCachedPath(IAgent agent, Coordinate from, Coordinate to, out PathResult pathResult)` | Tries to get a cached path result for the specified parameters. |
-| `void CachePath(IAgent agent, Coordinate from, Coordinate to, PathResult pathResult)` | Caches a path result for the specified parameters. |
+| `bool TryGetCachedPath(int agentSize, Coordinate from, Coordinate to, out PathResult pathResult)` | Tries to get a cached path result for the specified parameters. |
+| `void CachePath(int agentSize, Coordinate from, Coordinate to, PathResult pathResult)` | Caches a path result for the specified parameters. |
 | `void ClearCache()` | Clears all cached paths. |
 | `void Dispose()` | Releases all resources used by the path caching implementation. |
 
 ## Remarks
 
 - Implements the [IPathCaching](IPathCaching.md) interface.
-- Uses a dictionary-based cache with a composite key based on agent size, start position, and destination.
+- Uses a dictionary-based cache with a composite key of the agent size, start position, and destination, so queries of different sizes never share an entry.
 - Failed path results (where `PathResult.IsSuccess` is `false`) are not cached.
 - Owns every stored `PathResult`: when caching a path with the same key as an existing entry, the old entry is disposed, and `ClearCache`/`Dispose` dispose all entries.
 - `Pathfinder` stores a private copy and returns a fresh copy on every cache hit, so results returned by `GetPath` are always the caller's to dispose.
@@ -39,8 +39,8 @@ var pathfinder = new Pathfinder(cells, width, height);
 pathfinder.EnablePathCaching();
 
 // Find a path
-using var result = pathfinder.GetPath(agent, from, to);
+using var result = pathfinder.GetPath(from, to);
 
 // Subsequent calls with the same parameters return a fresh copy of the cached path
-using var cachedResult = pathfinder.GetPath(agent, from, to);
+using var cachedResult = pathfinder.GetPath(from, to);
 ``` 

@@ -1,11 +1,9 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using Benchmarks.Editor.Data;
 using Benchmarks.Editor.Helpers;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
-using Migs.MPath.Core.Interfaces;
 using UnityEngine;
 
 namespace Benchmarks.Editor.Runners
@@ -13,11 +11,9 @@ namespace Benchmarks.Editor.Runners
     public class MPathMazeBenchmarkRunner : BaseMazeBenchmarkRunner
     {
         private readonly Pathfinder _pathfinder;
-        private readonly IAgent _agent;
 
         public MPathMazeBenchmarkRunner(UnityMaze maze) : base(maze)
         {
-            _agent = new SimpleAgent();
             _pathfinder = new Pathfinder(Maze.Cells);
         }
 
@@ -29,7 +25,6 @@ namespace Benchmarks.Editor.Runners
             }
 
             var result = _pathfinder.GetPath(
-                _agent,
                 new Coordinate(start.x, start.y),
                 new Coordinate(destination.x, destination.y)
             );
@@ -53,7 +48,6 @@ namespace Benchmarks.Editor.Runners
             }
 
             var result = _pathfinder.GetPath(
-                _agent,
                 new Coordinate(start.x, start.y),
                 new Coordinate(destination.x, destination.y)
             );

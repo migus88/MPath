@@ -40,7 +40,7 @@ Represents the result of a pathfinding operation. Implements `IDisposable`.
 
 ```csharp
 // Get and use a path
-using (var pathResult = pathfinder.GetPath(agent, startPos, endPos))
+using (var pathResult = pathfinder.GetPath(startPos, endPos))
 {
     if (pathResult.IsSuccess)
     {

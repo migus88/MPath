@@ -12,11 +12,11 @@ namespace Migs.MPath.Core
     {
         /// <summary>
         /// Finds every cell reachable from the specified origin whose cheapest path cost does not exceed
-        /// the supplied movement budget. This is a uniform-cost (Dijkstra) flood fill over the grid that
-        /// honours the same movement rules as <see cref="GetPath"/> (diagonal movement, corner-cutting,
-        /// occupied cells and agent clearance).
+        /// the supplied movement budget, for an agent that occupies an <paramref name="agentSize"/> x
+        /// <paramref name="agentSize"/> square of cells. This is a uniform-cost (Dijkstra) flood fill over the grid
+        /// that honours the same movement rules as <see cref="GetPath(Coordinate, Coordinate, int)"/> (diagonal
+        /// movement, corner-cutting, occupied cells and agent clearance).
         /// </summary>
-        /// <param name="agent">The agent for which to evaluate reachability. Cannot be null.</param>
         /// <param name="from">The origin coordinate. Always included in the result (cost 0) when the budget is non-negative.</param>
         /// <param name="budget">
         /// The maximum allowed path cost, inclusive: a cell whose cheapest route costs exactly the budget is reached.
@@ -26,33 +26,9 @@ namespace Migs.MPath.Core
         /// reaches nothing; routes costing more than 1,073,741,823 (<c>int.MaxValue / 2</c>) are never reached, so
         /// <c>int.MaxValue</c> is an unbounded budget.
         /// </param>
-        /// <returns>
-        /// A <see cref="RangeResult"/> listing every reachable cell with its cheapest path cost.
-        /// The result must be disposed (use <c>using</c>) to return its pooled buffer.
-        /// </returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="agent"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when the origin is outside the valid field range.</exception>
-        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
-        public RangeResult GetReachable(IAgent agent, Coordinate from, int budget)
-        {
-            ThrowIfDisposed();
-
-            if (agent == null)
-            {
-                throw new ArgumentNullException(nameof(agent));
-            }
-
-            return FindReachable(agent.Size, from, budget);
-        }
-
-        /// <summary>
-        /// Finds every reachable cell like <see cref="GetReachable(IAgent, Coordinate, int)"/> for an agent that
-        /// occupies an <paramref name="agentSize"/> x <paramref name="agentSize"/> square of cells, without an
-        /// <see cref="IAgent"/>.
-        /// </summary>
-        /// <param name="from">The origin coordinate. Always included in the result (cost 0) when the budget is non-negative.</param>
-        /// <param name="budget">The maximum allowed path cost.</param>
-        /// <param name="agentSize">The agent's square size in cells. Defaults to a single-cell agent.</param>
+        /// <param name="agentSize">
+        /// The agent's square size in cells (anchored at its top-left cell). Defaults to a single-cell agent.
+        /// </param>
         /// <returns>
         /// A <see cref="RangeResult"/> listing every reachable cell with its cheapest path cost.
         /// The result must be disposed (use <c>using</c>) to return its pooled buffer.
@@ -69,7 +45,48 @@ namespace Migs.MPath.Core
         }
 
         /// <summary>
-        /// The shared body of the <c>GetReachable</c> overloads.
+        /// Finds every reachable cell like <see cref="GetReachable(Coordinate, int, int)"/>, with movement rules
+        /// overridden for this query only by <paramref name="options"/>. The grid and the settings are not modified.
+        /// </summary>
+        /// <param name="from">The origin coordinate. Always included in the result (cost 0) when the budget is non-negative.</param>
+        /// <param name="budget">The maximum allowed path cost.</param>
+        /// <param name="agentSize">The agent's square size in cells; pass 1 for a single-cell agent.</param>
+        /// <param name="options">
+        /// The per-query rules. <c>default</c> behaves exactly like the overload without options.
+        /// <see cref="QueryOptions.IsDestinationAlwaysEnterable"/> is ignored, since the query has no destination.
+        /// </param>
+        /// <returns>
+        /// A <see cref="RangeResult"/> listing every reachable cell with its cheapest path cost.
+        /// The result must be disposed (use <c>using</c>) to return its pooled buffer.
+        /// </returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="agentSize"/> is less than 1.</exception>
+        /// <exception cref="ArgumentException">Thrown when the origin is outside the valid field range.</exception>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
+        public RangeResult GetReachable(Coordinate from, int budget, int agentSize, QueryOptions options)
+        {
+            ThrowIfDisposed();
+            ThrowIfInvalidAgentSize(agentSize);
+
+            var enterableCells = options.AlwaysEnterable;
+
+            fixed (Coordinate* enterable = enterableCells)
+            {
+                _query = QueryRules.FromOptions(_settings, options.Occupancy, enterable, enterableCells.Length,
+                    false, null);
+
+                try
+                {
+                    return FindReachable(agentSize, from, budget);
+                }
+                finally
+                {
+                    _query = QueryRules.FromSettings(_settings);
+                }
+            }
+        }
+
+        /// <summary>
+        /// The shared body of the <c>GetReachable</c> overloads, run under the rules currently in <see cref="_query"/>.
         /// </summary>
         private RangeResult FindReachable(int agentSize, Coordinate from, int budget)
         {
@@ -99,83 +116,6 @@ namespace Migs.MPath.Core
                 }
 
                 return CalculateReachable(agentSize, from, budget, ptr, nodes);
-            }
-        }
-
-        /// <summary>
-        /// Finds every reachable cell like <see cref="GetReachable(IAgent, Coordinate, int)"/>, with movement rules
-        /// overridden for this query only by <paramref name="options"/>. The grid and the settings are not modified.
-        /// </summary>
-        /// <param name="agent">The agent for which to evaluate reachability. Cannot be null.</param>
-        /// <param name="from">The origin coordinate. Always included in the result (cost 0) when the budget is non-negative.</param>
-        /// <param name="budget">The maximum allowed path cost.</param>
-        /// <param name="options">
-        /// The per-query rules. <c>default</c> behaves exactly like the overload without options.
-        /// <see cref="QueryOptions.IsDestinationAlwaysEnterable"/> is ignored, since the query has no destination.
-        /// </param>
-        /// <returns>
-        /// A <see cref="RangeResult"/> listing every reachable cell with its cheapest path cost.
-        /// The result must be disposed (use <c>using</c>) to return its pooled buffer.
-        /// </returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="agent"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when the origin is outside the valid field range.</exception>
-        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
-        public RangeResult GetReachable(IAgent agent, Coordinate from, int budget, QueryOptions options)
-        {
-            ThrowIfDisposed();
-
-            if (agent == null)
-            {
-                throw new ArgumentNullException(nameof(agent));
-            }
-
-            return FindReachable(agent.Size, from, budget, options);
-        }
-
-        /// <summary>
-        /// Finds every reachable cell like <see cref="GetReachable(Coordinate, int, int)"/>, with movement rules
-        /// overridden for this query only by <paramref name="options"/>. The grid and the settings are not modified.
-        /// </summary>
-        /// <param name="from">The origin coordinate. Always included in the result (cost 0) when the budget is non-negative.</param>
-        /// <param name="budget">The maximum allowed path cost.</param>
-        /// <param name="options">
-        /// The per-query rules. <c>default</c> behaves exactly like the overload without options.
-        /// <see cref="QueryOptions.IsDestinationAlwaysEnterable"/> is ignored, since the query has no destination.
-        /// </param>
-        /// <param name="agentSize">The agent's square size in cells. Defaults to a single-cell agent.</param>
-        /// <returns>
-        /// A <see cref="RangeResult"/> listing every reachable cell with its cheapest path cost.
-        /// The result must be disposed (use <c>using</c>) to return its pooled buffer.
-        /// </returns>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="agentSize"/> is less than 1.</exception>
-        /// <exception cref="ArgumentException">Thrown when the origin is outside the valid field range.</exception>
-        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
-        public RangeResult GetReachable(Coordinate from, int budget, QueryOptions options,
-            int agentSize = SingleCellAgentSize)
-        {
-            ThrowIfDisposed();
-            ThrowIfInvalidAgentSize(agentSize);
-
-            return FindReachable(agentSize, from, budget, options);
-        }
-
-        private RangeResult FindReachable(int agentSize, Coordinate from, int budget, QueryOptions options)
-        {
-            var enterableCells = options.AlwaysEnterable;
-
-            fixed (Coordinate* enterable = enterableCells)
-            {
-                _query = QueryRules.FromOptions(_settings, options.Occupancy, enterable, enterableCells.Length,
-                    false, null);
-
-                try
-                {
-                    return FindReachable(agentSize, from, budget);
-                }
-                finally
-                {
-                    _query = QueryRules.FromSettings(_settings);
-                }
             }
         }
 

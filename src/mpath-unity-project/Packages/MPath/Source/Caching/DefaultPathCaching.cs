@@ -20,27 +20,27 @@ namespace Migs.MPath.Core.Caching
         /// <summary>
         /// Tries to get a cached path result for the specified parameters.
         /// </summary>
-        /// <param name="agent">The agent for which the path was calculated.</param>
+        /// <param name="agentSize">The square size, in cells, of the agent the path was calculated for.</param>
         /// <param name="from">The starting coordinate.</param>
         /// <param name="to">The destination coordinate.</param>
         /// <param name="pathResult">The cached path result, if found. It remains owned by the cache.</param>
         /// <returns>True if a cached path was found, otherwise false.</returns>
-        public bool TryGetCachedPath(IAgent agent, Coordinate from, Coordinate to, out PathResult pathResult)
+        public bool TryGetCachedPath(int agentSize, Coordinate from, Coordinate to, out PathResult pathResult)
         {
             ThrowIfDisposed();
             
-            var key = new CacheKey(agent.Size, from, to);
+            var key = new CacheKey(agentSize, from, to);
             return _cache.TryGetValue(key, out pathResult);
         }
 
         /// <summary>
         /// Caches a path result for the specified parameters.
         /// </summary>
-        /// <param name="agent">The agent for which the path was calculated.</param>
+        /// <param name="agentSize">The square size, in cells, of the agent the path was calculated for.</param>
         /// <param name="from">The starting coordinate.</param>
         /// <param name="to">The destination coordinate.</param>
         /// <param name="pathResult">The path result to cache. The cache takes ownership and disposes it on eviction.</param>
-        public void CachePath(IAgent agent, Coordinate from, Coordinate to, PathResult pathResult)
+        public void CachePath(int agentSize, Coordinate from, Coordinate to, PathResult pathResult)
         {
             ThrowIfDisposed();
             
@@ -50,7 +50,7 @@ namespace Migs.MPath.Core.Caching
                 return;
             }
                 
-            var key = new CacheKey(agent.Size, from, to);
+            var key = new CacheKey(agentSize, from, to);
             
             // If we already have a path for this key, remove it first
             if (_cache.TryGetValue(key, out var existingPath))

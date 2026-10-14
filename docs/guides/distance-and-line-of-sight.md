@@ -43,7 +43,7 @@ if (pathfinder.HasLineOfSight(shooter, target))
 else
 {
     // Need to path around cover.
-    using var path = pathfinder.GetPath(agent, shooter, target);
+    using var path = pathfinder.GetPath(shooter, target);
 }
 ```
 
@@ -73,7 +73,7 @@ The mode only governs walkability; occupancy stays under `AreOccupiedCellsBlocki
 ### Behavior and edge cases
 
 - **Endpoints are never tested.** Only the cells *between* `from` and `to` are checked, so a target standing on a blocked or occupied cell (for example, an enemy unit) can still be seen.
-- **Single-cell ray.** Agent `Size` is not considered — the line is one cell wide. A large agent that *fits through* a gap visually may still be unable to *path* through it.
+- **Single-cell ray.** The agent size is not considered — the line is one cell wide. A large agent that *fits through* a gap visually may still be unable to *path* through it.
 - **Self.** A coordinate always has line of sight to itself.
 - **Bounds.** `from` and `to` must be inside the grid; an out-of-range coordinate throws `ArgumentException`.
 - **Symmetry.** `HasLineOfSight(a, b)` equals `HasLineOfSight(b, a)`.

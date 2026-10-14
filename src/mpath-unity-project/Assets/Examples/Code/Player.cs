@@ -1,11 +1,10 @@
 using System.Collections;
 using Migs.MPath.Core.Data;
-using Migs.MPath.Core.Interfaces;
 using UnityEngine;
 
 namespace Migs.Mpath.Examples
 {
-    public class Player : MonoBehaviour, IAgent
+    public class Player : MonoBehaviour
     {
         public Coordinate Coordinate { get; set; }
         public int Size => _size;
@@ -29,7 +28,7 @@ namespace Migs.Mpath.Examples
             }
             
             var destination = cell.Coordinate;
-            var result = Battlefield.Instance.Pathfinder.GetPath(this, Coordinate, destination);
+            var result = Battlefield.Instance.Pathfinder.GetPath(Coordinate, destination, Size);
             
             if(result.IsSuccess)
             {

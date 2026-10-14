@@ -19,10 +19,10 @@ var pathfinder = new Pathfinder(cells, width, height);
 pathfinder.EnablePathCaching();
 
 // Get a path (will be calculated)
-using var firstPath = pathfinder.GetPath(agent, from, to);
+using var firstPath = pathfinder.GetPath(from, to);
 
 // Get the same path again (will be retrieved from cache)
-using var secondPath = pathfinder.GetPath(agent, from, to);
+using var secondPath = pathfinder.GetPath(from, to);
 ```
 
 ### Result Ownership
@@ -50,7 +50,7 @@ pathfinder.Refresh();
 
 ## Custom Path Caching Implementation
 
-You can provide your own path caching implementation by creating a class that implements the `IPathCaching` interface.
+You can provide your own path caching implementation by creating a class that implements the `IPathCaching` interface. Every call receives the query's `agentSize` with `from` and `to`; key on all three so queries of different sizes never share an entry.
 
 Ownership contract: the `PathResult` passed to `CachePath` belongs to your cache (dispose it when you evict or clear the entry). The instance you return from `TryGetCachedPath` stays yours too: the pathfinder copies it before returning it to its caller.
 
@@ -59,12 +59,12 @@ public class CustomPathCaching : IPathCaching
 {
     // Implement the interface methods...
     
-    public bool TryGetCachedPath(IAgent agent, Coordinate from, Coordinate to, out PathResult pathResult)
+    public bool TryGetCachedPath(int agentSize, Coordinate from, Coordinate to, out PathResult pathResult)
     {
         // Your custom logic to retrieve cached paths
     }
     
-    public void CachePath(IAgent agent, Coordinate from, Coordinate to, PathResult pathResult)
+    public void CachePath(int agentSize, Coordinate from, Coordinate to, PathResult pathResult)
     {
         // Your custom logic to store paths
     }

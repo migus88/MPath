@@ -7,7 +7,7 @@ This guide will help you quickly set up and start using MPath for pathfinding in
 To use MPath, you need:
 1. A grid of cells representing your navigable space
 2. A pathfinder that will calculate the path
-3. Optionally, an agent type (single-cell agents need none)
+3. Optionally, the agent's size (single-cell agents need nothing)
 
 ## Creating a Simple Grid
 
@@ -43,14 +43,10 @@ cells[22].IsWalkable = false;
 
 ## Agent Size
 
-Queries assume a single-cell agent. For a larger one, pass its size (`agentSize: 2` for a 2x2 unit), or pass an object implementing `IAgent` (see the [Agent Configuration](agent-configuration.md) guide):
+Queries assume a single-cell agent. For a larger one, pass its size as the third argument (`2` for a 2x2 unit); see the [Agent Configuration](agent-configuration.md) guide:
 
 ```csharp
-public class Truck : IAgent
-{
-    // Agent occupies a 2x2 square of cells
-    public int Size => 2;
-}
+using var truckPath = pathfinder.GetPath(start, end, 2); // a 2x2 truck
 ```
 
 ## Creating a Pathfinder
@@ -85,7 +81,7 @@ var end = new Coordinate(8, 8);
 // Calculate the path for a single-cell agent
 using var result = pathfinder.GetPath(start, end);
 
-// Or for a 2x2 agent: pathfinder.GetPath(start, end, agentSize: 2) or pathfinder.GetPath(new Truck(), start, end)
+// Or for a 2x2 agent: pathfinder.GetPath(start, end, 2)
 
 // Check if a path was found
 if (result.IsSuccess)

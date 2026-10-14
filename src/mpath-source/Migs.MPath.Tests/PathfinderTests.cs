@@ -91,21 +91,5 @@ namespace Migs.MPath.Tests
             action.Should().Throw<ArgumentException>()
                   .WithMessage("*outside the valid field range*");
         }
-        
-        [Test]
-        public void GetPath_WithNullAgent_ShouldThrowArgumentNullException()
-        {
-            // Arrange
-            var maze = new Maze("Maze/Conditions/001.png");
-            var start = maze.Start;
-            var destination = maze.Destination;
-            
-            var pathfinder = new Pathfinder(maze.Cells);
-            
-            // Act & Assert
-            var action = () => pathfinder.GetPath(null!, start, destination);
-            action.Should().Throw<ArgumentNullException>()
-                  .WithParameterName("agent");
-        }
     }
 }

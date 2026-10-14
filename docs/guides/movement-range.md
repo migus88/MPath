@@ -25,10 +25,8 @@ A cell is reachable when the cheapest accumulated cost to it is **less than or e
 
 ```csharp
 using var pathfinder = new Pathfinder(cells, width, height);
-var agent = new SimpleAgent { Size = 1 };
-
 // Find every cell reachable from (4, 4) for a budget of 5 straight steps (default step costs 100/141).
-using var range = pathfinder.GetReachable(agent, new Coordinate(4, 4), 500);
+using var range = pathfinder.GetReachable(new Coordinate(4, 4), 500);
 
 Console.WriteLine($"{range.Length} cells reachable");
 
@@ -88,12 +86,12 @@ Costs are integers, so the counts and the budget never drift. With a tie-break t
 The same pathfinder can answer "where can this unit move?" (units block) and "what can this unit threaten?" (units ignored) on one grid. Pass [`QueryOptions`](../api/QueryOptions.md):
 
 ```csharp
-using var move   = pathfinder.GetReachable(agent, origin, 500);
-using var threat = pathfinder.GetReachable(agent, origin, 500, new QueryOptions(OccupancyRule.Ignore));
+using var move   = pathfinder.GetReachable(origin, 500);
+using var threat = pathfinder.GetReachable(origin, 500, 1, new QueryOptions(OccupancyRule.Ignore));
 
 // Units block, except the ones listed (e.g. allies this unit may pass through):
 ReadOnlySpan<Coordinate> passable = stackalloc Coordinate[] { ally1, ally2 };
-using var pass = pathfinder.GetReachable(agent, origin, 500, new QueryOptions(alwaysEnterable: passable));
+using var pass = pathfinder.GetReachable(origin, 500, 1, new QueryOptions(alwaysEnterable: passable));
 ```
 
 The options apply to that call only and never modify the grid. `default(QueryOptions)` behaves exactly like the overload without options.
@@ -106,4 +104,4 @@ Like `PathResult`, `RangeResult` rents its backing array from a pool and **must 
 
 - A negative budget returns an empty result (`IsSuccess == false`, `Length == 0`).
 - A budget of `0` returns just the origin.
-- An origin outside the grid throws `ArgumentException`; a `null` agent throws `ArgumentNullException`.
+- An origin outside the grid throws `ArgumentException`; an `agentSize` below 1 throws `ArgumentOutOfRangeException`.

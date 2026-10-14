@@ -28,10 +28,10 @@ public class GridCell : MonoBehaviour, ICellHolder
 }
 
 // Define a Unity agent
-public class UnitAgent : MonoBehaviour, IAgent
+public class UnitAgent : MonoBehaviour
 {
     public Coordinate Coordinate { get; set; }
-    public int Size => 1; // Single cell agent
+    public int Size => 1; // Single cell agent: passed to GetPath as agentSize
     
     // Movement logic using the path
     public IEnumerator FollowPath(PathResult result, float speed)
@@ -71,7 +71,7 @@ private void Start()
 // Find a path for an agent
 public PathResult FindPath(UnitAgent agent, Coordinate destination)
 {
-    return _pathfinder.GetPath(agent, agent.Coordinate, destination);
+    return _pathfinder.GetPath(agent.Coordinate, destination, agent.Size);
 }
 
 private void OnDestroy()
@@ -89,7 +89,7 @@ The `GridCell` component implements the `ICellHolder` interface and manages the 
 
 ### Agent Implementation
 
-The `UnitAgent` component implements the `IAgent` interface and handles movement logic. The `FollowPath` coroutine demonstrates how to move the agent along the calculated path.
+The `UnitAgent` component holds the unit's position and size (passed to `GetPath` as `agentSize`) and handles movement logic. The `FollowPath` coroutine demonstrates how to move the agent along the calculated path.
 
 ### Pathfinding Controller
 

@@ -32,11 +32,11 @@ A `readonly ref struct`: it never allocates, and `AlwaysEnterable` takes any spa
 
 ```csharp
 // Movement range with units blocking, threat range with units ignored: same pathfinder, same grid.
-using var moveRange   = pathfinder.GetReachable(agent, unitCell, 500);
-using var threatRange = pathfinder.GetReachable(agent, unitCell, 500, new QueryOptions(OccupancyRule.Ignore));
+using var moveRange   = pathfinder.GetReachable(unitCell, 500);
+using var threatRange = pathfinder.GetReachable(unitCell, 500, 1, new QueryOptions(OccupancyRule.Ignore));
 
 // Move to attack: the mover stands on its own (occupied) cells and the target cell is occupied.
 ReadOnlySpan<Coordinate> ownCells = stackalloc Coordinate[] { unitCell };
-using var approach = pathfinder.GetPath(agent, unitCell, targetCell,
+using var approach = pathfinder.GetPath(unitCell, targetCell, 1,
     new QueryOptions(alwaysEnterable: ownCells, isDestinationAlwaysEnterable: true));
 ```

@@ -2,14 +2,14 @@
 
 **Namespace:** `Migs.MPath.Core.Interfaces`
 
-Interface for path caching functionality that allows storing and retrieving calculated paths based on start, destination, and agent properties.
+Interface for path caching functionality that allows storing and retrieving calculated paths keyed by the agent size, the start and the destination.
 
 ## Methods
 
 | Method | Description |
 |--------|-------------|
-| `bool TryGetCachedPath(IAgent agent, Coordinate from, Coordinate to, out PathResult pathResult)` | Tries to get a cached path result for the specified parameters. |
-| `void CachePath(IAgent agent, Coordinate from, Coordinate to, PathResult pathResult)` | Caches a path result for the specified parameters. |
+| `bool TryGetCachedPath(int agentSize, Coordinate from, Coordinate to, out PathResult pathResult)` | Tries to get a cached path result for the specified parameters. |
+| `void CachePath(int agentSize, Coordinate from, Coordinate to, PathResult pathResult)` | Caches a path result for the specified parameters. |
 | `void ClearCache()` | Clears all cached paths. |
 | `void Dispose()` | Releases all resources used by the path caching implementation. |
 
@@ -17,9 +17,9 @@ Interface for path caching functionality that allows storing and retrieving calc
 
 - **Ownership:** the `PathResult` passed to `CachePath` is owned by the cache, which disposes it when it evicts or clears the entry. The instance returned by `TryGetCachedPath` also stays owned by the cache: `Pathfinder` copies it before returning a result to its caller, so callers may dispose every result they receive.
 
-- **Agent:** queries made with the `IAgent` overloads pass the caller's agent. Queries made with the `int agentSize` overloads pass an internal `IAgent` whose `Size` is the query's size and which equals any other such agent of the same size. Key on `agent.Size` (as `DefaultPathCaching` does) so both kinds of query share entries.
+- **Key:** every call receives the query's `agentSize` (the third argument of `GetPath`, 1 by default) with `from` and `to`. Key on all three, as `DefaultPathCaching` does: a size-1 and a size-2 query of the same pair must not share an entry. Queries whose [`QueryOptions`](QueryOptions.md) change the rules never reach the cache.
 - Implements `IDisposable` and should be disposed when no longer needed.
-- Implementations should efficiently store and retrieve paths based on agent properties and start/end coordinates.
+- Implementations should efficiently store and retrieve paths by agent size and start/end coordinates.
 - Custom implementations can be provided to the `Pathfinder.EnablePathCaching()` method.
 
 ## Examples
@@ -30,17 +30,17 @@ public class CustomPathCaching : IPathCaching
 {
     private readonly Dictionary<string, PathResult> _cache = new();
     
-    public bool TryGetCachedPath(IAgent agent, Coordinate from, Coordinate to, out PathResult pathResult)
+    public bool TryGetCachedPath(int agentSize, Coordinate from, Coordinate to, out PathResult pathResult)
     {
-        var key = $"{agent.Size}_{from.X}_{from.Y}_{to.X}_{to.Y}";
+        var key = $"{agentSize}_{from.X}_{from.Y}_{to.X}_{to.Y}";
         return _cache.TryGetValue(key, out pathResult);
     }
     
-    public void CachePath(IAgent agent, Coordinate from, Coordinate to, PathResult pathResult)
+    public void CachePath(int agentSize, Coordinate from, Coordinate to, PathResult pathResult)
     {
         if (!pathResult.IsSuccess) return;
         
-        var key = $"{agent.Size}_{from.X}_{from.Y}_{to.X}_{to.Y}";
+        var key = $"{agentSize}_{from.X}_{from.Y}_{to.X}_{to.Y}";
         _cache[key] = pathResult;
     }
     

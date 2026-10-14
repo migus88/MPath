@@ -17,7 +17,7 @@ namespace Migs.MPath.Core.Data
     /// </list>
     /// Each flag names one combination of the two flanking cells; when the actual combination's flag is
     /// set, the diagonal step is not allowed. The order of the two cells does not matter.<br/>
-    /// For an agent with <see cref="Interfaces.IAgent.Size"/> greater than 1, a flanking "cell" is the agent's
+    /// For an agent size (the <c>agentSize</c> query argument) greater than 1, a flanking "cell" is the agent's
     /// whole footprint at the flanking position: it is a wall when any cell of the footprint is a wall or
     /// outside the grid, otherwise occupied when any cell of the footprint is occupied, otherwise open.<br/>
     /// The rule only gates diagonal steps. Entering a cell is decided separately (walls never, occupied

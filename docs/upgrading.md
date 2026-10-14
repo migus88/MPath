@@ -76,12 +76,6 @@ Each entry says what changed, who notices it, and what to do, if anything. Entri
 - **Who notices:** callers that compare routes with stored ones, and stepwise visualizations that show the scores.
 - **What to do:** nothing, unless you stored or asserted exact routes or scores; regenerate those.
 
-#### `agentSize` overloads
-
-- **What changed:** `GetPath`, `GetReachable` and `BeginStepwiseSearch` gained overloads that take an `int agentSize` (default 1) instead of an `IAgent`.
-- **Who notices:** nobody; the `IAgent` overloads behave as before.
-- **What to do:** nothing by itself. 2.0 reshapes these overloads; see [Remove IAgent](#59-remove-iagent).
-
 #### Open set sized to the grid
 
 - **What changed:** the open set is a heap rented once per pathfinder and sized to the grid (8 bytes per cell). The memory is taken when the pathfinder is created instead of growing during a search. `InitialBufferSize` is ignored.
@@ -216,7 +210,32 @@ target = null;
 
 Remove IAgent: agentSize-only overloads, int-keyed IPathCaching, no `default` trap.
 
-Pending: filled by #59.
+- **What changed:**
+  - `IAgent` is removed. Every query takes the agent's size as an `int agentSize`, always the **third** argument; the new `QueryOptions` overloads take the options after it:
+    - `GetPath(from, to, int agentSize = 1)` and `GetPath(from, to, int agentSize, QueryOptions options)`;
+    - `GetReachable(from, budget, int agentSize = 1)` and `GetReachable(from, budget, int agentSize, QueryOptions options)`;
+    - `BeginStepwiseSearch(from, to, int agentSize = 1)` and `BeginStepwiseSearch(from, to, int agentSize, QueryOptions options)`.
+  - `agentSize` below 1 throws `ArgumentOutOfRangeException` (parameter `agentSize`). In 1.2.1 an `IAgent` whose `Size` was below 1 was treated as a single-cell agent. A bare `default` as the third argument is a size of 0, so it throws too; there is no overload that takes options in that position.
+  - `IPathCaching` keys on the size: `TryGetCachedPath(int agentSize, Coordinate from, Coordinate to, out PathResult pathResult)` and `CachePath(int agentSize, Coordinate from, Coordinate to, PathResult pathResult)`. `DefaultPathCaching` keys on `(agentSize, from, to)` as before; queries of different sizes never share an entry.
+- **Who notices:** every caller that passes an agent, implements `IAgent` (the interface no longer exists), or implements `IPathCaching`.
+- **What to do:** pass `agent.Size` as the third argument (or nothing, for a single-cell agent). Your own agent types can stay; they no longer implement a library interface. A custom cache keys on `agentSize` instead of `agent.Size`.
+
+```csharp
+// 1.2.1
+using var path   = pathfinder.GetPath(agent, from, to);
+using var range  = pathfinder.GetReachable(agent, from, budget);
+using var search = pathfinder.BeginStepwiseSearch(agent, from, to);
+class Unit : IAgent { public int Size => 2; }
+class MyCache : IPathCaching { public bool TryGetCachedPath(IAgent agent, Coordinate from, Coordinate to, out PathResult result) => ... agent.Size ...; }
+
+// 2.0
+using var path   = pathfinder.GetPath(from, to, agent.Size);   // or GetPath(from, to) for a single-cell agent
+using var direct = pathfinder.GetPath(from, to, agent.Size, options); // new in 2.0: options follow the size
+using var range  = pathfinder.GetReachable(from, budget, agent.Size);
+using var search = pathfinder.BeginStepwiseSearch(from, to, agent.Size);
+class Unit { public int Size => 2; }                            // no interface
+class MyCache : IPathCaching { public bool TryGetCachedPath(int agentSize, Coordinate from, Coordinate to, out PathResult result) => ... agentSize ...; }
+```
 
 #### #60 Rename IsCalculatingOccupiedCells
 
@@ -256,7 +275,7 @@ Pending: filled by #62.
 4. Replace `IsMovementBetweenCornersEnabled` with `CornerBlocking`, including in `ScriptablePathfinderSettings` assets that had it ticked; delete `InitialBufferSize` and `Cell.Reset()` calls; pass step counts to `PathResult.Success`; add the four settings members to a custom `IPathfinderSettings`.
 5. Replace `Coordinate.IsInitialized` and `Coordinate.Reset()` with a `Coordinate?` (or your own sentinel).
 6. Pick a cost resolution and scale every cost to `int`: `StraightStepCost`/`DiagonalStepCost` (renamed from the multipliers), `Cell.Weight`, budgets, and the costs you read back. Re-enter the step costs on `ScriptablePathfinderSettings` assets.
-
-7. Rename `IsCalculatingOccupiedCells` to `AreOccupiedCellsBlocking`, including in custom `IPathfinderSettings` implementations.
+7. Replace every `IAgent` argument with its size as the third argument (`GetPath(from, to, agent.Size)`), drop `: IAgent` from your types, and key a custom `IPathCaching` on `int agentSize`.
+8. Rename `IsCalculatingOccupiedCells` to `AreOccupiedCellsBlocking`, including in custom `IPathfinderSettings` implementations.
 
 Steps for the breaking changes are added as their entries are filled.

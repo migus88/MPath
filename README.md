@@ -141,9 +141,8 @@ var end = new Coordinate(8, 8);
 
 using var result = pathfinder.GetPath(start, end);
 
-// Larger units: pass their size, or anything implementing IAgent
-using var tankPath = pathfinder.GetPath(start, end, agentSize: 2);
-using var unitPath = pathfinder.GetPath(unit, start, end); // unit implements IAgent
+// Larger units: pass their size (always the third argument)
+using var tankPath = pathfinder.GetPath(start, end, 2);
 
 // Use the path
 if (result.IsSuccess)

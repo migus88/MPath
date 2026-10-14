@@ -252,18 +252,6 @@ namespace Migs.MPath.Tests
         }
 
         [Test]
-        public void GetReachable_WithNullAgent_ThrowsArgumentNullException()
-        {
-            var cells = CreateEmptyGrid(GridSize, GridSize);
-            using var pathfinder = new Pathfinder(cells, GridSize, GridSize);
-
-            var action = () => pathfinder.GetReachable(null!, new Coordinate(0, 0), 500);
-
-            action.Should().Throw<ArgumentNullException>()
-                  .WithParameterName("agent");
-        }
-
-        [Test]
         public void GetReachable_AfterDisposal_ThrowsObjectDisposedException()
         {
             var cells = CreateEmptyGrid(GridSize, GridSize);
