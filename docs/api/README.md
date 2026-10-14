@@ -21,6 +21,7 @@ MPath uses a single codebase for both Unity and .NET:
 | [SearchState](SearchState.md) | The overall state of a stepwise search (in progress / success / failure) |
 | [Cell](Cell.md) | Represents a single cell in the pathfinding grid |
 | [Coordinate](Coordinate.md) | Represents a position in the grid |
+| [CornerBlocking](CornerBlocking.md) | Which walls / occupied cells block a diagonal step (corner-cutting) |
 | [LineOfSightMode](LineOfSightMode.md) | Controls whether unwalkable cells block `HasLineOfSight` |
 | [IAgent](IAgent.md) | Interface for entities that need pathfinding |
 | [ICellHolder](ICellHolder.md) | Interface for objects that hold cell data |

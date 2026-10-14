@@ -10,7 +10,10 @@ A Unity ScriptableObject implementation of the `IPathfinderSettings` interface. 
 |----------|------|---------|-------------|
 | `IsDiagonalMovementEnabled` | `bool` | `true` | Whether agents can move diagonally. |
 | `IsCalculatingOccupiedCells` | `bool` | `true` | Whether occupied cells are considered as blocked. |
-| `IsMovementBetweenCornersEnabled` | `bool` | `false` | Whether agents can move between two diagonal corners. |
+| `IsMovementBetweenCornersEnabled` | `bool` | `false` | Legacy shorthand: `true` is `CornerBlocking.None`, `false` is `BetweenBlockedCells`. Ignored while `IsCornerBlockingOverridden` is on. |
+| `IsCornerBlockingOverridden` | `bool` | `false` | Use `CornerBlockingOverride` instead of `IsMovementBetweenCornersEnabled`. |
+| `CornerBlockingOverride` | [`CornerBlocking`](CornerBlocking.md) | `BetweenBlockedCells` | The corner rule while the override is on. |
+| `CornerBlocking` | [`CornerBlocking`](CornerBlocking.md) | (computed) | The effective rule. Setting it turns the override on. |
 | `IsCellWeightEnabled` | `bool` | `true` | Whether cell weight calculation is enabled. |
 | `StraightMovementMultiplier` | `float` | `1.0f` | The cost multiplier for horizontal/vertical movement. |
 | `DiagonalMovementMultiplier` | `float` | `1.41f` | The cost multiplier for diagonal movement. |

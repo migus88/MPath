@@ -11,7 +11,27 @@ namespace Migs.MPath.Core.Data
         public bool IsCalculatingOccupiedCells { get; set; } = true;
 
         /// <inheritdoc/>
-        public bool IsMovementBetweenCornersEnabled { get; set; } = false;
+        /// <remarks>
+        /// A view over <see cref="CornerBlocking"/>: reads <c>true</c> only when it is <see cref="Data.CornerBlocking.None"/>.
+        /// Setting <c>true</c> sets <see cref="Data.CornerBlocking.None"/>; setting <c>false</c> sets
+        /// <see cref="Data.CornerBlocking.BetweenBlockedCells"/> unless a blocking rule is already configured.
+        /// </remarks>
+        public bool IsMovementBetweenCornersEnabled
+        {
+            get => CornerBlocking == CornerBlocking.None;
+            set
+            {
+                if (value == IsMovementBetweenCornersEnabled)
+                {
+                    return;
+                }
+
+                CornerBlocking = value ? CornerBlocking.None : CornerBlocking.BetweenBlockedCells;
+            }
+        }
+
+        /// <inheritdoc/>
+        public CornerBlocking CornerBlocking { get; set; } = CornerBlocking.BetweenBlockedCells;
 
         /// <inheritdoc/>
         public bool IsCellWeightEnabled { get; set; } = true;
