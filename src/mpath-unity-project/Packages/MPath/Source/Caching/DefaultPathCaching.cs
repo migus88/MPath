@@ -8,6 +8,10 @@ namespace Migs.MPath.Core.Caching
     /// <summary>
     /// Default implementation of path caching that stores calculated paths in memory.
     /// </summary>
+    /// <remarks>
+    /// Owns every stored <see cref="PathResult"/> and disposes it when the entry is replaced or cleared; see
+    /// <see cref="IPathCaching"/> for the ownership contract.
+    /// </remarks>
     public class DefaultPathCaching : IPathCaching
     {
         private readonly Dictionary<CacheKey, PathResult> _cache = new();
@@ -19,7 +23,7 @@ namespace Migs.MPath.Core.Caching
         /// <param name="agent">The agent for which the path was calculated.</param>
         /// <param name="from">The starting coordinate.</param>
         /// <param name="to">The destination coordinate.</param>
-        /// <param name="pathResult">The cached path result, if found.</param>
+        /// <param name="pathResult">The cached path result, if found. It remains owned by the cache.</param>
         /// <returns>True if a cached path was found, otherwise false.</returns>
         public bool TryGetCachedPath(IAgent agent, Coordinate from, Coordinate to, out PathResult pathResult)
         {
@@ -35,7 +39,7 @@ namespace Migs.MPath.Core.Caching
         /// <param name="agent">The agent for which the path was calculated.</param>
         /// <param name="from">The starting coordinate.</param>
         /// <param name="to">The destination coordinate.</param>
-        /// <param name="pathResult">The path result to cache.</param>
+        /// <param name="pathResult">The path result to cache. The cache takes ownership and disposes it on eviction.</param>
         public void CachePath(IAgent agent, Coordinate from, Coordinate to, PathResult pathResult)
         {
             ThrowIfDisposed();

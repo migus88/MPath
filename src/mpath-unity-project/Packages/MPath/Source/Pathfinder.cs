@@ -216,8 +216,7 @@ namespace Migs.MPath.Core
                 throw new ArgumentException("Destination is outside the valid field range", nameof(to));
             }
             
-            // Try to get the path from cache if caching is enabled
-            if (_isPathCachingEnabled && _pathCaching.TryGetCachedPath(agent, from, to, out var cachedPath))
+            if (TryGetCachedPath(agent, from, to, out var cachedPath))
             {
                 return cachedPath;
             }
@@ -238,13 +237,42 @@ namespace Migs.MPath.Core
 
                 var result = CalculatePath(agent, from, to, ptr);
                 
-                // Cache the path if caching is enabled and path was found
-                if (_isPathCachingEnabled && result.IsSuccess)
-                {
-                    _pathCaching.CachePath(agent, from, to, result);
-                }
+                CachePath(agent, from, to, result);
                 
                 return result;
+            }
+        }
+
+        /// <summary>
+        /// Looks the query up in the path cache. A hit is returned as a fresh copy owned by the caller, so the
+        /// instance the cache keeps is never handed out and disposing a result never touches the cache.
+        /// </summary>
+        /// <remarks>
+        /// Every cache read goes through here and every write through <see cref="CachePath"/>; a query that must not
+        /// share entries with plain <c>(agent, from, to)</c> queries (for example one with non-default per-query
+        /// options) skips both.
+        /// </remarks>
+        private bool TryGetCachedPath(IAgent agent, Coordinate from, Coordinate to, out PathResult pathResult)
+        {
+            if (_isPathCachingEnabled && _pathCaching.TryGetCachedPath(agent, from, to, out var cachedPath))
+            {
+                pathResult = cachedPath.Copy();
+                return true;
+            }
+
+            pathResult = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Stores a successful result in the path cache as a private copy that the cache owns, so the caller keeps
+        /// sole ownership of <paramref name="result"/>.
+        /// </summary>
+        private void CachePath(IAgent agent, Coordinate from, Coordinate to, PathResult result)
+        {
+            if (_isPathCachingEnabled && result.IsSuccess)
+            {
+                _pathCaching.CachePath(agent, from, to, result.Copy());
             }
         }
 

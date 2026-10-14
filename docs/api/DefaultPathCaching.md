@@ -24,7 +24,8 @@ Default implementation of the [IPathCaching](IPathCaching.md) interface that sto
 - Implements the [IPathCaching](IPathCaching.md) interface.
 - Uses a dictionary-based cache with a composite key based on agent size, start position, and destination.
 - Failed path results (where `PathResult.IsSuccess` is `false`) are not cached.
-- When caching a path with the same key as an existing entry, the old entry is properly disposed.
+- Owns every stored `PathResult`: when caching a path with the same key as an existing entry, the old entry is disposed, and `ClearCache`/`Dispose` dispose all entries.
+- `Pathfinder` stores a private copy and returns a fresh copy on every cache hit, so results returned by `GetPath` are always the caller's to dispose.
 - This is the default implementation used when `Pathfinder.EnablePathCaching()` is called without a custom caching parameter.
 
 ## Examples
@@ -38,8 +39,8 @@ var pathfinder = new Pathfinder(cells, width, height);
 pathfinder.EnablePathCaching();
 
 // Find a path
-var result = pathfinder.GetPath(agent, from, to);
+using var result = pathfinder.GetPath(agent, from, to);
 
-// Subsequent calls with the same parameters will use the cached result
-var cachedResult = pathfinder.GetPath(agent, from, to);
+// Subsequent calls with the same parameters return a fresh copy of the cached path
+using var cachedResult = pathfinder.GetPath(agent, from, to);
 ``` 
