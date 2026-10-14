@@ -56,7 +56,7 @@ var costs = new int[width * height];
 range.CopyCostsTo(costs);
 ```
 
-`Contains`, `TryGetCost` and `TryGetCell` are O(1): the first lookup builds an index over the reached cells (one pass, rented from the array pool and sized to their bounding box), so "is this cell in range?" over a whole board costs no more than walking the range once. The index belongs to the result: it stays valid after later queries and returns to the pool when the result is disposed. Spans and enumerators read the result's pooled array, so don't keep them past `Dispose`. `Cells` still works but allocates an iterator per enumeration.
+`Contains`, `TryGetCost` and `TryGetCell` are O(1): the first lookup builds an index over the reached cells (one pass, rented from the array pool and sized to their bounding box), so "is this cell in range?" over a whole board costs no more than walking the range once. The index belongs to the result: it stays valid after later queries and returns to the pool when the result is disposed. Spans and enumerators read the result's pooled array, so don't keep them past `Dispose`. `foreach` over `Cells` is allocation-free too; LINQ over it boxes it.
 
 ## Counting moves instead of costs
 

@@ -12,7 +12,7 @@ Represents the result of a pathfinding operation. Implements `IDisposable`.
 | `Length` | `int` | The number of coordinates in the path. |
 | `Steps` | `int` | The number of grid steps of the route the search found (origin excluded). Equals `Length` unless path smoothing removed waypoints; `0` for a failure. |
 | `DiagonalSteps` | `int` | How many of `Steps` are diagonal (before smoothing). |
-| `Path` | `IEnumerable<Coordinate>` | The coordinates forming the path from start to destination. Allocates an iterator per enumeration: prefer `foreach (var c in result)` or `AsSpan()`. |
+| `Path` | `PathResult.PathEnumerable` | The coordinates forming the path from start to destination, as a `readonly struct` implementing `IEnumerable<Coordinate>`. `foreach (var c in result.Path)` uses the struct `Enumerator` and allocates nothing, like `foreach (var c in result)`; used as an `IEnumerable<Coordinate>` (LINQ, a typed variable) it is boxed. Enumerating a disposed result throws `ObjectDisposedException`. |
 | `this[int index]` | `Coordinate` | The coordinate at the index. Throws `ArgumentOutOfRangeException` when out of range (any index of a failed result), `ObjectDisposedException` after dispose. |
 
 ## Methods
@@ -23,7 +23,7 @@ Represents the result of a pathfinding operation. Implements `IDisposable`.
 | `static PathResult Failure()` | Creates a failed path result. |
 | `Coordinate Get(int index)` | Gets the coordinate at the specified index. |
 | `ReadOnlySpan<Coordinate> AsSpan()` | The path as a span over the pooled array (no copy); empty for a failure. Valid until the result is disposed. |
-| `Enumerator GetEnumerator()` | A struct enumerator, so `foreach (var c in result)` allocates nothing. |
+| `Enumerator GetEnumerator()` | A struct enumerator (implements `IEnumerator<Coordinate>`), so `foreach (var c in result)` allocates nothing. |
 | `void Dispose()` | Releases resources used by the PathResult. |
 
 ## Remarks

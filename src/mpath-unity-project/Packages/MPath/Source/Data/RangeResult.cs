@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Migs.MPath.Core.Data
@@ -32,30 +33,13 @@ namespace Migs.MPath.Core.Data
         public int Length { get; }
 
         /// <summary>
-        /// Enumerates the reachable cells, each paired with the cost of the cheapest path to it, through an iterator,
-        /// which allocates on every enumeration. Prefer <c>foreach (var c in range)</c> (<see cref="GetEnumerator"/>)
-        /// or <see cref="AsSpan"/>, which do not.
+        /// The reachable cells, each paired with the cost of the cheapest path to it, as a sequence.
+        /// <c>foreach (var c in range.Cells)</c> uses the same struct <see cref="Enumerator"/> as
+        /// <c>foreach (var c in range)</c> and allocates nothing; as an <see cref="IEnumerable{T}"/> (LINQ, an
+        /// <c>IEnumerable&lt;ReachableCell&gt;</c> variable) it is boxed.
         /// </summary>
-        public IEnumerable<ReachableCell> Cells
-        {
-            get
-            {
-                if (_isDisposed)
-                {
-                    throw new ObjectDisposedException(nameof(RangeResult));
-                }
-
-                if (Length <= 0 || _cells == null || _cells.Length < Length)
-                {
-                    yield break;
-                }
-
-                for (var i = 0; i < Length; i++)
-                {
-                    yield return _cells[i];
-                }
-            }
-        }
+        /// <remarks>Enumerating a disposed result throws <see cref="ObjectDisposedException"/>.</remarks>
+        public CellEnumerable Cells => new CellEnumerable(this);
 
         /// <summary>
         /// Gets the reachable cell at the specified index, like <see cref="Get"/>.
@@ -418,7 +402,7 @@ namespace Migs.MPath.Core.Data
         /// Enumerates the cells of a <see cref="RangeResult"/> without allocating. Returned by
         /// <see cref="RangeResult.GetEnumerator"/>; not meant to be used directly.
         /// </summary>
-        public struct Enumerator
+        public struct Enumerator : IEnumerator<ReachableCell>
         {
             private readonly ReachableCell[] _cells;
             private readonly int _length;
@@ -436,6 +420,8 @@ namespace Migs.MPath.Core.Data
             /// </summary>
             public ReachableCell Current => _cells[_index];
 
+            object IEnumerator.Current => Current;
+
             /// <summary>
             /// Advances to the next reachable cell.
             /// </summary>
@@ -443,6 +429,49 @@ namespace Migs.MPath.Core.Data
             public bool MoveNext()
             {
                 return ++_index < _length;
+            }
+
+            void IEnumerator.Reset()
+            {
+                _index = -1;
+            }
+
+            void IDisposable.Dispose()
+            {
+            }
+        }
+
+        /// <summary>
+        /// The cells of a <see cref="RangeResult"/> as a sequence, returned by <see cref="RangeResult.Cells"/>.
+        /// <c>foreach</c> over it allocates nothing; used as an <see cref="IEnumerable{T}"/> it is boxed.
+        /// </summary>
+        public readonly struct CellEnumerable : IEnumerable<ReachableCell>
+        {
+            private readonly RangeResult _result;
+
+            internal CellEnumerable(RangeResult result)
+            {
+                _result = result;
+            }
+
+            /// <summary>
+            /// Returns an allocation-free enumerator over the cells, like <see cref="RangeResult.GetEnumerator"/>.
+            /// </summary>
+            /// <returns>An enumerator over the reachable cells; empty for a <c>default</c> instance.</returns>
+            /// <exception cref="ObjectDisposedException">Thrown when the result has been disposed.</exception>
+            public Enumerator GetEnumerator()
+            {
+                return _result == null ? default : _result.GetEnumerator();
+            }
+
+            IEnumerator<ReachableCell> IEnumerable<ReachableCell>.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
             }
         }
     }

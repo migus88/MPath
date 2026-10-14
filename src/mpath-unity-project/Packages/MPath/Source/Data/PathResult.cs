@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Migs.MPath.Core.Data
@@ -36,29 +37,12 @@ namespace Migs.MPath.Core.Data
         public int DiagonalSteps { get; private set; }
 
         /// <summary>
-        /// Enumerates the coordinates of the path through an iterator, which allocates on every enumeration. Prefer
-        /// <c>foreach (var c in result)</c> (<see cref="GetEnumerator"/>) or <see cref="AsSpan"/>, which do not.
+        /// The coordinates of the path as a sequence. <c>foreach (var c in result.Path)</c> uses the same struct
+        /// <see cref="Enumerator"/> as <c>foreach (var c in result)</c> and allocates nothing; as an
+        /// <see cref="IEnumerable{T}"/> (LINQ, an <c>IEnumerable&lt;Coordinate&gt;</c> variable) it is boxed.
         /// </summary>
-        public IEnumerable<Coordinate> Path
-        {
-            get
-            {
-                if (_isDisposed)
-                {
-                    throw new ObjectDisposedException(nameof(PathResult));
-                }
-                
-                if (Length <= 0 || _path.Length < Length)
-                {
-                    yield break;
-                }
-
-                for (var i = 0; i < Length; i++)
-                {
-                    yield return _path[i];
-                }
-            }
-        }
+        /// <remarks>Enumerating a disposed result throws <see cref="ObjectDisposedException"/>.</remarks>
+        public PathEnumerable Path => new PathEnumerable(this);
 
         /// <summary>
         /// Gets the coordinate at the specified index in the path, like <see cref="Get"/> without its success check
@@ -264,7 +248,7 @@ namespace Migs.MPath.Core.Data
         /// Enumerates the coordinates of a <see cref="PathResult"/> without allocating. Returned by
         /// <see cref="PathResult.GetEnumerator"/>; not meant to be used directly.
         /// </summary>
-        public struct Enumerator
+        public struct Enumerator : IEnumerator<Coordinate>
         {
             private readonly Coordinate[] _path;
             private readonly int _length;
@@ -282,6 +266,8 @@ namespace Migs.MPath.Core.Data
             /// </summary>
             public Coordinate Current => _path[_index];
 
+            object IEnumerator.Current => Current;
+
             /// <summary>
             /// Advances to the next coordinate.
             /// </summary>
@@ -289,6 +275,49 @@ namespace Migs.MPath.Core.Data
             public bool MoveNext()
             {
                 return ++_index < _length;
+            }
+
+            void IEnumerator.Reset()
+            {
+                _index = -1;
+            }
+
+            void IDisposable.Dispose()
+            {
+            }
+        }
+
+        /// <summary>
+        /// The coordinates of a <see cref="PathResult"/> as a sequence, returned by <see cref="PathResult.Path"/>.
+        /// <c>foreach</c> over it allocates nothing; used as an <see cref="IEnumerable{T}"/> it is boxed.
+        /// </summary>
+        public readonly struct PathEnumerable : IEnumerable<Coordinate>
+        {
+            private readonly PathResult _result;
+
+            internal PathEnumerable(PathResult result)
+            {
+                _result = result;
+            }
+
+            /// <summary>
+            /// Returns an allocation-free enumerator over the path, like <see cref="PathResult.GetEnumerator"/>.
+            /// </summary>
+            /// <returns>An enumerator over the path, origin excluded; empty for a <c>default</c> instance.</returns>
+            /// <exception cref="ObjectDisposedException">Thrown when the PathResult has been disposed.</exception>
+            public Enumerator GetEnumerator()
+            {
+                return _result == null ? default : _result.GetEnumerator();
+            }
+
+            IEnumerator<Coordinate> IEnumerable<Coordinate>.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
             }
         }
     }

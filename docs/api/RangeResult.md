@@ -10,7 +10,7 @@ Represents the result of a movement-range (reachability) query produced by `Path
 |----------|------|-------------|
 | `IsSuccess` | `bool` | Whether the query produced at least one reachable cell. |
 | `Length` | `int` | The number of reachable cells. |
-| `Cells` | `IEnumerable<ReachableCell>` | The reachable cells, each paired with its cheapest path cost. Allocates an iterator per enumeration: prefer `foreach (var c in range)` or `AsSpan()`. |
+| `Cells` | `RangeResult.CellEnumerable` | The reachable cells, each paired with its cheapest path cost, as a `readonly struct` implementing `IEnumerable<ReachableCell>`. `foreach (var c in range.Cells)` uses the struct `Enumerator` and allocates nothing, like `foreach (var c in range)`; used as an `IEnumerable<ReachableCell>` (LINQ, a typed variable) it is boxed. Enumerating a disposed result throws `ObjectDisposedException`. |
 | `this[int index]` | `ReachableCell` | The reachable cell at the index. Throws `ArgumentOutOfRangeException` when out of range, `ObjectDisposedException` after dispose. |
 
 ## Methods
@@ -21,7 +21,7 @@ Represents the result of a movement-range (reachability) query produced by `Path
 | `static RangeResult Empty()` | Returns a shared empty result (no reachable cells). |
 | `ReachableCell Get(int index)` | Gets the reachable cell at the specified index. |
 | `ReadOnlySpan<ReachableCell> AsSpan()` | The reachable cells as a span over the pooled array (no copy), in the order the search settled them, origin first. Valid until the result is disposed. |
-| `Enumerator GetEnumerator()` | A struct enumerator, so `foreach (var c in range)` allocates nothing. |
+| `Enumerator GetEnumerator()` | A struct enumerator (implements `IEnumerator<ReachableCell>`), so `foreach (var c in range)` allocates nothing. |
 | `bool Contains(Coordinate coordinate)` | Determines whether the coordinate is reachable (O(1)). |
 | `bool TryGetCost(Coordinate coordinate, out int cost)` | Gets the cheapest path cost to the coordinate, if reachable (O(1)). |
 | `bool TryGetCell(Coordinate coordinate, out ReachableCell cell)` | Gets the reachable cell (cost and step counts) at the coordinate, if reachable (O(1)). |

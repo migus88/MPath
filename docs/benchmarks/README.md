@@ -176,24 +176,26 @@ Results allocate 40 B (path) and 72 B (range). 1.2.1 had no snapshot mode and cl
 ### Reading Results
 
 The `results` suite measures reading results rather than computing them: enumerating the cross-maze `PathResult`
-and a medium-budget `RangeResult` (the allocating `Path` / `Cells` iterators against `foreach` over the result,
+and a medium-budget `RangeResult` (`foreach` over the `Path` / `Cells` properties and over the result,
 `AsSpan()` and `Get(i)`), `CopyCostsTo`, and an O(1) `TryGetCost` for every reached cell of the range.
 
 The path has 1,078 cells and the range has 2,040 cells (budget 10000).
 
 | Method                            | Mean     | Allocated | 1.2.1    |
 |---------------------------------- |---------:|----------:|---------:|
-| Path_ForeachPathProperty          | 8.62 µs  |      48 B | 5.84 µs  |
+| Path_ForeachPathProperty          | 0.75 µs  |         - | 5.84 µs  |
 | Path_GetLoop                      | 4.15 µs  |         - | 5.73 µs  |
 | Path_Foreach                      | 0.96 µs  |         - |          |
 | Path_AsSpan                       | 0.67 µs  |         - |          |
-| Range_ForeachCellsProperty        | 9.51 µs  |      56 B | 9.22 µs  |
+| Range_ForeachCellsProperty        | 1.57 µs  |         - | 9.22 µs  |
 | Range_Foreach                     | 2.47 µs  |         - |          |
 | Range_CopyCostsTo                 | 13.9 µs  |         - |          |
 | Range_TryGetCost_EveryReachedCell | 18.0 µs  |         - | 1,614 µs |
 
-Prefer `foreach` over the result itself or `AsSpan()`: both are allocation-free and roughly 9x faster than the `Path` / `Cells`
-iterators. The `Path` iterator is slower than in 1.2.1 ([#71](https://github.com/migus88/MPath/issues/71)).
+`foreach` over `Path` / `Cells`, over the result itself and over `AsSpan()` are all allocation-free: `Path` and `Cells` are
+struct sequences that share the result's struct enumerator ([#71](https://github.com/migus88/MPath/issues/71); 1.2.1's
+`yield` iterators allocated and were 8x / 6x slower). The two `*Property` rows were measured on the same machine after #71,
+under load from other processes; the rest of the table is unchanged within noise. LINQ over `Path` / `Cells` boxes them.
 
 ### Cell Layout
 
