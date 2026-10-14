@@ -37,7 +37,37 @@ namespace Migs.MPath.Core
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         public StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to)
         {
-            return BeginStepwiseSearch(agent, from, to, OccupancyRule.UseSettings, Array.Empty<Coordinate>(), false);
+            ThrowIfDisposed();
+
+            if (agent == null)
+            {
+                throw new ArgumentNullException(nameof(agent));
+            }
+
+            return BeginStepwiseSearch(agent.Size, from, to, OccupancyRule.UseSettings, Array.Empty<Coordinate>(),
+                false);
+        }
+
+        /// <summary>
+        /// Begins a stepwise search like <see cref="BeginStepwiseSearch(IAgent, Coordinate, Coordinate)"/> for an
+        /// agent that occupies an <paramref name="agentSize"/> x <paramref name="agentSize"/> square of cells,
+        /// without an <see cref="IAgent"/>. The session must be disposed.
+        /// </summary>
+        /// <param name="from">The origin coordinate. Must be inside the grid.</param>
+        /// <param name="to">The destination coordinate. Must be inside the grid.</param>
+        /// <param name="agentSize">The agent's square size in cells. Defaults to a single-cell agent.</param>
+        /// <returns>A disposable <see cref="StepwiseSearch"/> positioned before the first expansion.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="agentSize"/> is less than 1.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="from"/> or <paramref name="to"/> is outside the grid.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when a stepwise search is already active on this instance.</exception>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
+        public StepwiseSearch BeginStepwiseSearch(Coordinate from, Coordinate to, int agentSize = SingleCellAgentSize)
+        {
+            ThrowIfDisposed();
+            ThrowIfInvalidAgentSize(agentSize);
+
+            return BeginStepwiseSearch(agentSize, from, to, OccupancyRule.UseSettings, Array.Empty<Coordinate>(),
+                false);
         }
 
         /// <summary>
@@ -57,13 +87,6 @@ namespace Migs.MPath.Core
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         public StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)
         {
-            return BeginStepwiseSearch(agent, from, to, options.Occupancy, options.AlwaysEnterable.ToArray(),
-                options.IsDestinationAlwaysEnterable);
-        }
-
-        private StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to,
-            OccupancyRule occupancy, Coordinate[] enterableCells, bool isDestinationEnterable)
-        {
             ThrowIfDisposed();
 
             if (agent == null)
@@ -71,6 +94,37 @@ namespace Migs.MPath.Core
                 throw new ArgumentNullException(nameof(agent));
             }
 
+            return BeginStepwiseSearch(agent.Size, from, to, options.Occupancy, options.AlwaysEnterable.ToArray(),
+                options.IsDestinationAlwaysEnterable);
+        }
+
+        /// <summary>
+        /// Begins a stepwise search like <see cref="BeginStepwiseSearch(Coordinate, Coordinate, int)"/>, with
+        /// movement rules overridden by <paramref name="options"/> for the whole search, exactly as
+        /// <see cref="GetPath(Coordinate, Coordinate, QueryOptions, int)"/> with the same options would.
+        /// </summary>
+        /// <param name="from">The origin coordinate. Must be inside the grid.</param>
+        /// <param name="to">The destination coordinate. Must be inside the grid.</param>
+        /// <param name="options">The per-query rules. <c>default</c> behaves exactly like the overload without options.</param>
+        /// <param name="agentSize">The agent's square size in cells. Defaults to a single-cell agent.</param>
+        /// <returns>A disposable <see cref="StepwiseSearch"/> positioned before the first expansion.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="agentSize"/> is less than 1.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="from"/> or <paramref name="to"/> is outside the grid.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when a stepwise search is already active on this instance.</exception>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
+        public StepwiseSearch BeginStepwiseSearch(Coordinate from, Coordinate to, QueryOptions options,
+            int agentSize = SingleCellAgentSize)
+        {
+            ThrowIfDisposed();
+            ThrowIfInvalidAgentSize(agentSize);
+
+            return BeginStepwiseSearch(agentSize, from, to, options.Occupancy, options.AlwaysEnterable.ToArray(),
+                options.IsDestinationAlwaysEnterable);
+        }
+
+        private StepwiseSearch BeginStepwiseSearch(int agentSize, Coordinate from, Coordinate to,
+            OccupancyRule occupancy, Coordinate[] enterableCells, bool isDestinationEnterable)
+        {
             if (!IsPositionValid(from.X, from.Y))
             {
                 throw new ArgumentException("Origin is outside the valid field range", nameof(from));
@@ -88,7 +142,7 @@ namespace Migs.MPath.Core
                     "Dispose the previous StepwiseSearch before starting a new one.");
             }
 
-            _activeSearch = new StepwiseSearch(this, agent, from, to, occupancy, enterableCells,
+            _activeSearch = new StepwiseSearch(this, agentSize, from, to, occupancy, enterableCells,
                 isDestinationEnterable);
             return _activeSearch;
         }
@@ -132,12 +186,12 @@ namespace Migs.MPath.Core
             private SearchStep _lastStep;
             private bool _disposed;
 
-            internal StepwiseSearch(Pathfinder pathfinder, IAgent agent, Coordinate from, Coordinate to,
+            internal StepwiseSearch(Pathfinder pathfinder, int agentSize, Coordinate from, Coordinate to,
                 OccupancyRule occupancy, Coordinate[] enterableCells, bool isDestinationEnterable)
             {
                 _pathfinder = pathfinder;
                 _to = to;
-                _agentSize = agent.Size;
+                _agentSize = agentSize;
                 _occupancy = occupancy;
                 _enterableCells = enterableCells;
                 _isDestinationEnterable = isDestinationEnterable;

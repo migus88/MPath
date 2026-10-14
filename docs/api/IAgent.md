@@ -12,6 +12,7 @@ Represents an entity that can move through the pathfinding grid.
 
 ## Remarks
 
+- Optional: every `Pathfinder` query also has an overload taking `int agentSize = 1` instead (for example `GetPath(from, to, agentSize: 2)`), so single-cell units need no `IAgent` type. Both forms return the same results for the same size. See [agent size](Pathfinder.md#agent-size).
 - For a value of `1`, the agent occupies a single cell (1x1 square).
 - For a value of `2`, the agent occupies a 2x2 square of cells.
 - The agent is positioned at the top-left cell of its square area.
@@ -20,10 +21,13 @@ Represents an entity that can move through the pathfinding grid.
 ## Example
 
 ```csharp
-// Single-cell agent
-public class SingleCellAgent : IAgent
+// Single-cell agent: no IAgent needed
+using var path = pathfinder.GetPath(from, to);
+
+// A type that already knows its size can implement IAgent
+public class Truck : IAgent
 {
-    public int Size => 1;
+    public int Size => 2;
 }
 
 // In Unity with MonoBehaviour

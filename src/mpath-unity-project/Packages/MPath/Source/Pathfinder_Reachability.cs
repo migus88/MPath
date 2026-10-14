@@ -40,6 +40,37 @@ namespace Migs.MPath.Core
                 throw new ArgumentNullException(nameof(agent));
             }
 
+            return FindReachable(agent.Size, from, budget);
+        }
+
+        /// <summary>
+        /// Finds every reachable cell like <see cref="GetReachable(IAgent, Coordinate, float)"/> for an agent that
+        /// occupies an <paramref name="agentSize"/> x <paramref name="agentSize"/> square of cells, without an
+        /// <see cref="IAgent"/>.
+        /// </summary>
+        /// <param name="from">The origin coordinate. Always included in the result (cost 0) when the budget is non-negative.</param>
+        /// <param name="budget">The maximum allowed path cost.</param>
+        /// <param name="agentSize">The agent's square size in cells. Defaults to a single-cell agent.</param>
+        /// <returns>
+        /// A <see cref="RangeResult"/> listing every reachable cell with its cheapest path cost.
+        /// The result must be disposed (use <c>using</c>) to return its pooled buffer.
+        /// </returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="agentSize"/> is less than 1.</exception>
+        /// <exception cref="ArgumentException">Thrown when the origin is outside the valid field range.</exception>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
+        public RangeResult GetReachable(Coordinate from, float budget, int agentSize = SingleCellAgentSize)
+        {
+            ThrowIfDisposed();
+            ThrowIfInvalidAgentSize(agentSize);
+
+            return FindReachable(agentSize, from, budget);
+        }
+
+        /// <summary>
+        /// The shared body of the <c>GetReachable</c> overloads.
+        /// </summary>
+        private RangeResult FindReachable(int agentSize, Coordinate from, float budget)
+        {
             if (!IsPositionValid(from.X, from.Y))
             {
                 throw new ArgumentException("Origin is outside the valid field range", nameof(from));
@@ -59,7 +90,7 @@ namespace Migs.MPath.Core
                 ResetCells(ptr);
                 _openSet.Clear();
 
-                return CalculateReachable(agent, from, budget, ptr);
+                return CalculateReachable(agentSize, from, budget, ptr);
             }
         }
 
@@ -83,6 +114,45 @@ namespace Migs.MPath.Core
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         public RangeResult GetReachable(IAgent agent, Coordinate from, float budget, QueryOptions options)
         {
+            ThrowIfDisposed();
+
+            if (agent == null)
+            {
+                throw new ArgumentNullException(nameof(agent));
+            }
+
+            return FindReachable(agent.Size, from, budget, options);
+        }
+
+        /// <summary>
+        /// Finds every reachable cell like <see cref="GetReachable(Coordinate, float, int)"/>, with movement rules
+        /// overridden for this query only by <paramref name="options"/>. The grid and the settings are not modified.
+        /// </summary>
+        /// <param name="from">The origin coordinate. Always included in the result (cost 0) when the budget is non-negative.</param>
+        /// <param name="budget">The maximum allowed path cost.</param>
+        /// <param name="options">
+        /// The per-query rules. <c>default</c> behaves exactly like the overload without options.
+        /// <see cref="QueryOptions.IsDestinationAlwaysEnterable"/> is ignored, since the query has no destination.
+        /// </param>
+        /// <param name="agentSize">The agent's square size in cells. Defaults to a single-cell agent.</param>
+        /// <returns>
+        /// A <see cref="RangeResult"/> listing every reachable cell with its cheapest path cost.
+        /// The result must be disposed (use <c>using</c>) to return its pooled buffer.
+        /// </returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="agentSize"/> is less than 1.</exception>
+        /// <exception cref="ArgumentException">Thrown when the origin is outside the valid field range.</exception>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
+        public RangeResult GetReachable(Coordinate from, float budget, QueryOptions options,
+            int agentSize = SingleCellAgentSize)
+        {
+            ThrowIfDisposed();
+            ThrowIfInvalidAgentSize(agentSize);
+
+            return FindReachable(agentSize, from, budget, options);
+        }
+
+        private RangeResult FindReachable(int agentSize, Coordinate from, float budget, QueryOptions options)
+        {
             var enterableCells = options.AlwaysEnterable;
 
             fixed (Coordinate* enterable = enterableCells)
@@ -92,7 +162,7 @@ namespace Migs.MPath.Core
 
                 try
                 {
-                    return GetReachable(agent, from, budget);
+                    return FindReachable(agentSize, from, budget);
                 }
                 finally
                 {
@@ -104,7 +174,7 @@ namespace Migs.MPath.Core
         /// <summary>
         /// Runs the bounded uniform-cost search that backs <see cref="GetReachable"/>.
         /// </summary>
-        private RangeResult CalculateReachable(IAgent agent, Coordinate from, float budget, Cell* ptr)
+        private RangeResult CalculateReachable(int agentSize, Coordinate from, float budget, Cell* ptr)
         {
             // The reachable set can never exceed the number of cells in the grid.
             var reachable = ArrayPool<ReachableCell>.Shared.Rent(Size);
@@ -115,7 +185,6 @@ namespace Migs.MPath.Core
             _openSet.Enqueue(start, 0);
 
             var neighbors = stackalloc Cell*[MaxNeighbors];
-            var agentSize = agent.Size;
 
             while (_openSet.Count > 0)
             {

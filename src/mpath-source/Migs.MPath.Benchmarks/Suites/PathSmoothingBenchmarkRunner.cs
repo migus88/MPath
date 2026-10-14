@@ -2,7 +2,6 @@ using BenchmarkDotNet.Attributes;
 using Migs.MPath.Benchmarks.Common;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
-using Migs.MPath.Core.Interfaces;
 using Migs.MPath.Tools;
 
 namespace Migs.MPath.Benchmarks.Suites;
@@ -20,14 +19,13 @@ public class PathSmoothingBenchmarkRunner
     private readonly Pathfinder _pathfinderNoSmoothing;
     private readonly Pathfinder _pathfinderSimpleSmoothing;
     private readonly Pathfinder _pathfinderStringPullingSmoothing;
-    private readonly IAgent _agent;
-    private readonly IAgent _largeAgent;
+    // A 2x2 agent, so string pulling has to check the agent's footprint along every shortcut.
+    private const int LargeAgentSize = 2;
+
 
     public PathSmoothingBenchmarkRunner()
     {
         var maze = new Maze(BenchmarkScenario.MazePath);
-        _agent = new BenchmarkAgent();
-        _largeAgent = new LargeBenchmarkAgent();
 
         _pathfinderNoSmoothing = new Pathfinder(maze.Cells,
             new PathfinderSettings { PathSmoothingMethod = PathSmoothingMethod.None });
@@ -90,7 +88,7 @@ public class PathSmoothingBenchmarkRunner
 
     private PathResult StringPullingSmoothingLargeAgentCount()
     {
-        var result = RunBenchmark(_pathfinderStringPullingSmoothing, _largeAgent);
+        var result = RunBenchmark(_pathfinderStringPullingSmoothing, LargeAgentSize);
         Console.WriteLine($"String Pulling Smoothing Count (size-2 agent): {result.Path.Count()}");
         return result;
     }
@@ -105,13 +103,11 @@ public class PathSmoothingBenchmarkRunner
     public void StringPullingSmoothing() => RunBenchmark(_pathfinderStringPullingSmoothing);
 
     [Benchmark]
-    public void StringPullingSmoothingLargeAgent() => RunBenchmark(_pathfinderStringPullingSmoothing, _largeAgent);
+    public void StringPullingSmoothingLargeAgent() => RunBenchmark(_pathfinderStringPullingSmoothing, LargeAgentSize);
 
-    private PathResult RunBenchmark(Pathfinder pathfinder) => RunBenchmark(pathfinder, _agent);
-
-    private PathResult RunBenchmark(Pathfinder pathfinder, IAgent agent)
+    private PathResult RunBenchmark(Pathfinder pathfinder, int agentSize = 1)
     {
-        var result = pathfinder.GetPath(agent, _start, _destination);
+        var result = pathfinder.GetPath(_start, _destination, agentSize);
 
         if (!result.IsSuccess)
         {
@@ -120,12 +116,4 @@ public class PathSmoothingBenchmarkRunner
 
         return result;
     }
-}
-
-/// <summary>
-/// A 2x2 agent, so string pulling has to check the agent's footprint along every shortcut.
-/// </summary>
-internal sealed class LargeBenchmarkAgent : IAgent
-{
-    public int Size => 2;
 }

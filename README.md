@@ -123,12 +123,6 @@ var cells = new Cell[10, 10];
 // Or do it with gameObjects that implements ICellHolder
 [SerializeField] private FieldCell[] _cells;
 
-// Create a simple agent
-var agent = new SimpleAgent { Size = 1 };
-
-// Or your own player controller that implements IAgent
-[SerializeField] private PlayerController _player;
-
 // Create a pathfinder
 _pathfinder = new Pathfinder(cells);
 
@@ -142,7 +136,11 @@ _pathfinder.EnablePathCaching();
 var start = new Coordinate(1, 1);
 var end = new Coordinate(8, 8);
 
-using var result = pathfinder.GetPath(agent, start, end);
+using var result = pathfinder.GetPath(start, end);
+
+// Larger units: pass their size, or anything implementing IAgent
+using var tankPath = pathfinder.GetPath(start, end, agentSize: 2);
+using var unitPath = pathfinder.GetPath(unit, start, end); // unit implements IAgent
 
 // Use the path
 if (result.IsSuccess)
@@ -157,7 +155,7 @@ Need to know every tile a unit can reach within a movement budget (e.g. for a ta
 
 ```csharp
 // Every cell whose cheapest path cost is <= 5
-using var range = pathfinder.GetReachable(agent, new Coordinate(4, 4), 5f);
+using var range = pathfinder.GetReachable(new Coordinate(4, 4), 5f);
 
 foreach (var cell in range.Cells)
 {
@@ -168,8 +166,8 @@ foreach (var cell in range.Cells)
 Units block movement but not a threat range? Need the mover's own cell or an attack target to be enterable? Pass per-query `QueryOptions` (allocation-free; the grid is left untouched):
 
 ```csharp
-using var threat = pathfinder.GetReachable(agent, new Coordinate(4, 4), 5f, new QueryOptions(OccupancyRule.Ignore));
-using var attack = pathfinder.GetPath(agent, from, target, new QueryOptions(isDestinationAlwaysEnterable: true));
+using var threat = pathfinder.GetReachable(new Coordinate(4, 4), 5f, new QueryOptions(OccupancyRule.Ignore));
+using var attack = pathfinder.GetPath(from, target, new QueryOptions(isDestinationAlwaysEnterable: true));
 ```
 
 ### Distance and line of sight
@@ -198,7 +196,7 @@ See the [Distance and Line of Sight guide](docs/guides/distance-and-line-of-sigh
 Want to *show* how A* explores the grid (for teaching or a demo)? `BeginStepwiseSearch` runs the same search as `GetPath`, but one cell at a time, exposing the frontier and explored area after every step:
 
 ```csharp
-using var search = pathfinder.BeginStepwiseSearch(agent, new Coordinate(1, 1), new Coordinate(8, 8));
+using var search = pathfinder.BeginStepwiseSearch(new Coordinate(1, 1), new Coordinate(8, 8));
 
 while (!search.IsComplete)
 {

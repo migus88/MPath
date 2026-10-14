@@ -5,7 +5,6 @@ using FluentAssertions;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
-using Migs.MPath.Tests.Implementations;
 using NSubstitute;
 
 namespace Migs.MPath.Tests
@@ -25,15 +24,14 @@ namespace Migs.MPath.Tests
 
         public static IEnumerable<TestCaseData> InstanceMethods()
         {
-            var agent = new Agent { Size = 1 };
 
-            yield return new TestCaseData((Action<Pathfinder>)(p => p.GetPath(agent, Origin, Destination)))
+            yield return new TestCaseData((Action<Pathfinder>)(p => p.GetPath(Origin, Destination)))
                 .SetName("GetPath_AfterDispose_ThrowsObjectDisposedException");
-            yield return new TestCaseData((Action<Pathfinder>)(p => p.GetReachable(agent, Origin, 5f)))
+            yield return new TestCaseData((Action<Pathfinder>)(p => p.GetReachable(Origin, 5f)))
                 .SetName("GetReachable_AfterDispose_ThrowsObjectDisposedException");
             yield return new TestCaseData((Action<Pathfinder>)(p => p.HasLineOfSight(Origin, Destination)))
                 .SetName("HasLineOfSight_AfterDispose_ThrowsObjectDisposedException");
-            yield return new TestCaseData((Action<Pathfinder>)(p => p.BeginStepwiseSearch(agent, Origin, Destination)))
+            yield return new TestCaseData((Action<Pathfinder>)(p => p.BeginStepwiseSearch(Origin, Destination)))
                 .SetName("BeginStepwiseSearch_AfterDispose_ThrowsObjectDisposedException");
             yield return new TestCaseData((Action<Pathfinder>)(p => p.EnablePathCaching()))
                 .SetName("EnablePathCaching_AfterDispose_ThrowsObjectDisposedException");
@@ -112,7 +110,7 @@ namespace Migs.MPath.Tests
             var pathfinder = new Pathfinder(cells, GridSize, GridSize);
             pathfinder.Dispose();
 
-            var action = () => pathfinder.GetPath(new Agent { Size = 1 }, Origin, Destination);
+            var action = () => pathfinder.GetPath(Origin, Destination);
 
             action.Should().Throw<ObjectDisposedException>();
         }
@@ -121,7 +119,7 @@ namespace Migs.MPath.Tests
         public void Dispose_WithActiveStepwiseSearch_EndsTheSearch()
         {
             var pathfinder = new Pathfinder(CreateMatrix());
-            var search = pathfinder.BeginStepwiseSearch(new Agent { Size = 1 }, Origin, Destination);
+            var search = pathfinder.BeginStepwiseSearch(Origin, Destination);
             search.Tick();
 
             pathfinder.Dispose();

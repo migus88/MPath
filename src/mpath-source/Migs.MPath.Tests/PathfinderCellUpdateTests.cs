@@ -5,7 +5,6 @@ using FluentAssertions;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
-using Migs.MPath.Tests.Implementations;
 
 namespace Migs.MPath.Tests
 {
@@ -49,8 +48,8 @@ namespace Migs.MPath.Tests
             }
 
             // Assert
-            using var path = pathfinder.GetPath(new Agent(), Start, End);
-            using var reachable = pathfinder.GetReachable(new Agent(), Start, Budget);
+            using var path = pathfinder.GetPath(Start, End);
+            using var reachable = pathfinder.GetReachable(Start, Budget);
             path.IsSuccess.Should().BeFalse();
             reachable.Contains(new Coordinate(2, 1)).Should().BeFalse();
             reachable.Contains(End).Should().BeFalse();
@@ -62,7 +61,7 @@ namespace Migs.MPath.Tests
         {
             // Arrange
             using var pathfinder = Create(mode, out _, out _);
-            using (var before = pathfinder.GetPath(new Agent(), Start, End))
+            using (var before = pathfinder.GetPath(Start, End))
             {
                 before.IsSuccess.Should().BeTrue();
             }
@@ -74,7 +73,7 @@ namespace Migs.MPath.Tests
             }
 
             // Assert
-            using var after = pathfinder.GetPath(new Agent(), Start, End);
+            using var after = pathfinder.GetPath(Start, End);
             after.IsSuccess.Should().BeFalse();
         }
 
@@ -117,7 +116,7 @@ namespace Migs.MPath.Tests
             }
 
             // Assert
-            using var path = pathfinder.GetPath(new Agent(), Start, End);
+            using var path = pathfinder.GetPath(Start, End);
             path.IsSuccess.Should().Be(expectedReach);
         }
 
@@ -128,7 +127,7 @@ namespace Migs.MPath.Tests
             var settings = new PathfinderSettings { IsDiagonalMovementEnabled = false };
             using var pathfinder = new Pathfinder(CreateMatrix(), settings);
             var heavy = new Coordinate(2, 1);
-            using (var before = pathfinder.GetPath(new Agent(), Start, End))
+            using (var before = pathfinder.GetPath(Start, End))
             {
                 before.Path.Should().Contain(heavy);
             }
@@ -137,7 +136,7 @@ namespace Migs.MPath.Tests
             pathfinder.SetWeight(heavy, 50f);
 
             // Assert
-            using var after = pathfinder.GetPath(new Agent(), Start, End);
+            using var after = pathfinder.GetPath(Start, End);
             after.IsSuccess.Should().BeTrue();
             after.Path.Should().NotContain(heavy);
         }
@@ -167,7 +166,7 @@ namespace Migs.MPath.Tests
             // Arrange
             var cells = CreateRowMajorArray();
             using var pathfinder = new Pathfinder(cells, Width, Height);
-            using (pathfinder.GetPath(new Agent(), Start, End))
+            using (pathfinder.GetPath(Start, End))
             {
             }
 

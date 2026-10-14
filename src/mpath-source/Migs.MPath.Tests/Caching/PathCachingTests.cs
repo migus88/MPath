@@ -7,7 +7,6 @@ using Migs.MPath.Core;
 using Migs.MPath.Core.Caching;
 using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
-using Migs.MPath.Tests.Implementations;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -17,16 +16,13 @@ namespace Migs.MPath.Tests.Caching
     public class PathCachingTests
     {
         private const int FieldSize = 10;
-        private const int DefaultAgentSize = 1;
         
-        private Agent _agent;
         private Cell[] _cells;
         private Pathfinder _pathfinder;
         
         [SetUp]
         public void SetUp()
         {
-            _agent = new Agent { Size = DefaultAgentSize };
             _cells = new Cell[FieldSize * FieldSize];
             
             // Initialize all cells as walkable
@@ -84,8 +80,8 @@ namespace Migs.MPath.Tests.Caching
             var to = new Coordinate(5, 5);
             
             // Act
-            var firstResult = _pathfinder.GetPath(_agent, from, to);
-            var secondResult = _pathfinder.GetPath(_agent, from, to);
+            var firstResult = _pathfinder.GetPath(from, to);
+            var secondResult = _pathfinder.GetPath(from, to);
             
             // Assert
             firstResult.IsSuccess.Should().BeTrue();
@@ -110,8 +106,8 @@ namespace Migs.MPath.Tests.Caching
             var to2 = new Coordinate(8, 8);
             
             // Act
-            var result1 = _pathfinder.GetPath(_agent, from1, to1);
-            var result2 = _pathfinder.GetPath(_agent, from2, to2);
+            var result1 = _pathfinder.GetPath(from1, to1);
+            var result2 = _pathfinder.GetPath(from2, to2);
             
             // Assert
             result1.IsSuccess.Should().BeTrue();
@@ -136,12 +132,11 @@ namespace Migs.MPath.Tests.Caching
             _cells[4 * FieldSize + 2].IsWalkable = false;
             _cells[4 * FieldSize + 4].IsWalkable = false;
 
-            var agent1 = new Agent { Size = 1 };
-            var agent2 = new Agent { Size = 2 };
+            var agent2Size = 2;
             
             // Act
-            var result1 = _pathfinder.GetPath(agent1, from, to);
-            var result2 = _pathfinder.GetPath(agent2, from, to);
+            var result1 = _pathfinder.GetPath(from, to);
+            var result2 = _pathfinder.GetPath(from, to, agent2Size);
             
             // Assert
             result1.IsSuccess.Should().BeTrue();
@@ -158,13 +153,13 @@ namespace Migs.MPath.Tests.Caching
             var to = new Coordinate(5, 5);
             
             // First calculation with caching
-            var firstResult = _pathfinder.GetPath(_agent, from, to);
+            var firstResult = _pathfinder.GetPath(from, to);
             
             // Disable caching
             _pathfinder.DisablePathCaching();
             
             // Act
-            var secondResult = _pathfinder.GetPath(_agent, from, to);
+            var secondResult = _pathfinder.GetPath(from, to);
             
             // Assert
             firstResult.IsSuccess.Should().BeTrue();
@@ -184,11 +179,11 @@ namespace Migs.MPath.Tests.Caching
             var to = new Coordinate(5, 5);
             
             // Cache a path
-            var firstResult = _pathfinder.GetPath(_agent, from, to);
+            var firstResult = _pathfinder.GetPath(from, to);
             
             // Act
             _pathfinder.InvalidateCache();
-            var secondResult = _pathfinder.GetPath(_agent, from, to);
+            var secondResult = _pathfinder.GetPath(from, to);
             
             // Assert
             firstResult.IsSuccess.Should().BeTrue();
@@ -209,8 +204,8 @@ namespace Migs.MPath.Tests.Caching
             var to = new Coordinate(5, 5);
             
             // Act
-            _pathfinder.GetPath(_agent, from, to);
-            _pathfinder.GetPath(_agent, from, to);
+            _pathfinder.GetPath(from, to);
+            _pathfinder.GetPath(from, to);
             
             // Assert
             customCaching.CachePathCalls.Should().Be(1);
@@ -226,7 +221,7 @@ namespace Migs.MPath.Tests.Caching
             var to = new Coordinate(5, 5);
             Coordinate[] expected;
 
-            using (var first = _pathfinder.GetPath(_agent, from, to))
+            using (var first = _pathfinder.GetPath(from, to))
             {
                 expected = first.Path.ToArray();
             }
@@ -236,7 +231,7 @@ namespace Migs.MPath.Tests.Caching
             Array.Fill(reused, new Coordinate(-1, -1));
 
             // Act
-            using var second = _pathfinder.GetPath(_agent, from, to);
+            using var second = _pathfinder.GetPath(from, to);
 
             // Assert
             second.IsSuccess.Should().BeTrue();
@@ -251,12 +246,12 @@ namespace Migs.MPath.Tests.Caching
             _pathfinder.EnablePathCaching();
             var from = new Coordinate(0, 0);
             var to = new Coordinate(5, 5);
-            using var computed = _pathfinder.GetPath(_agent, from, to);
+            using var computed = _pathfinder.GetPath(from, to);
             var expected = computed.Path.ToArray();
 
             // Act
-            var firstHit = _pathfinder.GetPath(_agent, from, to);
-            using var secondHit = _pathfinder.GetPath(_agent, from, to);
+            var firstHit = _pathfinder.GetPath(from, to);
+            using var secondHit = _pathfinder.GetPath(from, to);
             firstHit.Dispose();
 
             // Assert
@@ -273,8 +268,8 @@ namespace Migs.MPath.Tests.Caching
             _pathfinder.EnablePathCaching();
             var from = new Coordinate(0, 0);
             var to = new Coordinate(5, 5);
-            using var computed = _pathfinder.GetPath(_agent, from, to);
-            using var hit = _pathfinder.GetPath(_agent, from, to);
+            using var computed = _pathfinder.GetPath(from, to);
+            using var hit = _pathfinder.GetPath(from, to);
             var expected = computed.Path.ToArray();
 
             // Act
@@ -295,8 +290,8 @@ namespace Migs.MPath.Tests.Caching
             var to = new Coordinate(5, 5);
 
             // Act
-            using var computed = _pathfinder.GetPath(_agent, from, to);
-            using var hit = _pathfinder.GetPath(_agent, from, to);
+            using var computed = _pathfinder.GetPath(from, to);
+            using var hit = _pathfinder.GetPath(from, to);
 
             // Assert
             customCaching.LastCached.Should().NotBeNull();
@@ -314,14 +309,14 @@ namespace Migs.MPath.Tests.Caching
             var to = new Coordinate(5, 0);
             var blocked = new Coordinate(3, 0);
 
-            using (var cached = _pathfinder.GetPath(_agent, from, to))
+            using (var cached = _pathfinder.GetPath(from, to))
             {
                 cached.Path.Should().Contain(blocked);
             }
 
             // Act
             _pathfinder.SetWalkable(blocked, false);
-            using var result = _pathfinder.GetPath(_agent, from, to);
+            using var result = _pathfinder.GetPath(from, to);
 
             // Assert
             result.IsSuccess.Should().BeTrue();

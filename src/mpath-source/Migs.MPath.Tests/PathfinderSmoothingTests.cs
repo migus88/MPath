@@ -4,7 +4,6 @@ using System.Linq;
 using FluentAssertions;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
-using Migs.MPath.Tests.Implementations;
 
 namespace Migs.MPath.Tests
 {
@@ -19,7 +18,7 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(cells, 10, 10, Settings(PathSmoothingMethod.Simple));
 
             // Act
-            using var result = pathfinder.GetPath(new Agent(), new Coordinate(0, 0), new Coordinate(5, 0));
+            using var result = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(5, 0));
 
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -42,7 +41,7 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(cells, 6, 6, settings);
 
             // Act
-            using var result = pathfinder.GetPath(new Agent(), new Coordinate(0, 0), new Coordinate(5, 5));
+            using var result = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(5, 5));
 
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -65,7 +64,7 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(cells, 6, 6, settings);
 
             // Act
-            using var result = pathfinder.GetPath(new Agent(), new Coordinate(0, 0), new Coordinate(5, 1));
+            using var result = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(5, 1));
 
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -88,8 +87,8 @@ namespace Migs.MPath.Tests
                 using var simple = new Pathfinder(cells, size, size, Settings(PathSmoothingMethod.Simple));
 
                 // Act
-                using var rawResult = raw.GetPath(new Agent(), from, to);
-                using var smoothedResult = simple.GetPath(new Agent(), from, to);
+                using var rawResult = raw.GetPath(from, to);
+                using var smoothedResult = simple.GetPath(from, to);
 
                 // Assert
                 smoothedResult.IsSuccess.Should().Be(rawResult.IsSuccess);
@@ -122,12 +121,12 @@ namespace Migs.MPath.Tests
             var from = new Coordinate(0, 0);
 
             // Act
-            using var result = pathfinder.GetPath(new Agent(), from, new Coordinate(6, 6));
+            using var result = pathfinder.GetPath(from, new Coordinate(6, 6));
 
             // Assert
             result.IsSuccess.Should().BeTrue();
             result.Path.Should().NotEqual(new[] { new Coordinate(1, 1), new Coordinate(6, 6) });
-            AssertEverySegmentIsStraightlyWalkable(cells, 7, 7, settings, new Agent(), from, result);
+            AssertEverySegmentIsStraightlyWalkable(cells, 7, 7, settings, 1, from, result);
         }
 
         [Test]
@@ -142,7 +141,7 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(cells, 7, 7, settings);
 
             // Act
-            using var result = pathfinder.GetPath(new Agent(), new Coordinate(0, 0), new Coordinate(6, 6));
+            using var result = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(6, 6));
 
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -163,7 +162,7 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(cells, 7, 7, settings);
 
             // Act
-            using var result = pathfinder.GetPath(new Agent(), new Coordinate(0, 0), new Coordinate(6, 6));
+            using var result = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(6, 6));
 
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -188,12 +187,12 @@ namespace Migs.MPath.Tests
                 var from = new Coordinate(0, 0);
 
                 // Act
-                using var result = pathfinder.GetPath(new Agent(), from, new Coordinate(size - 1, size - 1));
+                using var result = pathfinder.GetPath(from, new Coordinate(size - 1, size - 1));
 
                 // Assert
                 if (result.IsSuccess)
                 {
-                    AssertEverySegmentIsStraightlyWalkable(cells, size, size, settings, new Agent(), from, result);
+                    AssertEverySegmentIsStraightlyWalkable(cells, size, size, settings, 1, from, result);
                 }
             }
         }
@@ -214,15 +213,15 @@ namespace Migs.MPath.Tests
 
             var settings = Settings(PathSmoothingMethod.StringPulling);
             using var pathfinder = new Pathfinder(cells, size, size, settings);
-            var agent = new Agent { Size = 2 };
+            var agentSize = 2;
             var from = new Coordinate(0, 0);
 
             // Act
-            using var result = pathfinder.GetPath(agent, from, new Coordinate(2, 8));
+            using var result = pathfinder.GetPath(from, new Coordinate(2, 8), agentSize);
 
             // Assert
             result.IsSuccess.Should().BeTrue();
-            AssertEverySegmentIsStraightlyWalkable(cells, size, size, settings, agent, from, result);
+            AssertEverySegmentIsStraightlyWalkable(cells, size, size, settings, agentSize, from, result);
         }
 
         [Test]
@@ -238,17 +237,17 @@ namespace Migs.MPath.Tests
                 var cells = CreateRandomGrid(size, size, random, 0.06);
                 var settings = Settings(PathSmoothingMethod.StringPulling);
                 using var pathfinder = new Pathfinder(cells, size, size, settings);
-                var agent = new Agent { Size = 2 };
+                var agentSize = 2;
                 var from = new Coordinate(0, 0);
 
                 // Act
-                using var result = pathfinder.GetPath(agent, from, new Coordinate(size - 2, size - 2));
+                using var result = pathfinder.GetPath(from, new Coordinate(size - 2, size - 2), agentSize);
 
                 // Assert
                 if (result.IsSuccess)
                 {
                     successes++;
-                    AssertEverySegmentIsStraightlyWalkable(cells, size, size, settings, agent, from, result);
+                    AssertEverySegmentIsStraightlyWalkable(cells, size, size, settings, agentSize, from, result);
                 }
             }
 
@@ -258,7 +257,7 @@ namespace Migs.MPath.Tests
         // A segment is walkable in a straight line when the unsmoothed search, under the same settings and
         // agent, connects its ends in the minimum number of moves (Chebyshev with diagonals, else Manhattan).
         private static void AssertEverySegmentIsStraightlyWalkable(Cell[] cells, int width, int height,
-            PathfinderSettings settings, Agent agent, Coordinate from, PathResult result)
+            PathfinderSettings settings, int agentSize, Coordinate from, PathResult result)
         {
             var rawSettings = new PathfinderSettings
             {
@@ -280,7 +279,7 @@ namespace Migs.MPath.Tests
                     ? Pathfinder.GetChebyshevDistance(start, end)
                     : Pathfinder.GetManhattanDistance(start, end);
 
-                using var segment = oracle.GetPath(agent, start, end);
+                using var segment = oracle.GetPath(start, end, agentSize);
 
                 segment.IsSuccess.Should().BeTrue($"segment {start} -> {end} must be reachable");
                 segment.Length.Should().Be(minimumMoves, $"segment {start} -> {end} must be a straight walk");

@@ -2,7 +2,6 @@ using BenchmarkDotNet.Attributes;
 using Migs.MPath.Benchmarks.Common;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
-using Migs.MPath.Core.Interfaces;
 using Migs.MPath.Tools;
 
 namespace Migs.MPath.Benchmarks.Suites;
@@ -20,31 +19,29 @@ public class ReachabilityBenchmarkRunner : IDisposable
     private readonly Coordinate _origin = BenchmarkScenario.Start;
 
     private readonly Pathfinder _pathfinder;
-    private readonly IAgent _agent;
 
     public ReachabilityBenchmarkRunner()
     {
         var maze = new Maze(BenchmarkScenario.MazePath);
-        _agent = new BenchmarkAgent();
         _pathfinder = new Pathfinder(maze.Cells);
     }
 
     [Benchmark]
     public void GetReachable_SmallBudget()
     {
-        using var result = _pathfinder.GetReachable(_agent, _origin, 25f);
+        using var result = _pathfinder.GetReachable(_origin, 25f);
     }
 
     [Benchmark]
     public void GetReachable_MediumBudget()
     {
-        using var result = _pathfinder.GetReachable(_agent, _origin, 100f);
+        using var result = _pathfinder.GetReachable(_origin, 100f);
     }
 
     [Benchmark]
     public void GetReachable_LargeBudget()
     {
-        using var result = _pathfinder.GetReachable(_agent, _origin, 1000f);
+        using var result = _pathfinder.GetReachable(_origin, 1000f);
     }
 
     public void Dispose()

@@ -4,7 +4,6 @@ using System.Linq;
 using FluentAssertions;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
-using Migs.MPath.Tests.Implementations;
 
 namespace Migs.MPath.Tests
 {
@@ -18,19 +17,18 @@ namespace Migs.MPath.Tests
         {
             var from = new Coordinate(1, 1);
             var to = new Coordinate(8, 6);
-            var agent = new Agent { Size = 1 };
 
             // Default settings use no smoothing, so GetPath returns the raw A* path the stepwise search traces.
             List<Coordinate> batchPath;
             using (var batchPathfinder = new Pathfinder(CreateEmptyGrid(GridSize, GridSize), GridSize, GridSize))
-            using (var batchResult = batchPathfinder.GetPath(agent, from, to))
+            using (var batchResult = batchPathfinder.GetPath(from, to))
             {
                 batchResult.IsSuccess.Should().BeTrue();
                 batchPath = batchResult.Path.ToList();
             }
 
             using var pathfinder = new Pathfinder(CreateEmptyGrid(GridSize, GridSize), GridSize, GridSize);
-            using var search = pathfinder.BeginStepwiseSearch(agent, from, to);
+            using var search = pathfinder.BeginStepwiseSearch(from, to);
 
             var final = search.RunToCompletion();
 
@@ -46,7 +44,7 @@ namespace Migs.MPath.Tests
             var to = new Coordinate(9, 9);
             using var pathfinder = new Pathfinder(CreateEmptyGrid(GridSize, GridSize), GridSize, GridSize);
 
-            using var search = pathfinder.BeginStepwiseSearch(new Agent { Size = 1 }, from, to);
+            using var search = pathfinder.BeginStepwiseSearch(from, to);
             var final = search.RunToCompletion();
 
             final.State.Should().Be(SearchState.Success);
@@ -70,7 +68,7 @@ namespace Migs.MPath.Tests
             var from = new Coordinate(5, 5);
             var to = new Coordinate(9, 9);
             using var pathfinder = new Pathfinder(CreateEmptyGrid(GridSize, GridSize), GridSize, GridSize);
-            using var search = pathfinder.BeginStepwiseSearch(new Agent { Size = 1 }, from, to);
+            using var search = pathfinder.BeginStepwiseSearch(from, to);
 
             var previousSearched = 0;
             SearchStep step;
@@ -98,7 +96,7 @@ namespace Migs.MPath.Tests
             var from = new Coordinate(0, 0);
             var to = new Coordinate(9, 9);
             using var pathfinder = new Pathfinder(CreateEmptyGrid(GridSize, GridSize), GridSize, GridSize);
-            using var search = pathfinder.BeginStepwiseSearch(new Agent { Size = 1 }, from, to);
+            using var search = pathfinder.BeginStepwiseSearch(from, to);
 
             SearchStep step;
             do
@@ -124,7 +122,7 @@ namespace Migs.MPath.Tests
             var from = new Coordinate(3, 4);
             var to = new Coordinate(7, 7);
             using var pathfinder = new Pathfinder(CreateEmptyGrid(GridSize, GridSize), GridSize, GridSize);
-            using var search = pathfinder.BeginStepwiseSearch(new Agent { Size = 1 }, from, to);
+            using var search = pathfinder.BeginStepwiseSearch(from, to);
 
             var first = search.Tick();
 
@@ -145,7 +143,7 @@ namespace Migs.MPath.Tests
             SetWalkable(cells, 9, 8, false);
 
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
-            using var search = pathfinder.BeginStepwiseSearch(new Agent { Size = 1 },
+            using var search = pathfinder.BeginStepwiseSearch(
                 new Coordinate(0, 0), new Coordinate(9, 9));
 
             var final = search.RunToCompletion();
@@ -165,7 +163,7 @@ namespace Migs.MPath.Tests
         {
             var origin = new Coordinate(4, 4);
             using var pathfinder = new Pathfinder(CreateEmptyGrid(GridSize, GridSize), GridSize, GridSize);
-            using var search = pathfinder.BeginStepwiseSearch(new Agent { Size = 1 }, origin, origin);
+            using var search = pathfinder.BeginStepwiseSearch(origin, origin);
 
             var step = search.Tick();
 
@@ -178,7 +176,7 @@ namespace Migs.MPath.Tests
         public void Tick_AfterCompletion_IsIdempotent()
         {
             using var pathfinder = new Pathfinder(CreateEmptyGrid(GridSize, GridSize), GridSize, GridSize);
-            using var search = pathfinder.BeginStepwiseSearch(new Agent { Size = 1 },
+            using var search = pathfinder.BeginStepwiseSearch(
                 new Coordinate(0, 0), new Coordinate(2, 2));
 
             var final = search.RunToCompletion();
@@ -194,16 +192,15 @@ namespace Migs.MPath.Tests
         public void BeginStepwiseSearch_WhileAnotherSearchIsActive_Throws()
         {
             using var pathfinder = new Pathfinder(CreateEmptyGrid(GridSize, GridSize), GridSize, GridSize);
-            var agent = new Agent { Size = 1 };
 
-            var first = pathfinder.BeginStepwiseSearch(agent, new Coordinate(0, 0), new Coordinate(5, 5));
+            var first = pathfinder.BeginStepwiseSearch(new Coordinate(0, 0), new Coordinate(5, 5));
 
-            var startSecond = () => pathfinder.BeginStepwiseSearch(agent, new Coordinate(0, 0), new Coordinate(5, 5));
+            var startSecond = () => pathfinder.BeginStepwiseSearch(new Coordinate(0, 0), new Coordinate(5, 5));
             startSecond.Should().Throw<InvalidOperationException>();
 
             // Disposing the first session frees the instance for a new search.
             first.Dispose();
-            using var second = pathfinder.BeginStepwiseSearch(agent, new Coordinate(0, 0), new Coordinate(5, 5));
+            using var second = pathfinder.BeginStepwiseSearch(new Coordinate(0, 0), new Coordinate(5, 5));
             second.RunToCompletion().State.Should().Be(SearchState.Success);
         }
 
@@ -211,17 +208,16 @@ namespace Migs.MPath.Tests
         public void Pathfinder_CanRunGetPathAfterAStepwiseSearchIsDisposed()
         {
             using var pathfinder = new Pathfinder(CreateEmptyGrid(GridSize, GridSize), GridSize, GridSize);
-            var agent = new Agent { Size = 1 };
             var from = new Coordinate(0, 0);
             var to = new Coordinate(7, 7);
 
-            using (var search = pathfinder.BeginStepwiseSearch(agent, from, to))
+            using (var search = pathfinder.BeginStepwiseSearch(from, to))
             {
                 search.RunToCompletion().State.Should().Be(SearchState.Success);
             }
 
             // The pinned buffer is released on dispose, so the regular API works again.
-            using var result = pathfinder.GetPath(agent, from, to);
+            using var result = pathfinder.GetPath(from, to);
             result.IsSuccess.Should().BeTrue();
         }
 
@@ -229,7 +225,7 @@ namespace Migs.MPath.Tests
         public void Tick_AfterDisposal_ThrowsObjectDisposedException()
         {
             using var pathfinder = new Pathfinder(CreateEmptyGrid(GridSize, GridSize), GridSize, GridSize);
-            var search = pathfinder.BeginStepwiseSearch(new Agent { Size = 1 },
+            var search = pathfinder.BeginStepwiseSearch(
                 new Coordinate(0, 0), new Coordinate(5, 5));
 
             search.Dispose();
@@ -253,7 +249,7 @@ namespace Migs.MPath.Tests
         {
             using var pathfinder = new Pathfinder(CreateEmptyGrid(GridSize, GridSize), GridSize, GridSize);
 
-            var action = () => pathfinder.BeginStepwiseSearch(new Agent { Size = 1 },
+            var action = () => pathfinder.BeginStepwiseSearch(
                 new Coordinate(GridSize + 3, 0), new Coordinate(5, 5));
 
             action.Should().Throw<ArgumentException>().WithParameterName("from");
@@ -264,7 +260,7 @@ namespace Migs.MPath.Tests
         {
             using var pathfinder = new Pathfinder(CreateEmptyGrid(GridSize, GridSize), GridSize, GridSize);
 
-            var action = () => pathfinder.BeginStepwiseSearch(new Agent { Size = 1 },
+            var action = () => pathfinder.BeginStepwiseSearch(
                 new Coordinate(0, 0), new Coordinate(GridSize + 3, 0));
 
             action.Should().Throw<ArgumentException>().WithParameterName("to");
@@ -275,7 +271,6 @@ namespace Migs.MPath.Tests
         {
             var from = new Coordinate(0, 5);
             var to = new Coordinate(9, 5);
-            var agent = new Agent { Size = 1 };
 
             static Cell[] BuildWalledGrid()
             {
@@ -293,14 +288,14 @@ namespace Migs.MPath.Tests
 
             List<Coordinate> batchPath;
             using (var batchPathfinder = new Pathfinder(BuildWalledGrid(), GridSize, GridSize, settings))
-            using (var batchResult = batchPathfinder.GetPath(agent, from, to))
+            using (var batchResult = batchPathfinder.GetPath(from, to))
             {
                 batchResult.IsSuccess.Should().BeTrue();
                 batchPath = batchResult.Path.ToList();
             }
 
             using var pathfinder = new Pathfinder(BuildWalledGrid(), GridSize, GridSize, settings);
-            using var search = pathfinder.BeginStepwiseSearch(agent, from, to);
+            using var search = pathfinder.BeginStepwiseSearch(from, to);
             var final = search.RunToCompletion();
 
             final.State.Should().Be(SearchState.Success);
