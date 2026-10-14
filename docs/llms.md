@@ -161,8 +161,8 @@ One row per type; click through for full members. The load-bearing facts are rep
 
 | Type | Kind | Gist | Details |
 |------|------|------|---------|
-| `PathResult` | result, `IDisposable` | `IsSuccess`, `Length`, `foreach` / `AsSpan()` / `this[i]` (steps, **origin excluded**; allocation-free), `Path` (allocating iterator), `Get(i)`, `Steps` / `DiagonalSteps` (ints, of the route before smoothing) | [api](api/PathResult.md) |
-| `RangeResult` | result, `IDisposable` | `IsSuccess`, `Length`, `foreach` / `AsSpan()` / `this[i]` (allocation-free), `Cells` (allocating iterator), `Contains(c)` / `TryGetCost(c, out cost)` / `TryGetCell(c, out cell)` (O(1)), `CopyCostsTo(Span<int>, unreached = -1)`, `Get(i)` | [api](api/RangeResult.md) |
+| `PathResult` | result, `IDisposable` | `IsSuccess`, `Length`, `foreach` / `AsSpan()` / `this[i]` (steps, **origin excluded**; allocation-free), `Path` (`PathEnumerable` struct: `foreach` allocation-free, boxed as `IEnumerable<Coordinate>`), `Get(i)`, `Steps` / `DiagonalSteps` (ints, of the route before smoothing) | [api](api/PathResult.md) |
+| `RangeResult` | result, `IDisposable` | `IsSuccess`, `Length`, `foreach` / `AsSpan()` / `this[i]` (allocation-free), `Cells` (`CellEnumerable` struct: `foreach` allocation-free, boxed as `IEnumerable<ReachableCell>`), `Contains(c)` / `TryGetCost(c, out cost)` / `TryGetCell(c, out cell)` (O(1)), `CopyCostsTo(Span<int>, unreached = -1)`, `Get(i)` | [api](api/RangeResult.md) |
 | `ReachableCell` | `readonly struct` | `Coordinate` + `Cost` + `Steps` + `DiagonalSteps` (ints) | [api](api/ReachableCell.md) |
 | `StepwiseSearch` | session, `IDisposable` | `Tick()`, `RunToCompletion()`, `State`, `IsComplete` | [api](api/StepwiseSearch.md) |
 | `SearchStep` | immutable class | Per-tick snapshot: `Searched`, `Open/ClosedCount`, `Current`, `Iteration`, `Path` | [api](api/SearchStep.md) |

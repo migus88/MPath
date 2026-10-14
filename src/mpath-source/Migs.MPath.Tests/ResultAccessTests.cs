@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using FluentAssertions;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
@@ -185,6 +187,147 @@ namespace Migs.MPath.Tests
             // Assert
             sum.Should().BeGreaterThan(0);
             allocated.Should().Be(0);
+        }
+
+        [Test]
+        public void Foreach_OverPathAndCellsProperties_AllocatesNothing()
+        {
+            // Arrange
+            using var pathfinder = new Pathfinder(CreateGrid(seed: 0, wallChance: 0));
+            using var path = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(Width - 1, Height - 1));
+            using var range = pathfinder.GetReachable(new Coordinate(5, 5), 400);
+            var sum = SumProperties(path, range);
+
+            // Act
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            sum += SumProperties(path, range);
+            var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            // Assert
+            sum.Should().BeGreaterThan(0);
+            allocated.Should().Be(0);
+        }
+
+        [Test]
+        public void PathAndCellsProperties_ForeachAndAsEnumerable_MatchTheResult()
+        {
+            // Arrange
+            using var pathfinder = new Pathfinder(CreateGrid(seed: 0, wallChance: 0));
+            using var path = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(Width - 1, Height - 3));
+            using var range = pathfinder.GetReachable(new Coordinate(5, 5), 600);
+            var expectedPath = path.AsSpan().ToArray();
+            var expectedCells = range.AsSpan().ToArray();
+            var pathFromForeach = new List<Coordinate>();
+            var cellsFromForeach = new List<ReachableCell>();
+
+            // Act
+            foreach (var coordinate in path.Path)
+            {
+                pathFromForeach.Add(coordinate);
+            }
+
+            foreach (var cell in range.Cells)
+            {
+                cellsFromForeach.Add(cell);
+            }
+
+            IEnumerable<Coordinate> pathSequence = path.Path;
+            IEnumerable<ReachableCell> cellSequence = range.Cells;
+
+            // Assert
+            expectedPath.Should().NotBeEmpty();
+            expectedCells.Length.Should().BeGreaterThan(1);
+            pathFromForeach.Should().Equal(expectedPath);
+            cellsFromForeach.Should().Equal(expectedCells);
+            pathSequence.ToArray().Should().Equal(expectedPath);
+            cellSequence.ToArray().Should().Equal(expectedCells);
+            ((IEnumerable)pathSequence).Cast<Coordinate>().Should().Equal(expectedPath);
+            ((IEnumerable)cellSequence).Cast<ReachableCell>().Should().Equal(expectedCells);
+        }
+
+        [Test]
+        public void BoxedEnumerators_Reset_StartOver()
+        {
+            // Arrange
+            using var pathfinder = new Pathfinder(CreateGrid(seed: 0, wallChance: 0));
+            using var path = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(3, 3));
+            using var range = pathfinder.GetReachable(new Coordinate(0, 0), 100);
+            using var pathEnumerator = ((IEnumerable<Coordinate>)path.Path).GetEnumerator();
+            using var cellEnumerator = ((IEnumerable<ReachableCell>)range.Cells).GetEnumerator();
+
+            while (pathEnumerator.MoveNext())
+            {
+            }
+
+            while (cellEnumerator.MoveNext())
+            {
+            }
+
+            // Act
+            pathEnumerator.Reset();
+            cellEnumerator.Reset();
+
+            // Assert
+            pathEnumerator.MoveNext().Should().BeTrue();
+            pathEnumerator.Current.Should().Be(path[0]);
+            cellEnumerator.MoveNext().Should().BeTrue();
+            cellEnumerator.Current.Should().Be(range[0]);
+        }
+
+        [Test]
+        public void PathAndCellsProperties_OfFailedEmptyAndDefault_AreEmpty()
+        {
+            // Arrange
+            var failure = PathResult.Failure();
+            var empty = RangeResult.Empty();
+            var visited = 0;
+
+            // Act
+            foreach (var _ in failure.Path)
+            {
+                visited++;
+            }
+
+            foreach (var _ in empty.Cells)
+            {
+                visited++;
+            }
+
+            foreach (var _ in default(PathResult.PathEnumerable))
+            {
+                visited++;
+            }
+
+            foreach (var _ in default(RangeResult.CellEnumerable))
+            {
+                visited++;
+            }
+
+            // Assert
+            visited.Should().Be(0);
+            failure.Path.Should().BeEmpty();
+            empty.Cells.Should().BeEmpty();
+        }
+
+        [Test]
+        public void PathAndCellsProperties_AfterDispose_ThrowWhenEnumerated()
+        {
+            // Arrange
+            using var pathfinder = new Pathfinder(CreateGrid(seed: 0, wallChance: 0));
+            var path = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(3, 3));
+            var range = pathfinder.GetReachable(new Coordinate(3, 3), 200);
+            path.Dispose();
+            range.Dispose();
+
+            // Act
+            var pathSequence = path.Path;
+            var cellSequence = range.Cells;
+
+            // Assert
+            ((Action)(() => pathSequence.GetEnumerator())).Should().Throw<ObjectDisposedException>();
+            ((Action)(() => cellSequence.GetEnumerator())).Should().Throw<ObjectDisposedException>();
+            ((Action)(() => pathSequence.ToArray())).Should().Throw<ObjectDisposedException>();
+            ((Action)(() => cellSequence.ToArray())).Should().Throw<ObjectDisposedException>();
         }
 
         [Test]
@@ -416,6 +559,23 @@ namespace Migs.MPath.Tests
             }
 
             foreach (var cell in range)
+            {
+                sum += cell.Cost;
+            }
+
+            return sum;
+        }
+
+        private static long SumProperties(PathResult path, RangeResult range)
+        {
+            var sum = 0L;
+
+            foreach (var coordinate in path.Path)
+            {
+                sum += coordinate.X;
+            }
+
+            foreach (var cell in range.Cells)
             {
                 sum += cell.Cost;
             }

@@ -115,7 +115,7 @@ Each entry says what changed, who notices it, and what to do, if anything. Entri
   - `RangeResult.Contains`, `TryGetCost` and `TryGetCell` are O(1) through an index the result rents on its first lookup, so that first call takes memory (returned on `Dispose`).
   - New `RangeResult.CopyCostsTo`.
 - **Who notices:** callers that measure allocations around the first lookup on a `RangeResult`.
-- **What to do:** nothing. Prefer `foreach` over the result itself, or `AsSpan()`, to the allocating `Path` and `Cells` iterators.
+- **What to do:** nothing. `foreach` over the result itself, over `Path` / `Cells` (see [#71](#71-path-and-cells-are-struct-sequences)) or over `AsSpan()` allocates nothing.
 
 #### Not behaviour changes
 
@@ -312,6 +312,25 @@ class Tile : ICellHolder { public PathCell CellData => ...; }
 // the alias is no longer needed; to keep it: using GridCell = Migs.MPath.Core.Data.PathCell;
 ```
 
+#### #71 Path and Cells are struct sequences
+
+- **What changed:**
+  - `PathResult.Path` returns `PathResult.PathEnumerable` and `RangeResult.Cells` returns `RangeResult.CellEnumerable` instead of `IEnumerable<Coordinate>` / `IEnumerable<ReachableCell>`. Both are `readonly struct`s that implement those interfaces, and their `GetEnumerator()` returns the result's struct `Enumerator`, so `foreach (var c in result.Path)` allocates nothing and runs as fast as `foreach (var c in result)` (1.2.1's iterator allocated on every enumeration).
+  - `PathResult.Enumerator` and `RangeResult.Enumerator` implement `IEnumerator<Coordinate>` / `IEnumerator<ReachableCell>`.
+  - Unchanged: the sequence, enumerating a disposed result throws `ObjectDisposedException` (reading the property does not), and LINQ, `IEnumerable<T>` variables and parameters keep working (the struct is boxed there, as the iterator was allocated).
+- **Who notices:** binaries compiled against 1.2.1 (recompile), and code that names the property's type: `IEnumerable<Coordinate> path = result.Path;` still compiles but boxes, so keep `var` or `foreach` to stay allocation-free.
+- **What to do:** recompile. Nothing else, unless you want to drop a boxed `IEnumerable<T>` variable for `var`.
+
+```csharp
+// 1.2.1: allocates an iterator per enumeration
+foreach (var coordinate in result.Path) { }
+IEnumerable<Coordinate> path = result.Path;
+
+// 2.0: the same foreach allocates nothing; an IEnumerable<T> variable still works but boxes
+foreach (var coordinate in result.Path) { }
+var path = result.Path; // PathResult.PathEnumerable
+```
+
 ### Checklist
 
 1. Dispose every `PathResult`, `RangeResult` and `StepwiseSearch`, including path-cache hits.
@@ -324,3 +343,4 @@ class Tile : ICellHolder { public PathCell CellData => ...; }
 8. Rename `IsCalculatingOccupiedCells` to `AreOccupiedCellsBlocking`, including in custom `IPathfinderSettings` implementations.
 9. Delete `Cell.Coordinate` from cell initializers and reads; put every cell (and holder) in its slot: `[x, y]` in a matrix, column-major in an array, or row-major with `CellLayout = RowMajor`.
 10. Rename the type `Cell` to `PathCell` (whole word, in files that import `Migs.MPath.Core.Data`), and drop or retarget a `using GridCell = Migs.MPath.Core.Data.Cell;` alias.
+11. Recompile against 2.0 (`PathResult.Path` and `RangeResult.Cells` return struct sequences); keep `var` or `foreach` over them to stay allocation-free.
