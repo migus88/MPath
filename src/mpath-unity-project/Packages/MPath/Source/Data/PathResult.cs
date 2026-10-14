@@ -35,6 +35,10 @@ namespace Migs.MPath.Core.Data
         /// </summary>
         public int DiagonalSteps { get; private set; }
 
+        /// <summary>
+        /// Enumerates the coordinates of the path through an iterator, which allocates on every enumeration. Prefer
+        /// <c>foreach (var c in result)</c> (<see cref="GetEnumerator"/>) or <see cref="AsSpan"/>, which do not.
+        /// </summary>
         public IEnumerable<Coordinate> Path
         {
             get
@@ -53,6 +57,28 @@ namespace Migs.MPath.Core.Data
                 {
                     yield return _path[i];
                 }
+            }
+        }
+
+        /// <summary>
+        /// Gets the coordinate at the specified index in the path, like <see cref="Get"/> without its success check
+        /// (a failed result is empty, so any index is out of range).
+        /// </summary>
+        /// <param name="index">The zero-based index of the coordinate to get.</param>
+        /// <exception cref="ObjectDisposedException">Thrown when the PathResult has been disposed.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the index is out of range.</exception>
+        public Coordinate this[int index]
+        {
+            get
+            {
+                ThrowIfDisposed();
+
+                if ((uint)index >= (uint)Length)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(index));
+                }
+
+                return _path[index];
             }
         }
 
@@ -157,6 +183,34 @@ namespace Migs.MPath.Core.Data
         }
 
         /// <summary>
+        /// Returns the coordinates of the path as a span over the pooled array, without copying. Empty for a failed
+        /// result.
+        /// </summary>
+        /// <remarks>The span is only valid until the result is disposed: the array then goes back to the pool and
+        /// is reused by later queries.</remarks>
+        /// <returns>The path, origin excluded.</returns>
+        /// <exception cref="ObjectDisposedException">Thrown when the PathResult has been disposed.</exception>
+        public ReadOnlySpan<Coordinate> AsSpan()
+        {
+            ThrowIfDisposed();
+
+            return _path == null ? ReadOnlySpan<Coordinate>.Empty : new ReadOnlySpan<Coordinate>(_path, 0, Length);
+        }
+
+        /// <summary>
+        /// Returns an allocation-free enumerator over the path, so <c>foreach (var c in result)</c> allocates nothing.
+        /// </summary>
+        /// <remarks>Do not dispose the result while enumerating it.</remarks>
+        /// <returns>An enumerator over the path, origin excluded.</returns>
+        /// <exception cref="ObjectDisposedException">Thrown when the PathResult has been disposed.</exception>
+        public Enumerator GetEnumerator()
+        {
+            ThrowIfDisposed();
+
+            return new Enumerator(_path, Length);
+        }
+
+        /// <summary>
         /// Creates an independent result with the same path in a freshly rented array, so the copy and the original
         /// can be disposed separately.
         /// </summary>
@@ -201,6 +255,46 @@ namespace Migs.MPath.Core.Data
                 
             ArrayPool<Coordinate>.Shared.Return(_path);
             _isDisposed = true;
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (_isDisposed)
+            {
+                throw new ObjectDisposedException(nameof(PathResult));
+            }
+        }
+
+        /// <summary>
+        /// Enumerates the coordinates of a <see cref="PathResult"/> without allocating. Returned by
+        /// <see cref="PathResult.GetEnumerator"/>; not meant to be used directly.
+        /// </summary>
+        public struct Enumerator
+        {
+            private readonly Coordinate[] _path;
+            private readonly int _length;
+            private int _index;
+
+            internal Enumerator(Coordinate[] path, int length)
+            {
+                _path = path;
+                _length = path == null ? 0 : length;
+                _index = -1;
+            }
+
+            /// <summary>
+            /// Gets the coordinate at the current position.
+            /// </summary>
+            public Coordinate Current => _path[_index];
+
+            /// <summary>
+            /// Advances to the next coordinate.
+            /// </summary>
+            /// <returns><c>true</c> while there is a coordinate to read.</returns>
+            public bool MoveNext()
+            {
+                return ++_index < _length;
+            }
         }
     }
 }

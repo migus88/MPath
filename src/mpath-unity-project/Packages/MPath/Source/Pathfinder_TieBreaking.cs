@@ -296,7 +296,7 @@ namespace Migs.MPath.Core
                 }
             }
 
-            return RangeResult.Create(reachable, count);
+            return CreateRangeResult(reachable, count);
         }
 
         /// <summary>

@@ -94,6 +94,7 @@ dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchm
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark reachability
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark grid
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark short
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark results
 
 # Render result images / print path stats
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- render
@@ -138,6 +139,12 @@ grid with `Manual`.
 | GetPath_6Steps      | 1024 | 2.539 ms  | 0.4 µs   |
 | GetReachable_2Steps | 1024 | 2.461 ms  | 0.6 µs   |
 | GetReachable_6Steps | 1024 | 2.467 ms  | 5.1 µs   |
+
+### Reading Results
+
+The `results` suite measures reading results rather than computing them: enumerating the cross-maze `PathResult`
+and a medium-budget `RangeResult` (the allocating `Path` / `Cells` iterators against `foreach` over the result,
+`AsSpan()` and `Get(i)`), `CopyCostsTo`, and an O(1) `TryGetCost` for every reached cell of the range.
 
 ### Unity Benchmarks
 

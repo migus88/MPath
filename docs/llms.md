@@ -93,8 +93,8 @@ using var result = pathfinder.GetPath(from: new Coordinate(0, 0), to: new Coordi
 
 if (result.IsSuccess)
 {
-    // result.Path does NOT include the origin; it is the sequence of steps after `from`.
-    foreach (Coordinate step in result.Path) { /* move to step */ }
+    // The path does NOT include the origin; it is the sequence of steps after `from`.
+    foreach (Coordinate step in result) { /* move to step */ }   // struct enumerator: no allocation
 }
 ```
 
@@ -161,8 +161,8 @@ One row per type; click through for full members. The load-bearing facts are rep
 
 | Type | Kind | Gist | Details |
 |------|------|------|---------|
-| `PathResult` | result, `IDisposable` | `IsSuccess`, `Length`, `Path` (steps, **origin excluded**), `Get(i)`, `Steps` / `DiagonalSteps` (ints, of the route before smoothing) | [api](api/PathResult.md) |
-| `RangeResult` | result, `IDisposable` | `IsSuccess`, `Length`, `Cells`, `Contains(c)`, `TryGetCost(c, out cost)`, `TryGetCell(c, out cell)`, `Get(i)` | [api](api/RangeResult.md) |
+| `PathResult` | result, `IDisposable` | `IsSuccess`, `Length`, `foreach` / `AsSpan()` / `this[i]` (steps, **origin excluded**; allocation-free), `Path` (allocating iterator), `Get(i)`, `Steps` / `DiagonalSteps` (ints, of the route before smoothing) | [api](api/PathResult.md) |
+| `RangeResult` | result, `IDisposable` | `IsSuccess`, `Length`, `foreach` / `AsSpan()` / `this[i]` (allocation-free), `Cells` (allocating iterator), `Contains(c)` / `TryGetCost(c, out cost)` / `TryGetCell(c, out cell)` (O(1)), `CopyCostsTo(Span<float>, unreached = -1)`, `Get(i)` | [api](api/RangeResult.md) |
 | `ReachableCell` | `readonly struct` | `Coordinate` + `Cost` + `Steps` + `DiagonalSteps` (ints) | [api](api/ReachableCell.md) |
 | `StepwiseSearch` | session, `IDisposable` | `Tick()`, `RunToCompletion()`, `State`, `IsComplete` | [api](api/StepwiseSearch.md) |
 | `SearchStep` | immutable class | Per-tick snapshot: `Searched`, `Open/ClosedCount`, `Current`, `Iteration`, `Path` | [api](api/SearchStep.md) |
@@ -229,16 +229,19 @@ construction has **no effect** — build a new `Pathfinder` to change settings.
 using var result = pathfinder.GetPath(from, to);                 // single-cell agent
 using var big    = pathfinder.GetPath(from, to, agentSize: 2);   // 2x2 agent (or GetPath(agent, from, to))
 if (result.IsSuccess)
-    foreach (var step in result.Path) { /* ... */ }   // origin excluded
+    foreach (var step in result) { /* ... */ }        // origin excluded; or result.AsSpan() / result[i]
 ```
 
 ### Movement range ("where can this unit move?", tactics games)
 
 ```csharp
 using var range = pathfinder.GetReachable(origin, budget: 5f);
-foreach (var c in range.Cells)
+foreach (var c in range)                              // struct enumerator: no allocation
     Highlight(c.Coordinate, c.Cost);                  // every cell with cheapest cost <= 5
-if (range.TryGetCost(target, out var cost)) { /* reachable for `cost` */ }
+if (range.TryGetCost(target, out var cost)) { /* reachable for `cost` */ }   // O(1), no allocation
+
+var costs = new float[width * height];                // reuse it across queries
+range.CopyCostsTo(costs);                             // costs[pathfinder.GetIndex(c)], -1 where unreached
 ```
 
 Per-step cost mirrors the main A*: straight/diagonal multiplier **+** cell `Weight` (when weighting is on).
@@ -388,6 +391,9 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
    their result, however large the search.
 3. **Not thread-safe.** No concurrent queries on one instance, no sharing across threads. One per thread.
 4. **`Path` excludes the origin.** It is the sequence of steps *after* `from`. Don't expect `from` first.
+   Spans from `AsSpan()` and `foreach` enumerators read the result's pooled array: don't use them after
+   disposing the result. `RangeResult` lookups stay valid until the result is disposed, whatever the pathfinder
+   does meanwhile (later queries, `Dispose`).
 5. **No path → failure result, not an exception.** Check `IsSuccess`. Only bad arguments throw
    (`agent == null`; `agentSize < 1`; `from` or `to` outside the grid).
 6. **Direct grid edits aren't seen by the cache.** The pathfinder re-reads your grid each query (with
