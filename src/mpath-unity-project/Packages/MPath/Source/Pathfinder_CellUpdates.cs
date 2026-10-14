@@ -8,7 +8,7 @@ namespace Migs.MPath.Core
     public sealed unsafe partial class Pathfinder
     {
         /// <summary>
-        /// Returns the index of the cell at <paramref name="coordinate"/>. For a <see cref="Cell"/>[] or
+        /// Returns the index of the cell at <paramref name="coordinate"/>. For a <see cref="PathCell"/>[] or
         /// <see cref="ICellHolder"/>[] array it is the cell's index in the caller's array, by
         /// <see cref="IPathfinderSettings.CellLayout"/>: <c>X * fieldHeight + Y</c> (column-major) or
         /// <c>Y * fieldWidth + X</c> (row-major). For a matrix it is the column-major index
@@ -30,14 +30,14 @@ namespace Migs.MPath.Core
 
         /// <summary>
         /// Returns the current cell data at <paramref name="coordinate"/>, read from the grid the pathfinder was
-        /// built from: the caller's <see cref="Cell"/>[] or <see cref="Cell"/>[,], or the matching
+        /// built from: the caller's <see cref="PathCell"/>[] or <see cref="PathCell"/>[,], or the matching
         /// <see cref="ICellHolder.CellData"/> (a <c>null</c> holder reads as a <c>default</c>, non-walkable cell).
         /// </summary>
         /// <param name="coordinate">A coordinate inside the grid.</param>
         /// <returns>A copy of the cell.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="coordinate"/> is outside the grid.</exception>
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
-        public Cell GetCell(Coordinate coordinate)
+        public PathCell GetCell(Coordinate coordinate)
         {
             ThrowIfDisposed();
             ThrowIfOutsideGrid(coordinate);
@@ -66,11 +66,11 @@ namespace Migs.MPath.Core
         /// <paramref name="cell"/>.
         /// </summary>
         /// <param name="coordinate">A coordinate inside the grid.</param>
-        /// <param name="cell">The new cell values. Its <see cref="Cell.Weight"/> must not be negative.</param>
+        /// <param name="cell">The new cell values. Its <see cref="PathCell.Weight"/> must not be negative.</param>
         /// <inheritdoc cref="SetWalkable" path="/remarks"/>
         /// <inheritdoc cref="SetWalkable" path="/exception"/>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the cell's weight is negative.</exception>
-        public void SetCell(Coordinate coordinate, in Cell cell)
+        public void SetCell(Coordinate coordinate, in PathCell cell)
         {
             ThrowIfNegativeWeight(cell.Weight, nameof(cell));
 
@@ -86,7 +86,7 @@ namespace Migs.MPath.Core
         /// <param name="isWalkable">The new walkability.</param>
         /// <remarks>
         /// O(1) and allocation-free. The caller's grid is never reordered. The change is written to the caller's
-        /// <see cref="Cell"/>[] or <see cref="Cell"/>[,], so the caller's grid and the pathfinder stay in sync, and
+        /// <see cref="PathCell"/>[] or <see cref="PathCell"/>[,], so the caller's grid and the pathfinder stay in sync, and
         /// the next query sees it. When the value changes in a way cached paths depend on, the path cache is
         /// cleared, as by <see cref="InvalidateCache"/>; setting the current value again does nothing. Not
         /// supported by the <see cref="ICellHolder"/> constructors: the holders are the source the pathfinder reads,
@@ -143,7 +143,7 @@ namespace Migs.MPath.Core
         /// weight only matter to cached paths when the settings enable them, since cached queries always run under
         /// the settings' own rules.
         /// </summary>
-        private void UpdateCell(ref Cell target, Coordinate coordinate, bool isWalkable, bool isOccupied, int weight)
+        private void UpdateCell(ref PathCell target, Coordinate coordinate, bool isWalkable, bool isOccupied, int weight)
         {
             var isCacheAffected = target.IsWalkable != isWalkable
                 || (_settings.AreOccupiedCellsBlocking && target.IsOccupied != isOccupied)
@@ -171,7 +171,7 @@ namespace Migs.MPath.Core
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteUserFields(ref Cell cell, bool isWalkable, bool isOccupied, int weight)
+        private static void WriteUserFields(ref PathCell cell, bool isWalkable, bool isOccupied, int weight)
         {
             cell.IsWalkable = isWalkable;
             cell.IsOccupied = isOccupied;
@@ -179,11 +179,11 @@ namespace Migs.MPath.Core
         }
 
         /// <summary>
-        /// The caller-owned cell a setter writes to: the element of the caller's <see cref="Cell"/>[] or
-        /// <see cref="Cell"/>[,]. Holder modes have no writable source, since <see cref="ICellHolder.CellData"/> is
+        /// The caller-owned cell a setter writes to: the element of the caller's <see cref="PathCell"/>[] or
+        /// <see cref="PathCell"/>[,]. Holder modes have no writable source, since <see cref="ICellHolder.CellData"/> is
         /// read-only.
         /// </summary>
-        private ref Cell GetWritableCell(Coordinate coordinate)
+        private ref PathCell GetWritableCell(Coordinate coordinate)
         {
             ThrowIfDisposed();
             ThrowIfOutsideGrid(coordinate);

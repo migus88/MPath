@@ -52,10 +52,10 @@ public class RandomGridBenchmarkRunner : IDisposable
         _largePathfinder?.Dispose();
     }
 
-    private static Cell[,] CreateGrid(int width, int height)
+    private static PathCell[,] CreateGrid(int width, int height)
     {
         var random = new Random(Seed);
-        var cells = new Cell[width, height];
+        var cells = new PathCell[width, height];
 
         for (var x = 0; x < width; x++)
         {
@@ -63,7 +63,7 @@ public class RandomGridBenchmarkRunner : IDisposable
             {
                 var isCorner = (x == 0 && y == 0) || (x == width - 1 && y == height - 1);
 
-                cells[x, y] = new Cell
+                cells[x, y] = new PathCell
                 {
                     IsWalkable = isCorner || random.NextDouble() >= WallRatio,
                 };

@@ -79,7 +79,7 @@ namespace Migs.MPath.Tests
         {
             using var pathfinder = new Pathfinder(CreateCells(), Width, Height);
 
-            var setCell = () => pathfinder.SetCell(new Coordinate(2, 2), new Cell { IsWalkable = true, Weight = -3 });
+            var setCell = () => pathfinder.SetCell(new Coordinate(2, 2), new PathCell { IsWalkable = true, Weight = -3 });
 
             setCell.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("cell");
         }
@@ -101,14 +101,14 @@ namespace Migs.MPath.Tests
             beyond.Should().Be(400);
         }
 
-        private static Cell[] CreateCells()
+        private static PathCell[] CreateCells()
         {
-            var cells = new Cell[Width * Height];
+            var cells = new PathCell[Width * Height];
             for (var x = 0; x < Width; x++)
             {
                 for (var y = 0; y < Height; y++)
                 {
-                    cells[x * Height + y] = new Cell { IsWalkable = true };
+                    cells[x * Height + y] = new PathCell { IsWalkable = true };
                 }
             }
 

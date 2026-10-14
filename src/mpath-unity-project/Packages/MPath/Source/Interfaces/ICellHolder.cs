@@ -18,6 +18,6 @@ namespace Migs.MPath.Core.Interfaces
         /// Gets the cell data associated with this holder.
         /// This data contains information such as walkability, occupancy and weight.
         /// </summary>
-        Cell CellData { get; }
+        PathCell CellData { get; }
     }
 }

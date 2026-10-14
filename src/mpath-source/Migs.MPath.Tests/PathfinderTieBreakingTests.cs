@@ -120,8 +120,8 @@ namespace Migs.MPath.Tests
                 SetWall(cells, wall.X, wall.Y);
             }
 
-            var rowMajor = new Cell[Width * Height];
-            var matrix = new Cell[Width, Height];
+            var rowMajor = new PathCell[Width * Height];
+            var matrix = new PathCell[Width, Height];
             for (var x = 0; x < Width; x++)
             {
                 for (var y = 0; y < Height; y++)
@@ -380,21 +380,21 @@ namespace Migs.MPath.Tests
             };
         }
 
-        private static Cell[] CreateCells(int width = Width, int height = Height)
+        private static PathCell[] CreateCells(int width = Width, int height = Height)
         {
-            var cells = new Cell[width * height];
+            var cells = new PathCell[width * height];
             for (var x = 0; x < width; x++)
             {
                 for (var y = 0; y < height; y++)
                 {
-                    cells[x * height + y] = new Cell { IsWalkable = true };
+                    cells[x * height + y] = new PathCell { IsWalkable = true };
                 }
             }
 
             return cells;
         }
 
-        private static void SetWall(Cell[] cells, int x, int y)
+        private static void SetWall(PathCell[] cells, int x, int y)
         {
             cells[x * Height + y].IsWalkable = false;
         }

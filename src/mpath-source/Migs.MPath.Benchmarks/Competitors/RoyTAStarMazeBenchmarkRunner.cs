@@ -90,7 +90,7 @@ public class RoyTAStarMazeBenchmarkRunner : BaseMazeBenchmarkRunner
         }
     }
 
-    private void Connect(int x, int y, Cell[,] cells)
+    private void Connect(int x, int y, PathCell[,] cells)
     {
         var node = _nodes[x, y];
 

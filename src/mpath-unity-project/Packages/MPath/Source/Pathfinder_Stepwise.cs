@@ -125,7 +125,7 @@ namespace Migs.MPath.Core
             private GCHandle _handle;
             private GCHandle _nodesHandle;
             private GCHandle _arrivalsHandle;
-            private Cell* _cells;
+            private PathCell* _cells;
             private PathNode* _nodes;
             private byte* _arrivals;
 
@@ -159,7 +159,7 @@ namespace Migs.MPath.Core
                 {
                     _handle = GCHandle.Alloc(pathfinder._cells, GCHandleType.Pinned);
                     _nodesHandle = GCHandle.Alloc(pathfinder._nodes, GCHandleType.Pinned);
-                    _cells = (Cell*)_handle.AddrOfPinnedObject();
+                    _cells = (PathCell*)_handle.AddrOfPinnedObject();
                     _nodes = (PathNode*)_nodesHandle.AddrOfPinnedObject();
 
                     pathfinder.BeginSearch(_nodes);
@@ -245,7 +245,7 @@ namespace Migs.MPath.Core
 
                 _iteration++;
 
-                var neighbors = stackalloc Cell*[MaxNeighbors];
+                var neighbors = stackalloc PathCell*[MaxNeighbors];
                 var reachedGoal = ExpandNext(neighbors, out var current);
                 _current = _pathfinder.GetCoordinate(current);
 
@@ -302,7 +302,7 @@ namespace Migs.MPath.Core
                 }
             }
 
-            private bool ExpandNext(Cell** neighbors, out int current)
+            private bool ExpandNext(PathCell** neighbors, out int current)
             {
                 fixed (Coordinate* enterable = _enterableCells)
                 {
@@ -332,7 +332,7 @@ namespace Migs.MPath.Core
                 _pathfinder._query = QueryRules.FromSettings(_pathfinder._settings);
             }
 
-            private void MarkDiscovered(Cell* cell)
+            private void MarkDiscovered(PathCell* cell)
             {
                 var index = (int)(cell - _cells);
                 if (_seen[index])

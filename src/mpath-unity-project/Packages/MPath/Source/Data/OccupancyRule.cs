@@ -1,7 +1,7 @@
 namespace Migs.MPath.Core.Data
 {
     /// <summary>
-    /// Decides, for a single query, whether occupied cells (<see cref="Cell.IsOccupied"/>) block the agent.
+    /// Decides, for a single query, whether occupied cells (<see cref="PathCell.IsOccupied"/>) block the agent.
     /// Passed through <see cref="QueryOptions"/>.
     /// </summary>
     public enum OccupancyRule

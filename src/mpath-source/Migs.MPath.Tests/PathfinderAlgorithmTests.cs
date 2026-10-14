@@ -486,15 +486,15 @@ namespace Migs.MPath.Tests
             resultStringPulling.Length.Should().BeLessThan(resultNoSmoothing.Length);
         }
         
-        private static Cell[] CreateEmptyGrid(int width, int height)
+        private static PathCell[] CreateEmptyGrid(int width, int height)
         {
-            var cells = new Cell[width * height];
+            var cells = new PathCell[width * height];
             for (var x = 0; x < width; x++)
             {
                 for (var y = 0; y < height; y++)
                 {
                     var index = x * height + y;
-                    cells[index] = new Cell
+                    cells[index] = new PathCell
                     {
                         IsWalkable = true,
                         IsOccupied = false,

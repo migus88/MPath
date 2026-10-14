@@ -7,7 +7,7 @@ namespace Migs.Mpath.Examples
 {
     public class FieldCell : MonoBehaviour, ICellHolder
     {
-        public Cell CellData { get; private set; }
+        public PathCell CellData { get; private set; }
         public Vector2Int Position => _position;
         
         public event Action<FieldCell> CellClicked;
@@ -26,7 +26,7 @@ namespace Migs.Mpath.Examples
 
         private void Awake()
         {
-            CellData = new Cell
+            CellData = new PathCell
             {
                 IsWalkable = _isWalkable,
                 Weight = Mathf.RoundToInt(_weight * CostScale)

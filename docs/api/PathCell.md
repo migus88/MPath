@@ -1,8 +1,8 @@
-# Cell Struct
+# PathCell Struct
 
 **Namespace:** `Migs.MPath.Core.Data`
 
-Represents a single cell in the pathfinding grid: the data a search reads. `Cell` is the fundamental unit of the grid used for pathfinding. A cell does not carry its position: its slot in the grid is its position (`[x, y]` in a `Cell[,]`, the index under [`CellLayout`](CellLayout.md) in a `Cell[]`). Searches only read cells: their state (scores, parents, open/closed) lives in the pathfinder, so a query never writes into your grid.
+Represents a single cell in the pathfinding grid: the data a search reads. `PathCell` is the fundamental unit of the grid used for pathfinding. A cell does not carry its position: its slot in the grid is its position (`[x, y]` in a `PathCell[,]`, the index under [`CellLayout`](CellLayout.md) in a `PathCell[]`). Searches only read cells: their state (scores, parents, open/closed) lives in the pathfinder, so a query never writes into your grid.
 
 ## Properties
 
@@ -16,7 +16,7 @@ Represents a single cell in the pathfinding grid: the data a search reads. `Cell
 
 ```csharp
 // The cell at (5, 10): its slot is its position
-cells[5, 10] = new Cell
+cells[5, 10] = new PathCell
 {
     IsWalkable = true,
     Weight = 100
@@ -25,5 +25,5 @@ cells[5, 10] = new Cell
 
 ## Remarks
 
-- `Cell` is 8 bytes (two `bool`s and the weight), which keeps the searched buffer and the per-query copy of a matrix or holder grid small. The pathfinder derives every coordinate it reports from the cell's index.
-- A search never writes into the cells, and a `Cell[]` grid is never reordered: see [`CellLayout`](CellLayout.md).
+- `PathCell` is 8 bytes (two `bool`s and the weight), which keeps the searched buffer and the per-query copy of a matrix or holder grid small. The pathfinder derives every coordinate it reports from the cell's index.
+- A search never writes into the cells, and a `PathCell[]` grid is never reordered: see [`CellLayout`](CellLayout.md).

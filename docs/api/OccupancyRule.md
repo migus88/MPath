@@ -2,7 +2,7 @@
 
 **Namespace:** `Migs.MPath.Core.Data`
 
-Decides, for a single query, whether occupied cells (`Cell.IsOccupied`) block the agent. Set through [`QueryOptions.Occupancy`](QueryOptions.md).
+Decides, for a single query, whether occupied cells (`PathCell.IsOccupied`) block the agent. Set through [`QueryOptions.Occupancy`](QueryOptions.md).
 
 ## Values
 

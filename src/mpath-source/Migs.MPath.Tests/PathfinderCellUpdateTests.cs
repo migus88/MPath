@@ -92,7 +92,7 @@ namespace Migs.MPath.Tests
                 () => pathfinder.SetWalkable(target, false),
                 () => pathfinder.SetOccupied(target, true),
                 () => pathfinder.SetWeight(target, 300),
-                () => pathfinder.SetCell(target, new Cell())
+                () => pathfinder.SetCell(target, new PathCell())
             };
 
             // Assert
@@ -150,7 +150,7 @@ namespace Migs.MPath.Tests
             var target = new Coordinate(3, 2);
 
             // Act
-            pathfinder.SetCell(target, new Cell { IsOccupied = true, Weight = 400 });
+            pathfinder.SetCell(target, new PathCell { IsOccupied = true, Weight = 400 });
 
             // Assert
             var cell = pathfinder.GetCell(target);
@@ -298,7 +298,7 @@ namespace Migs.MPath.Tests
                 .SetName("SetOccupied_OutsideGrid_ThrowsArgumentException");
             yield return new TestCaseData((Action<Pathfinder>)(p => p.SetWeight(new Coordinate(Width, 0), 100)))
                 .SetName("SetWeight_OutsideGrid_ThrowsArgumentException");
-            yield return new TestCaseData((Action<Pathfinder>)(p => p.SetCell(new Coordinate(Width, 0), new Cell())))
+            yield return new TestCaseData((Action<Pathfinder>)(p => p.SetCell(new Coordinate(Width, 0), new PathCell())))
                 .SetName("SetCell_OutsideGrid_ThrowsArgumentException");
         }
 
@@ -320,7 +320,7 @@ namespace Migs.MPath.Tests
             CellLayout = CellLayout.RowMajor
         };
 
-        private static Pathfinder Create(Mode mode, out Cell[] cells, out Holder[,] holders)
+        private static Pathfinder Create(Mode mode, out PathCell[] cells, out Holder[,] holders)
         {
             cells = null!;
             holders = null!;
@@ -359,32 +359,32 @@ namespace Migs.MPath.Tests
             {
                 for (var y = 0; y < Height; y++)
                 {
-                    holders[x, y] = new Holder(new Cell { IsWalkable = true });
+                    holders[x, y] = new Holder(new PathCell { IsWalkable = true });
                 }
             }
 
             return holders;
         }
 
-        private static Cell[] CreateOpenArray()
+        private static PathCell[] CreateOpenArray()
         {
-            var cells = new Cell[Width * Height];
+            var cells = new PathCell[Width * Height];
             for (var i = 0; i < cells.Length; i++)
             {
-                cells[i] = new Cell { IsWalkable = true };
+                cells[i] = new PathCell { IsWalkable = true };
             }
 
             return cells;
         }
 
-        private static Cell[,] CreateMatrix()
+        private static PathCell[,] CreateMatrix()
         {
-            var matrix = new Cell[Width, Height];
+            var matrix = new PathCell[Width, Height];
             for (var x = 0; x < Width; x++)
             {
                 for (var y = 0; y < Height; y++)
                 {
-                    matrix[x, y] = new Cell { IsWalkable = true };
+                    matrix[x, y] = new PathCell { IsWalkable = true };
                 }
             }
 
@@ -393,14 +393,14 @@ namespace Migs.MPath.Tests
 
         public sealed class Holder : ICellHolder
         {
-            private Cell _cell;
+            private PathCell _cell;
 
-            public Holder(Cell cell)
+            public Holder(PathCell cell)
             {
                 _cell = cell;
             }
 
-            public Cell CellData => _cell;
+            public PathCell CellData => _cell;
 
             public bool IsOccupied
             {

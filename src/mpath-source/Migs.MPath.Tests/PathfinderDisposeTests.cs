@@ -43,7 +43,7 @@ namespace Migs.MPath.Tests
                 .SetName("GetIndex_AfterDispose_ThrowsObjectDisposedException");
             yield return new TestCaseData((Action<Pathfinder>)(p => p.GetCell(Origin)))
                 .SetName("GetCell_AfterDispose_ThrowsObjectDisposedException");
-            yield return new TestCaseData((Action<Pathfinder>)(p => p.SetCell(Origin, new Cell())))
+            yield return new TestCaseData((Action<Pathfinder>)(p => p.SetCell(Origin, new PathCell())))
                 .SetName("SetCell_AfterDispose_ThrowsObjectDisposedException");
             yield return new TestCaseData((Action<Pathfinder>)(p => p.SetWalkable(Origin, false)))
                 .SetName("SetWalkable_AfterDispose_ThrowsObjectDisposedException");
@@ -61,8 +61,8 @@ namespace Migs.MPath.Tests
             pathfinder.Dispose();
             pathfinder.Dispose();
 
-            var first = ArrayPool<Cell>.Shared.Rent(GridSize * GridSize);
-            var second = ArrayPool<Cell>.Shared.Rent(GridSize * GridSize);
+            var first = ArrayPool<PathCell>.Shared.Rent(GridSize * GridSize);
+            var second = ArrayPool<PathCell>.Shared.Rent(GridSize * GridSize);
 
             try
             {
@@ -70,8 +70,8 @@ namespace Migs.MPath.Tests
             }
             finally
             {
-                ArrayPool<Cell>.Shared.Return(first);
-                ArrayPool<Cell>.Shared.Return(second);
+                ArrayPool<PathCell>.Shared.Return(first);
+                ArrayPool<PathCell>.Shared.Return(second);
             }
         }
 
@@ -101,10 +101,10 @@ namespace Migs.MPath.Tests
         [Test]
         public void GetPath_AfterDisposeOfNonPooledArrayMode_ThrowsObjectDisposedException()
         {
-            var cells = new Cell[GridSize * GridSize];
+            var cells = new PathCell[GridSize * GridSize];
             for (var i = 0; i < cells.Length; i++)
             {
-                cells[i] = new Cell { IsWalkable = true };
+                cells[i] = new PathCell { IsWalkable = true };
             }
 
             var pathfinder = new Pathfinder(cells, GridSize, GridSize);
@@ -131,14 +131,14 @@ namespace Migs.MPath.Tests
             disposeSearch.Should().NotThrow();
         }
 
-        private static Cell[,] CreateMatrix()
+        private static PathCell[,] CreateMatrix()
         {
-            var matrix = new Cell[GridSize, GridSize];
+            var matrix = new PathCell[GridSize, GridSize];
             for (var x = 0; x < GridSize; x++)
             {
                 for (var y = 0; y < GridSize; y++)
                 {
-                    matrix[x, y] = new Cell { IsWalkable = true };
+                    matrix[x, y] = new PathCell { IsWalkable = true };
                 }
             }
 

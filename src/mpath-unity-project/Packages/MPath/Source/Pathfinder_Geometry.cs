@@ -79,9 +79,9 @@ namespace Migs.MPath.Core
 
             InitializeCellsArray();
 
-            var cells = new Span<Cell>(_cells, 0, Size);
+            var cells = new Span<PathCell>(_cells, 0, Size);
 
-            fixed (Cell* ptr = &MemoryMarshal.GetReference(cells))
+            fixed (PathCell* ptr = &MemoryMarshal.GetReference(cells))
             {
                 return HasLineOfSight(from, to, ptr, mode);
             }

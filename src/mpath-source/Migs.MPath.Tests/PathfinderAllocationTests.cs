@@ -86,15 +86,15 @@ namespace Migs.MPath.Tests
             return new PathfinderSettings { TieBreaking = tieBreaking };
         }
 
-        private static Cell[,] CreateOpenGrid()
+        private static PathCell[,] CreateOpenGrid()
         {
-            var cells = new Cell[GridSize, GridSize];
+            var cells = new PathCell[GridSize, GridSize];
 
             for (var x = 0; x < GridSize; x++)
             {
                 for (var y = 0; y < GridSize; y++)
                 {
-                    cells[x, y] = new Cell { IsWalkable = true };
+                    cells[x, y] = new PathCell { IsWalkable = true };
                 }
             }
 

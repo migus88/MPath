@@ -54,21 +54,21 @@ the grid size. Searches never write into your cells.
 
 The grid representation affects performance:
 
-1. **Flat Cell Array**: Fastest option: it is searched in place, so a query never copies the grid (declare its order
+1. **Flat PathCell Array**: Fastest option: it is searched in place, so a query never copies the grid (declare its order
    with [`CellLayout`](../api/CellLayout.md): column-major by default, or row-major).
-2. **Cell Matrix**: Copied into a snapshot per query, in one block copy (see `GridSnapshotMode` below)
+2. **PathCell Matrix**: Copied into a snapshot per query, in one block copy (see `GridSnapshotMode` below)
 3. **Cell Holder Array**: Additional overhead from interface calls
 4. **Cell Holder Matrix**: Most overhead but most convenient
 
 ```csharp
 // For best performance, use flat arrays when possible
-Cell[] cells = new Cell[width * height];        // cells[y * width + x]
+PathCell[] cells = new PathCell[width * height];        // cells[y * width + x]
 // Initialize cells...
 settings.CellLayout = CellLayout.RowMajor;
 var pathfinder = new Pathfinder(cells, width, height, settings);
 ```
 
-The `Cell[,]` and holder constructors search a snapshot of your grid. By default
+The `PathCell[,]` and holder constructors search a snapshot of your grid. By default
 ([`GridSnapshotMode.PerQuery`](../api/GridSnapshotMode.md)) every query copies the whole grid into it first, so each
 query costs at least O(grid size) however short it is. If you run many short queries on a large grid (movement
 ranges per unit, AI turns, simulations), switch to `Manual`: the grid is copied once and then only after

@@ -22,7 +22,7 @@ namespace Migs.MPath.Core
         /// The maximum allowed path cost, inclusive: a cell whose cheapest route costs exactly the budget is reached.
         /// Each straight step costs <see cref="IPathfinderSettings.StraightStepCost"/> and each diagonal step costs
         /// <see cref="IPathfinderSettings.DiagonalStepCost"/>; when <see cref="IPathfinderSettings.IsCellWeightEnabled"/>
-        /// is set, the destination cell's <see cref="Cell.Weight"/> is added to the step cost. A negative budget
+        /// is set, the destination cell's <see cref="PathCell.Weight"/> is added to the step cost. A negative budget
         /// reaches nothing; routes costing more than 1,073,741,823 (<c>int.MaxValue / 2</c>) are never reached, so
         /// <c>int.MaxValue</c> is an unbounded budget.
         /// </param>
@@ -102,9 +102,9 @@ namespace Migs.MPath.Core
 
             InitializeCellsArray();
 
-            var cells = new Span<Cell>(_cells, 0, Size);
+            var cells = new Span<PathCell>(_cells, 0, Size);
 
-            fixed (Cell* ptr = &MemoryMarshal.GetReference(cells))
+            fixed (PathCell* ptr = &MemoryMarshal.GetReference(cells))
             fixed (PathNode* nodes = _nodes)
             {
                 BeginSearch(nodes);
@@ -122,7 +122,7 @@ namespace Migs.MPath.Core
         /// <summary>
         /// Runs the bounded uniform-cost search that backs <see cref="GetReachable"/>.
         /// </summary>
-        private RangeResult CalculateReachable(int agentSize, Coordinate from, int budget, Cell* cells,
+        private RangeResult CalculateReachable(int agentSize, Coordinate from, int budget, PathCell* cells,
             PathNode* nodes)
         {
             // The reachable set can never exceed the number of cells in the grid.
@@ -132,7 +132,7 @@ namespace Migs.MPath.Core
 
             OpenNode(nodes, GetLayoutIndex(from.X, from.Y), PathNode.NoParent, 0, 0, 0);
 
-            var neighbors = stackalloc Cell*[MaxNeighbors];
+            var neighbors = stackalloc PathCell*[MaxNeighbors];
             var generation = _generation;
 
             while (_openSet.Count > 0)

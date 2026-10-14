@@ -17,20 +17,20 @@ namespace Migs.MPath.Tests.Caching
     {
         private const int FieldSize = 10;
         
-        private Cell[] _cells;
+        private PathCell[] _cells;
         private Pathfinder _pathfinder;
         
         [SetUp]
         public void SetUp()
         {
-            _cells = new Cell[FieldSize * FieldSize];
+            _cells = new PathCell[FieldSize * FieldSize];
             
             // Initialize all cells as walkable
             for (var y = 0; y < FieldSize; y++)
             {
                 for (var x = 0; x < FieldSize; x++)
                 {
-                    var cell = new Cell
+                    var cell = new PathCell
                     {
                         IsWalkable = true
                     };

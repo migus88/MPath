@@ -15,8 +15,8 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 - Deterministic tie-breaking (`TieBreaking`): among equal-cost routes, the one with fewer diagonals or fewer turns, with exact integer costs; results report integer `Steps` / `DiagonalSteps`
 - Per-query options (`QueryOptions`): units block or not, and specific occupied cells can be entered for one query, without touching the grid
 - Single-cell updates (`SetWalkable`, `SetOccupied`, `SetWeight`, `SetCell`): O(1) writes into your grid that keep the path cache valid
-- Short queries stay short on large grids: search state lives in the pathfinder and is reset lazily, and `GridSnapshotMode.Manual` stops `Cell[,]`/holder grids from being copied per query
-- Flat `Cell[]` grids, column- or row-major (`CellLayout`): a cell's slot is its position, 8 bytes a cell, searched in place and never reordered
+- Short queries stay short on large grids: search state lives in the pathfinder and is reset lazily, and `GridSnapshotMode.Manual` stops `PathCell[,]`/holder grids from being copied per query
+- Flat `PathCell[]` grids, column- or row-major (`CellLayout`): a cell's slot is its position, 8 bytes a cell, searched in place and never reordered
 - Distance metrics (Manhattan, Chebyshev) and line-of-sight checks for range and visibility logic
 - Stepwise search (`BeginStepwiseSearch`) for visualizing how the algorithm explores the grid
 - First-class support for Unity with dedicated integration components
@@ -121,7 +121,7 @@ Here's a simple example of using MPath in a .NET project:
 
 ```csharp
 // Create matrix of Cells
-var cells = new Cell[10, 10];
+var cells = new PathCell[10, 10];
 
 // Or do it with gameObjects that implements ICellHolder
 [SerializeField] private FieldCell[] _cells;

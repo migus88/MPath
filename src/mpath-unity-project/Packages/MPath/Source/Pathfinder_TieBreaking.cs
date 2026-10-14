@@ -61,13 +61,13 @@ namespace Migs.MPath.Core
         /// <summary>
         /// The keyed counterpart of <see cref="CalculatePath"/>.
         /// </summary>
-        private PathResult CalculatePathKeyed(int agentSize, Coordinate from, Coordinate to, Cell* cells,
+        private PathResult CalculatePathKeyed(int agentSize, Coordinate from, Coordinate to, PathCell* cells,
             PathNode* nodes)
         {
             OpenOriginKeyed(nodes, from, GetH(from.X, from.Y, to.X, to.Y));
 
             var toIndex = GetLayoutIndex(to.X, to.Y);
-            var neighbors = stackalloc Cell*[MaxNeighbors];
+            var neighbors = stackalloc PathCell*[MaxNeighbors];
 
             while (_keyedOpenSet.Count > 0)
             {
@@ -83,8 +83,8 @@ namespace Migs.MPath.Core
         /// <summary>
         /// The keyed counterpart of <see cref="ExpandNext"/>: one expansion of the keyed search.
         /// </summary>
-        private bool ExpandNextKeyed(Cell* cells, PathNode* nodes, Coordinate to, int toIndex, int agentSize,
-            Cell** neighbors, out int current)
+        private bool ExpandNextKeyed(PathCell* cells, PathNode* nodes, Coordinate to, int toIndex, int agentSize,
+            PathCell** neighbors, out int current)
         {
             current = _keyedOpenSet.Dequeue();
 
@@ -107,8 +107,8 @@ namespace Migs.MPath.Core
         /// <see cref="ProcessNeighbors"/>, with the same <see cref="FastPathfinderSettings.MaxCost"/> headroom.
         /// (<paramref name="x"/>, <paramref name="y"/>) is the position of <paramref name="current"/>.
         /// </summary>
-        private void ProcessNeighborsKeyed(Cell* cells, PathNode* nodes, int current, int x, int y,
-            Cell** neighbors, Coordinate to)
+        private void ProcessNeighborsKeyed(PathCell* cells, PathNode* nodes, int current, int x, int y,
+            PathCell** neighbors, Coordinate to)
         {
             var isCountingTurns = _settings.TieBreaking == TieBreaking.FewerTurns;
             var currentNode = nodes + current;
@@ -178,7 +178,7 @@ namespace Migs.MPath.Core
         /// <summary>
         /// Builds the result of a successful keyed search by walking back from <paramref name="lastIndex"/>.
         /// </summary>
-        private PathResult ReconstructKeyedPath(int lastIndex, Cell* cells, Coordinate from, int agentSize)
+        private PathResult ReconstructKeyedPath(int lastIndex, PathCell* cells, Coordinate from, int agentSize)
         {
             var steps = WalkRoute(lastIndex, cells, from, null, 0, out var diagonalSteps);
             var path = ArrayPool<Coordinate>.Shared.Rent(steps);
@@ -195,7 +195,7 @@ namespace Migs.MPath.Core
         /// into <paramref name="path"/> when it is not null.
         /// </summary>
         /// <returns>The number of steps of the route.</returns>
-        private int WalkRoute(int lastIndex, Cell* cells, Coordinate from, Coordinate[] path, int length,
+        private int WalkRoute(int lastIndex, PathCell* cells, Coordinate from, Coordinate[] path, int length,
             out int diagonalSteps)
         {
             var steps = 0;
@@ -236,7 +236,7 @@ namespace Migs.MPath.Core
         /// ranks equal-cost routes here by (fewer diagonals, fewer steps), so the counts are exact and match the route
         /// <see cref="TieBreaking.FewerDiagonals"/> returns.
         /// </summary>
-        private RangeResult CalculateReachableKeyed(int agentSize, Coordinate from, int budget, Cell* cells,
+        private RangeResult CalculateReachableKeyed(int agentSize, Coordinate from, int budget, PathCell* cells,
             PathNode* nodes)
         {
             var reachable = ArrayPool<ReachableCell>.Shared.Rent(Size);
@@ -249,7 +249,7 @@ namespace Migs.MPath.Core
             SetLabel(nodes + start, 0, 0, 0);
             _keyedOpenSet.Enqueue(start, 0, 0, 0);
 
-            var neighbors = stackalloc Cell*[MaxNeighbors];
+            var neighbors = stackalloc PathCell*[MaxNeighbors];
 
             while (_keyedOpenSet.Count > 0)
             {

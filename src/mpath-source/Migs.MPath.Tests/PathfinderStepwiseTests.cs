@@ -262,7 +262,7 @@ namespace Migs.MPath.Tests
             var from = new Coordinate(0, 5);
             var to = new Coordinate(9, 5);
 
-            static Cell[] BuildWalledGrid()
+            static PathCell[] BuildWalledGrid()
             {
                 var cells = CreateEmptyGrid(GridSize, GridSize);
                 // Vertical wall down the middle with a single gap at the top.
@@ -295,20 +295,20 @@ namespace Migs.MPath.Tests
             final.Searched.Should().NotContain(n => n.Coordinate.X == 5 && n.Coordinate.Y >= 1);
         }
 
-        private static void SetWalkable(Cell[] cells, int x, int y, bool walkable)
+        private static void SetWalkable(PathCell[] cells, int x, int y, bool walkable)
         {
             cells[x * GridSize + y].IsWalkable = walkable;
         }
 
-        private static Cell[] CreateEmptyGrid(int width, int height)
+        private static PathCell[] CreateEmptyGrid(int width, int height)
         {
-            var cells = new Cell[width * height];
+            var cells = new PathCell[width * height];
             for (var x = 0; x < width; x++)
             {
                 for (var y = 0; y < height; y++)
                 {
                     var index = x * height + y;
-                    cells[index] = new Cell
+                    cells[index] = new PathCell
                     {
                         IsWalkable = true,
                         IsOccupied = false,

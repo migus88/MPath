@@ -5,37 +5,37 @@ The grid is the foundation of your pathfinding system in MPath. This guide expla
 ## Grid Representation Options
 
 MPath provides several options for representing your grid, each with different benefits. In all of them a cell's
-slot is its position: `[x, y]` in a matrix, the index under [`CellLayout`](../api/CellLayout.md) in an array. A `Cell`
+slot is its position: `[x, y]` in a matrix, the index under [`CellLayout`](../api/CellLayout.md) in an array. A `PathCell`
 carries no coordinate of its own.
 
-1. **Cell Array**: Simple, flat array of cells
-2. **Cell Matrix**: 2D array/matrix of cells
+1. **PathCell Array**: Simple, flat array of cells
+2. **PathCell Matrix**: 2D array/matrix of cells
 3. **Cell Holder Array**: Array of objects implementing ICellHolder
 4. **Cell Holder Matrix**: 2D array of objects implementing ICellHolder
 
-## When Your Game Already Has a `Cell` Type
+## Your Game's Own `Cell` Type
 
-MPath's grid square is `Migs.MPath.Core.Data.Cell`, and many games already have a `Cell` of their own. Importing both namespaces makes `Cell` ambiguous (`CS0104`). Alias MPath's type in the files that build the grid:
+MPath's grid square is `Migs.MPath.Core.Data.PathCell` (it was `Cell` before 2.0), so it does not clash with the `Cell` type most games already have: import both namespaces and use each name unqualified.
 
 ```csharp
 using Migs.MPath.Core.Data;
-using GridCell = Migs.MPath.Core.Data.Cell;
+using MyGame.Board;               // your own Cell
 
-var grid = new GridCell[width, height];
-grid[x, y] = new GridCell { IsWalkable = true };
+var grid = new PathCell[width, height];
+grid[x, y] = new PathCell { IsWalkable = true };
 ```
 
-Or alias your own type (`using GameCell = MyGame.Board.Cell;`) and keep `Cell` for MPath. A distinct name for MPath's type is planned for the next major version; until then the alias is the supported way.
+If your game happens to have its own `PathCell`, alias one of the two (`using MPathCell = Migs.MPath.Core.Data.PathCell;`).
 
-## Option 1: Cell Array
+## Option 1: PathCell Array
 
-The most straightforward approach is to use a flat array of `Cell` objects. Note that this option is most suitable for static or rarely changing environments, as it's the most performant but least flexible for dynamic grid updates.
+The most straightforward approach is to use a flat array of `PathCell` objects. Note that this option is most suitable for static or rarely changing environments, as it's the most performant but least flexible for dynamic grid updates.
 
 ```csharp
 // Create a 20x20 grid
 var width = 20;
 var height = 20;
-var cells = new Cell[width * height];
+var cells = new PathCell[width * height];
 
 // Initialize cells
 for (var y = 0; y < height; y++)
@@ -43,7 +43,7 @@ for (var y = 0; y < height; y++)
     for (var x = 0; x < width; x++)
     {
         var index = y * width + x;
-        cells[index] = new Cell
+        cells[index] = new PathCell
         {
             IsWalkable = true,
             Weight = 100
@@ -59,7 +59,7 @@ var pathfinder = new Pathfinder(cells, width, height, settings);
 The pathfinder keeps a reference to your array and reads it on every query; it never reorders or writes it. Set
 [`CellLayout`](../api/CellLayout.md) to the order you filled it in:
 
-- `ColumnMajor` (the default): `cells[x * height + y]`, the order of a `Cell[,]` in memory.
+- `ColumnMajor` (the default): `cells[x * height + y]`, the order of a `PathCell[,]` in memory.
 - `RowMajor`: `cells[y * width + x]` (as above).
 
 Either way the array is searched in place, so a query costs only the cells it searches and your own writes are seen by
@@ -79,22 +79,22 @@ Only the first `width * height` elements are read; a shorter array throws `Argum
 - No direct integration with game objects
 - Not ideal for dynamic environments as the entire grid must be recreated when cells change
 
-## Option 2: Cell Matrix
+## Option 2: PathCell Matrix
 
-For more natural 2D grid access, you can use a matrix/2D array. Like the Cell Array option, this is best suited for static environments where the grid structure doesn't change frequently.
+For more natural 2D grid access, you can use a matrix/2D array. Like the PathCell Array option, this is best suited for static environments where the grid structure doesn't change frequently.
 
 ```csharp
 // Create a 20x20 grid matrix
 var width = 20;
 var height = 20;
-var cellMatrix = new Cell[width, height];
+var cellMatrix = new PathCell[width, height];
 
 // Initialize cells
 for (var y = 0; y < height; y++)
 {
     for (var x = 0; x < width; x++)
     {
-        cellMatrix[x, y] = new Cell
+        cellMatrix[x, y] = new PathCell
         {
             IsWalkable = true,
             Weight = 100
@@ -131,18 +131,18 @@ public class TerrainTile : MonoBehaviour, ICellHolder
     public bool IsObstacle { get; set; }
     public int MovementCost = 100; // Extra cost to enter, in step-cost units
     
-    private Cell _cellData;
+    private PathCell _cellData;
     
     // Unity-specific properties
     public SpriteRenderer SpriteRenderer;
     public Color WalkableColor = Color.green;
     public Color ObstacleColor = Color.red;
     
-    public Cell CellData => _cellData;
+    public PathCell CellData => _cellData;
     
     public void Initialize()
     {
-        _cellData = new Cell
+        _cellData = new PathCell
         {
             IsWalkable = !IsObstacle,
             Weight = MovementCost
@@ -222,7 +222,7 @@ public class GridManager : MonoBehaviour
 - Better separation of concerns
 - Ideal for dynamic environments as cell data updates automatically
 
-A holder's index is its cell's position, under the same [`CellLayout`](../api/CellLayout.md) as a `Cell[]`. A `null`
+A holder's index is its cell's position, under the same [`CellLayout`](../api/CellLayout.md) as a `PathCell[]`. A `null`
 holder is a wall, and an array shorter than `Width * Height` throws `ArgumentException`.
 
 **Considerations:**
@@ -287,7 +287,7 @@ public class GridManager : MonoBehaviour
 
 MPath does not automatically update your grid when game state changes. However, the way you manage these updates depends on your grid representation choice:
 
-### Direct Cell Representation (Options 1 & 2)
+### Direct PathCell Representation (Options 1 & 2)
 
 The pathfinder keeps a reference to your array or matrix and reads it on every query, so keep the same instance and update cells through it:
 
@@ -301,7 +301,7 @@ pathfinder.SetWeight(new Coordinate(7, 3), 250); // ints in step-cost units; a n
 using var path = pathfinder.GetPath(start, end);
 ```
 
-The setters write the cell at `pathfinder.GetIndex(coordinate)` in your `Cell[]` (or `[x, y]` in your matrix). Writing into the array yourself also works: queries never reorder it, so your own indexing (or `pathfinder.GetIndex(coordinate)`) stays valid. After direct writes, call `pathfinder.Refresh()` if path caching is enabled (it clears the cache) or, for a `Cell[,]`, under `GridSnapshotMode.Manual`.
+The setters write the cell at `pathfinder.GetIndex(coordinate)` in your `PathCell[]` (or `[x, y]` in your matrix). Writing into the array yourself also works: queries never reorder it, so your own indexing (or `pathfinder.GetIndex(coordinate)`) stays valid. After direct writes, call `pathfinder.Refresh()` if path caching is enabled (it clears the cache) or, for a `PathCell[,]`, under `GridSnapshotMode.Manual`.
 
 ### Cell Holder Representation (Options 3 & 4)
 
@@ -346,7 +346,7 @@ This approach is particularly powerful because:
 
 ## Performance Considerations
 
-- **Update Frequency**: If your grid changes infrequently, use direct Cell arrays
+- **Update Frequency**: If your grid changes infrequently, use direct PathCell arrays
 - **Dynamic Environments**: For frequently changing environments, use cell holders
 - **Cell Reuse**: The pathfinder pools and reuses cell arrays where possible to minimize GC overhead
 

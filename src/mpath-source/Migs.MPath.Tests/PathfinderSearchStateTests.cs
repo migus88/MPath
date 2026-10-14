@@ -68,7 +68,7 @@ namespace Migs.MPath.Tests
             // Arrange
             var random = new Random(11);
             var grid = CreateRandomGrid(random);
-            var cells = new Cell[Width * Height];
+            var cells = new PathCell[Width * Height];
 
             for (var x = 0; x < Width; x++)
             {
@@ -78,7 +78,7 @@ namespace Migs.MPath.Tests
                 }
             }
 
-            var before = (Cell[])cells.Clone();
+            var before = (PathCell[])cells.Clone();
             using var pathfinder = new Pathfinder(cells, Width, Height);
 
             // Act
@@ -222,7 +222,7 @@ namespace Migs.MPath.Tests
         /// Runs one query of the given kind (0 = path, 1 = reachability, 2 = stepwise) with random arguments on
         /// <paramref name="shared"/> and on a fresh pathfinder over the same grid, and asserts identical results.
         /// </summary>
-        private static void AssertSameAsFresh(Pathfinder shared, Cell[,] grid, Random random, int kind)
+        private static void AssertSameAsFresh(Pathfinder shared, PathCell[,] grid, Random random, int kind)
         {
             var from = RandomCoordinate(random);
             var to = RandomCoordinate(random);
@@ -280,15 +280,15 @@ namespace Migs.MPath.Tests
             return new Coordinate(random.Next(Width), random.Next(Height));
         }
 
-        private static Cell[,] CreateRandomGrid(Random random)
+        private static PathCell[,] CreateRandomGrid(Random random)
         {
-            var grid = new Cell[Width, Height];
+            var grid = new PathCell[Width, Height];
 
             for (var x = 0; x < Width; x++)
             {
                 for (var y = 0; y < Height; y++)
                 {
-                    grid[x, y] = new Cell
+                    grid[x, y] = new PathCell
                     {
                         IsWalkable = random.NextDouble() >= 0.25,
                         IsOccupied = random.NextDouble() < 0.05,
@@ -314,7 +314,7 @@ namespace Migs.MPath.Tests
         private sealed class EditableGrid
         {
             private readonly SnapshotSource _source;
-            private readonly Cell[,] _matrix = new Cell[Width, Height];
+            private readonly PathCell[,] _matrix = new PathCell[Width, Height];
             private readonly Holder[,] _holders = new Holder[Width, Height];
 
             public EditableGrid(SnapshotSource source)
@@ -325,7 +325,7 @@ namespace Migs.MPath.Tests
                 {
                     for (var y = 0; y < Height; y++)
                     {
-                        var cell = new Cell { IsWalkable = true };
+                        var cell = new PathCell { IsWalkable = true };
                         _matrix[x, y] = cell;
                         _holders[x, y] = new Holder { CellData = cell };
                     }
@@ -360,7 +360,7 @@ namespace Migs.MPath.Tests
 
         private sealed class Holder : ICellHolder
         {
-            public Cell CellData { get; set; }
+            public PathCell CellData { get; set; }
         }
 
     }

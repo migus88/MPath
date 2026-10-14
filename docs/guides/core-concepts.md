@@ -16,7 +16,7 @@ The A* algorithm used in MPath calculates the cheapest path while considering bo
 
 ### 1. The Grid
 
-The grid represents your navigable space. In MPath, a grid consists of `Cell` objects arranged in a 2D structure. Each cell contains:
+The grid represents your navigable space. In MPath, a grid consists of `PathCell` objects arranged in a 2D structure. Each cell contains:
 
 - **Coordinates**: Position within the grid
 - **Walkability**: Whether agents can traverse this cell
@@ -24,8 +24,8 @@ The grid represents your navigable space. In MPath, a grid consists of `Cell` ob
 - **Weight**: Extra cost added to every step that enters this cell (an `int` in the same units as the step costs; 0 by default)
 
 MPath is flexible in how you represent your grid:
-- As a flat array of `Cell` objects
-- As a 2D matrix of `Cell` objects
+- As a flat array of `PathCell` objects
+- As a 2D matrix of `PathCell` objects
 - Via `ICellHolder` objects that provide cell data
 
 ### 2. Agents

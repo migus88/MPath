@@ -2,7 +2,7 @@
 
 **Namespace:** `Migs.MPath.Core.Data`
 
-Decides when a pathfinder built over a `Cell[,]` matrix or over [`ICellHolder`](ICellHolder.md)s copies your grid into its internal snapshot. Set it through [`IPathfinderSettings.GridSnapshotMode`](IPathfinderSettings.md). A `Cell[]` array (see [`CellLayout`](CellLayout.md)) is searched in place and has no snapshot, so the setting does not affect it. A snapshot writes every grid cell (a `null` holder becomes a wall), and a `Cell[,]` is copied in one block.
+Decides when a pathfinder built over a `PathCell[,]` matrix or over [`ICellHolder`](ICellHolder.md)s copies your grid into its internal snapshot. Set it through [`IPathfinderSettings.GridSnapshotMode`](IPathfinderSettings.md). A `PathCell[]` array (see [`CellLayout`](CellLayout.md)) is searched in place and has no snapshot, so the setting does not affect it. A snapshot writes every grid cell (a `null` holder becomes a wall), and a `PathCell[,]` is copied in one block.
 
 ## Values
 
@@ -16,8 +16,8 @@ Decides when a pathfinder built over a `Cell[,]` matrix or over [`ICellHolder`](
 | Edit | Seen by the next query? |
 |------|-------------------------|
 | Before the first query (any way) | Yes |
-| `SetWalkable` / `SetOccupied` / `SetWeight` / `SetCell` on a `Cell[,]` pathfinder | Yes, at once (the setters write your grid and the snapshot) |
-| Direct write to the `Cell[,]` matrix | Only after `Refresh()` |
+| `SetWalkable` / `SetOccupied` / `SetWeight` / `SetCell` on a `PathCell[,]` pathfinder | Yes, at once (the setters write your grid and the snapshot) |
+| Direct write to the `PathCell[,]` matrix | Only after `Refresh()` |
 | Change to an `ICellHolder.CellData` | Only after `Refresh()` |
 
 `Refresh()` is cheap: it marks the snapshot stale, and the next query copies once. It also clears the path cache, since cached paths were computed for the grid before the edit.

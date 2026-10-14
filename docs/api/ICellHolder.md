@@ -8,7 +8,7 @@ Represents an object that contains cell data used in the pathfinding system.
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `CellData` | `Cell` | Gets the cell data associated with this holder. |
+| `CellData` | `PathCell` | Gets the cell data associated with this holder. |
 
 ## Remarks
 
@@ -25,12 +25,12 @@ Represents an object that contains cell data used in the pathfinding system.
 // Simple implementation
 public class GridTile : ICellHolder
 {
-    private Cell _cell;
-    public Cell CellData => _cell;
+    private PathCell _cell;
+    public PathCell CellData => _cell;
     
     public GridTile(bool isWalkable, int weight = 0)
     {
-        _cell = new Cell
+        _cell = new PathCell
         {
             IsWalkable = isWalkable,
             Weight = weight
@@ -44,12 +44,12 @@ public class GridCell : MonoBehaviour, ICellHolder
     [SerializeField] private bool _isWalkable = true;
     [SerializeField] private int _weight = 0;
     
-    private Cell _cellData;
-    public Cell CellData => _cellData;
+    private PathCell _cellData;
+    public PathCell CellData => _cellData;
     
     private void Awake()
     {
-        _cellData = new Cell
+        _cellData = new PathCell
         {
             IsWalkable = _isWalkable,
             Weight = _weight

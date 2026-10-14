@@ -10,7 +10,7 @@ namespace Migs.MPath.Core.Interfaces
         bool IsDiagonalMovementEnabled { get; }
 
         /// <summary>
-        /// Whether occupied cells (<see cref="Data.Cell.IsOccupied"/>) block: they cannot be entered, count against
+        /// Whether occupied cells (<see cref="Data.PathCell.IsOccupied"/>) block: they cannot be entered, count against
         /// an agent's clearance and the corner rule, and block line of sight. Set it to 'false' when several agents
         /// can share a cell. A query can override it with <see cref="Data.QueryOptions.Occupancy"/>.
         /// </summary>
@@ -54,18 +54,18 @@ namespace Migs.MPath.Core.Interfaces
         PathSmoothingMethod PathSmoothingMethod { get; }
 
         /// <summary>
-        /// When a pathfinder built over a <see cref="Cell"/>[,] matrix or over cell holders copies the caller's grid
+        /// When a pathfinder built over a <see cref="PathCell"/>[,] matrix or over cell holders copies the caller's grid
         /// into its internal snapshot: before every query (<see cref="Data.GridSnapshotMode.PerQuery"/>), or once and
         /// then only after <see cref="Pathfinder.Refresh"/> (<see cref="Data.GridSnapshotMode.Manual"/>). Has no
-        /// effect on a <see cref="Cell"/>[], which is searched in place.
+        /// effect on a <see cref="PathCell"/>[], which is searched in place.
         /// <see cref="Data.GridSnapshotMode.PerQuery"/> is the usual default.
         /// </summary>
         GridSnapshotMode GridSnapshotMode { get; }
 
         /// <summary>
-        /// Which index of a <see cref="Cell"/>[] or <see cref="ICellHolder"/>[] array holds the cell at (X, Y):
+        /// Which index of a <see cref="PathCell"/>[] or <see cref="ICellHolder"/>[] array holds the cell at (X, Y):
         /// column-major (<c>X * fieldHeight + Y</c>) or row-major (<c>Y * fieldWidth + X</c>). Queries never reorder
-        /// the array. Has no effect on the <see cref="Cell"/>[,] and <see cref="ICellHolder"/>[,] constructors.
+        /// the array. Has no effect on the <see cref="PathCell"/>[,] and <see cref="ICellHolder"/>[,] constructors.
         /// <see cref="Data.CellLayout.ColumnMajor"/> is the usual default; any value but the two is rejected with an
         /// <see cref="System.ArgumentOutOfRangeException"/> when the pathfinder is built.
         /// </summary>

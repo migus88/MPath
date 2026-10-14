@@ -19,14 +19,14 @@ MPath uses a single codebase for both Unity and .NET:
 | [SearchStep](SearchStep.md) | A per-tick snapshot of a stepwise search (searched area + path) |
 | [SearchNode](SearchNode.md) | A single searched cell with its open/closed state and A* scores |
 | [SearchState](SearchState.md) | The overall state of a stepwise search (in progress / success / failure) |
-| [Cell](Cell.md) | Represents a single cell in the pathfinding grid |
+| [PathCell](PathCell.md) | Represents a single cell in the pathfinding grid |
 | [Coordinate](Coordinate.md) | Represents a position in the grid |
 | [CornerBlocking](CornerBlocking.md) | Which walls / occupied cells block a diagonal step (corner-cutting) |
 | [TieBreaking](TieBreaking.md) | Which route wins among equal-cost routes (fewer diagonals / fewer turns) |
 | [QueryOptions](QueryOptions.md) | Per-query overrides: occupancy rule and always-enterable cells |
 | [OccupancyRule](OccupancyRule.md) | Whether occupied cells block in one query (`UseSettings` / `Block` / `Ignore`) |
-| [GridSnapshotMode](GridSnapshotMode.md) | When a `Cell[,]`/holder pathfinder copies the grid (`PerQuery` / `Manual`) |
-| [CellLayout](CellLayout.md) | Which index of a `Cell[]`/`ICellHolder[]` holds cell (X, Y) (`ColumnMajor` / `RowMajor`) |
+| [GridSnapshotMode](GridSnapshotMode.md) | When a `PathCell[,]`/holder pathfinder copies the grid (`PerQuery` / `Manual`) |
+| [CellLayout](CellLayout.md) | Which index of a `PathCell[]`/`ICellHolder[]` holds cell (X, Y) (`ColumnMajor` / `RowMajor`) |
 | [LineOfSightMode](LineOfSightMode.md) | Controls whether unwalkable cells block `HasLineOfSight` |
 | [ICellHolder](ICellHolder.md) | Interface for objects that hold cell data |
 | [IPathfinderSettings](IPathfinderSettings.md) | Interface for configuring pathfinding behavior |

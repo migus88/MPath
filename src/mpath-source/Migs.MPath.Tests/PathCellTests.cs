@@ -6,13 +6,13 @@ using NUnit.Framework;
 namespace Migs.MPath.Tests
 {
     [TestFixture]
-    public class CellTests
+    public class PathCellTests
     {
         [Test]
         public void Constructor_ShouldInitializeWithDefaultValues()
         {
             // Arrange & Act
-            var cell = new Cell();
+            var cell = new PathCell();
 
             // Assert
             cell.IsWalkable.Should().BeFalse();
@@ -29,7 +29,7 @@ namespace Migs.MPath.Tests
             var weight = 250;
 
             // Act
-            var cell = new Cell
+            var cell = new PathCell
             {
                 IsWalkable = isWalkable,
                 IsOccupied = isOccupied,
@@ -46,7 +46,7 @@ namespace Migs.MPath.Tests
         public void Layout_ShouldBeEightBytes()
         {
             // A cell carries no coordinate: its slot in the grid is its position.
-            Unsafe.SizeOf<Cell>().Should().Be(8);
+            Unsafe.SizeOf<PathCell>().Should().Be(8);
         }
     }
 }

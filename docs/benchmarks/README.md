@@ -42,7 +42,7 @@ The results show that:
 
 ### Tie-Breaking Cost
 
-`TieBreaking.None` (the default) runs the float search unchanged. A tie-break runs an integer-keyed search that also settles every route's cells before the cells after them, so it explores more on open ground with many equal-cost routes. Same maze and machine, `Cell[,]` grid:
+`TieBreaking.None` (the default) runs the float search unchanged. A tie-break runs an integer-keyed search that also settles every route's cells before the cells after them, so it explores more on open ground with many equal-cost routes. Same maze and machine, `PathCell[,]` grid:
 
 | Query | None | FewerDiagonals | FewerTurns |
 |-------|-----:|---------------:|-----------:|
@@ -126,7 +126,7 @@ the first query of an iteration rents a fresh one. Outside the harness a query a
 ### Short Queries on Large Grids
 
 The `short` suite runs a 2-step and a 6-step `GetPath` and `GetReachable` from the center of 256x256 and 1024x1024
-open `Cell[,]` grids, under both [`GridSnapshotMode`](../api/GridSnapshotMode.md)s. The search touches a handful of
+open `PathCell[,]` grids, under both [`GridSnapshotMode`](../api/GridSnapshotMode.md)s. The search touches a handful of
 cells, so the numbers are the per-query overhead: the copy of the matrix with `PerQuery`, nothing that scales with the
 grid with `Manual`.
 

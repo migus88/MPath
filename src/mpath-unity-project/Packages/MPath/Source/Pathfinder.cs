@@ -31,11 +31,11 @@ namespace Migs.MPath.Core
         private readonly InitializationMode _initializationMode;
         private readonly ICellHolder[] _cellHolders;
         private readonly ICellHolder[,] _cellHoldersMatrix;
-        private readonly Cell[,] _cellsMatrix;
+        private readonly PathCell[,] _cellsMatrix;
 
-        // The buffer searches read, laid out by GetLayoutIndex: the caller's array in Cell[] mode (queries only read
+        // The buffer searches read, laid out by GetLayoutIndex: the caller's array in PathCell[] mode (queries only read
         // it), otherwise a pooled snapshot of the caller's grid. A cell's index is its position.
-        private Cell[] _cells;
+        private PathCell[] _cells;
 
         // Whether the snapshot in _cells has been taken and not marked stale by Refresh since.
         private bool _isSnapshotCurrent;
@@ -78,7 +78,7 @@ namespace Migs.MPath.Core
         /// The array is searched in place, with no copy: a query costs only the cells it searches, and direct edits to
         /// the array are seen by the next query.
         /// </remarks>
-        public Pathfinder(Cell[] cells, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
+        public Pathfinder(PathCell[] cells, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
             : this(fieldWidth, fieldHeight, settings)
         {
             _cells = cells ?? throw new ArgumentNullException(nameof(cells));
@@ -93,7 +93,7 @@ namespace Migs.MPath.Core
         /// </summary>
         /// <param name="holders">
         /// Array of Cell Holders, laid out as <see cref="IPathfinderSettings.CellLayout"/> says, like the
-        /// <see cref="Cell"/>[] constructor's array: a holder's index is its cell's position. A <c>null</c> holder is a
+        /// <see cref="PathCell"/>[] constructor's array: a holder's index is its cell's position. A <c>null</c> holder is a
         /// non-walkable cell. Only the first <c>fieldWidth * fieldHeight</c> elements are read. Cannot be null.
         /// </param>
         /// <param name="fieldWidth">The width of the field.</param>
@@ -109,7 +109,7 @@ namespace Migs.MPath.Core
         {
             _cellHolders = holders ?? throw new ArgumentNullException(nameof(holders));
             ThrowIfShorterThanGrid(holders.Length, nameof(holders));
-            _cells = ArrayPool<Cell>.Shared.Rent(Size);
+            _cells = ArrayPool<PathCell>.Shared.Rent(Size);
             _initializationMode = InitializationMode.CellHoldersArray;
             SetLayout(_settings.CellLayout);
         }
@@ -121,13 +121,13 @@ namespace Migs.MPath.Core
         /// <param name="cellsMatrix">Matrix of Cells: the cell at (X, Y) is <c>[X, Y]</c>. Cannot be null.</param>
         /// <param name="settings">Optional pathfinder settings. If null, default settings will be used.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="cellsMatrix"/> is null.</exception>
-        public Pathfinder(Cell[,] cellsMatrix, IPathfinderSettings settings = null)
+        public Pathfinder(PathCell[,] cellsMatrix, IPathfinderSettings settings = null)
             : this(cellsMatrix?.GetLength(0) ?? throw new ArgumentNullException(nameof(cellsMatrix)), 
                   cellsMatrix.GetLength(1), 
                   settings)
         {
             _cellsMatrix = cellsMatrix;
-            _cells = ArrayPool<Cell>.Shared.Rent(Size);
+            _cells = ArrayPool<PathCell>.Shared.Rent(Size);
             _initializationMode = InitializationMode.CellsMatrix;
         }
 
@@ -147,7 +147,7 @@ namespace Migs.MPath.Core
                   settings)
         {
             _cellHoldersMatrix = cellHoldersMatrix;
-            _cells = ArrayPool<Cell>.Shared.Rent(Size);
+            _cells = ArrayPool<PathCell>.Shared.Rent(Size);
             _initializationMode = InitializationMode.CellHoldersMatrix;
         }
 
@@ -186,7 +186,7 @@ namespace Migs.MPath.Core
 
         /// <summary>
         /// Tells the pathfinder the caller's grid changed outside the cell-update methods: the next query copies the
-        /// <see cref="Cell"/>[,] matrix or the cell holders again, and the path cache is cleared, as by
+        /// <see cref="PathCell"/>[,] matrix or the cell holders again, and the path cache is cleared, as by
         /// <see cref="InvalidateCache"/>.
         /// </summary>
         /// <returns>The current pathfinder instance.</returns>
@@ -195,7 +195,7 @@ namespace Migs.MPath.Core
         /// Cheap: the copy happens on the next query, once, however many times this is called before it. Needed
         /// after direct edits to the grid when they must be seen: with <see cref="GridSnapshotMode.Manual"/>
         /// (snapshots are not retaken otherwise), and whenever path caching is enabled (cached paths do not see
-        /// direct edits). A <see cref="Cell"/>[] array is searched in place, so without caching its direct edits
+        /// direct edits). A <see cref="PathCell"/>[] array is searched in place, so without caching its direct edits
         /// need no refresh. Edits through the cell-update methods (<see cref="SetWalkable"/>, ...) are seen at once
         /// and clear the cache themselves.
         /// </remarks>
@@ -358,9 +358,9 @@ namespace Migs.MPath.Core
 
             InitializeCellsArray();
 
-            var cells = new Span<Cell>(_cells, 0, Size);
+            var cells = new Span<PathCell>(_cells, 0, Size);
 
-            fixed (Cell* ptr = &MemoryMarshal.GetReference(cells))
+            fixed (PathCell* ptr = &MemoryMarshal.GetReference(cells))
             fixed (PathNode* nodes = _nodes)
             fixed (byte* arrivals = _arrivals)
             {
@@ -436,13 +436,13 @@ namespace Migs.MPath.Core
         /// <summary>
         /// Calculates the path using A* algorithm.
         /// </summary>
-        private PathResult CalculatePath(int agentSize, Coordinate from, Coordinate to, Cell* cells, PathNode* nodes)
+        private PathResult CalculatePath(int agentSize, Coordinate from, Coordinate to, PathCell* cells, PathNode* nodes)
         {
             OpenNode(nodes, GetLayoutIndex(from.X, from.Y), PathNode.NoParent, 0, 0,
                 GetH(from.X, from.Y, to.X, to.Y));
 
             var toIndex = GetLayoutIndex(to.X, to.Y);
-            var neighbors = stackalloc Cell*[MaxNeighbors];
+            var neighbors = stackalloc PathCell*[MaxNeighbors];
 
             // A* algorithm main loop. Each iteration expands one cell; ExpandNextPlain (behind ExpandNext) is the
             // single source of truth for that step, shared with the stepwise (tick-by-tick) search.
@@ -513,8 +513,8 @@ namespace Migs.MPath.Core
         /// <returns><c>true</c> when the dequeued cell is the destination and the search should stop;
         /// otherwise <c>false</c>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool ExpandNext(Cell* cells, PathNode* nodes, Coordinate to, int toIndex, int agentSize,
-            Cell** neighbors, out int current)
+        private bool ExpandNext(PathCell* cells, PathNode* nodes, Coordinate to, int toIndex, int agentSize,
+            PathCell** neighbors, out int current)
         {
             return _settings.IsTieBreaking
                 ? ExpandNextKeyed(cells, nodes, to, toIndex, agentSize, neighbors, out current)
@@ -526,8 +526,8 @@ namespace Migs.MPath.Core
         /// directly so its loop has no mode check.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool ExpandNextPlain(Cell* cells, PathNode* nodes, Coordinate to, int toIndex, int agentSize,
-            Cell** neighbors, out int current)
+        private bool ExpandNextPlain(PathCell* cells, PathNode* nodes, Coordinate to, int toIndex, int agentSize,
+            PathCell** neighbors, out int current)
         {
             current = _openSet.Dequeue();
 
@@ -551,7 +551,7 @@ namespace Migs.MPath.Core
         /// A step whose route would cost more than <see cref="FastPathfinderSettings.MaxCost"/> is not taken.
         /// (<paramref name="x"/>, <paramref name="y"/>) is the position of <paramref name="current"/>.
         /// </summary>
-        private void ProcessNeighbors(Cell* cells, PathNode* nodes, int current, int x, int y, Cell** neighbors,
+        private void ProcessNeighbors(PathCell* cells, PathNode* nodes, int current, int x, int y, PathCell** neighbors,
             Coordinate to)
         {
             var currentNode = nodes + current;
@@ -607,7 +607,7 @@ namespace Migs.MPath.Core
         /// <summary>
         /// Reconstructs the final path from the destination cell back to the start.
         /// </summary>
-        private PathResult ReconstructPath(int lastIndex, Cell* cells, PathNode* nodes, int agentSize)
+        private PathResult ReconstructPath(int lastIndex, PathCell* cells, PathNode* nodes, int agentSize)
         {
             var depth = nodes[lastIndex].Depth;
             var path = ArrayPool<Coordinate>.Shared.Rent(depth);
@@ -638,7 +638,7 @@ namespace Migs.MPath.Core
         /// Wraps a reconstructed route (origin excluded) into the result, smoothing it when enabled. The step counts
         /// always describe the route the search found, before smoothing.
         /// </summary>
-        private PathResult CreatePathResult(Coordinate[] path, int steps, int diagonalSteps, Cell* cells,
+        private PathResult CreatePathResult(Coordinate[] path, int steps, int diagonalSteps, PathCell* cells,
             int agentSize)
         {
             // Apply path smoothing if enabled
@@ -650,7 +650,7 @@ namespace Migs.MPath.Core
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Cell* GetCell(Cell* cells, int x, int y)
+        private PathCell* GetCell(PathCell* cells, int x, int y)
         {
             return cells + GetLayoutIndex(x, y);
         }
@@ -722,7 +722,7 @@ namespace Migs.MPath.Core
 
         /// <summary>
         /// Brings <see cref="_cells"/> up to date for a query: copies the caller's grid into the snapshot when the
-        /// snapshot mode asks for it. A <see cref="Cell"/>[] is searched in place and needs nothing.
+        /// snapshot mode asks for it. A <see cref="PathCell"/>[] is searched in place and needs nothing.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void InitializeCellsArray()
@@ -782,9 +782,9 @@ namespace Migs.MPath.Core
         /// </summary>
         private void CopyCellsMatrix()
         {
-            fixed (Cell* source = _cellsMatrix)
+            fixed (PathCell* source = _cellsMatrix)
             {
-                new ReadOnlySpan<Cell>(source, Size).CopyTo(_cells);
+                new ReadOnlySpan<PathCell>(source, Size).CopyTo(_cells);
             }
         }
 
@@ -807,15 +807,15 @@ namespace Migs.MPath.Core
         /// <summary>
         /// The cost of a step in <paramref name="direction"/> (a <see cref="DirectionIndexes"/> slot) into
         /// <paramref name="neighbor"/>: the straight or diagonal step cost plus the entered cell's
-        /// <see cref="Cell.Weight"/> (when cell weighting is enabled). The single step-cost function of both searches
+        /// <see cref="PathCell.Weight"/> (when cell weighting is enabled). The single step-cost function of both searches
         /// and of <see cref="GetPath"/> and <see cref="GetReachable"/>, so a route's cost means the same everywhere.
-        /// The weight is added, not multiplied: <see cref="Cell.Weight"/> defaults to 0, and a multiplier would make
+        /// The weight is added, not multiplied: <see cref="PathCell.Weight"/> defaults to 0, and a multiplier would make
         /// every step free. A negative weight counts as 0 and one above <see cref="FastPathfinderSettings.MaxCost"/>
         /// as that, so the sum never overflows (a step cost is at most half of it after
         /// <see cref="FastPathfinderSettings.Validate"/>).
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int GetStepCost(int direction, Cell* neighbor)
+        private int GetStepCost(int direction, PathCell* neighbor)
         {
             var travel = direction >= DiagonalStart ? _settings.DiagonalStepCost : _settings.StraightStepCost;
 
@@ -829,7 +829,7 @@ namespace Migs.MPath.Core
         /// an agent standing at (<paramref name="x"/>, <paramref name="y"/>) can step into, <c>null</c> elsewhere.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void PopulateNeighbors(Cell* cells, int x, int y, int agentSize, Cell** neighbors)
+        private void PopulateNeighbors(PathCell* cells, int x, int y, int agentSize, PathCell** neighbors)
         {
             // Add cardinal directions first
             neighbors[West] = GetWalkableLocation(cells, x - 1, y, agentSize, out var west);
@@ -860,7 +860,7 @@ namespace Migs.MPath.Core
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void PopulateNeighbor(Cell* cells, int x, int y, int agentSize, Cell** neighbors,
+        private void PopulateNeighbor(PathCell* cells, int x, int y, int agentSize, PathCell** neighbors,
             int neighborIndex, bool shouldPopulate = true)
         {
             if (neighbors == null || neighborIndex < 0 || neighborIndex >= MaxNeighbors)
@@ -876,7 +876,7 @@ namespace Migs.MPath.Core
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Cell* GetWalkableLocation(Cell* cells, int x, int y, int agentSize)
+        private PathCell* GetWalkableLocation(PathCell* cells, int x, int y, int agentSize)
         {
             return GetWalkableLocation(cells, x, y, agentSize, out _);
         }
@@ -887,7 +887,7 @@ namespace Migs.MPath.Core
         /// agent's footprint (the input of the corner-cutting rule).
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Cell* GetWalkableLocation(Cell* cells, int x, int y, int agentSize, out CellBlocker blocker)
+        private PathCell* GetWalkableLocation(PathCell* cells, int x, int y, int agentSize, out CellBlocker blocker)
         {
             blocker = GetFootprintBlocker(cells, x, y, agentSize);
 
@@ -901,7 +901,7 @@ namespace Migs.MPath.Core
         /// occupied cells block), else <see cref="CellBlocker.Open"/>.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private CellBlocker GetFootprintBlocker(Cell* cells, int x, int y, int agentSize)
+        private CellBlocker GetFootprintBlocker(PathCell* cells, int x, int y, int agentSize)
         {
             var blocker = GetBlocker(cells, x, y);
 
@@ -933,7 +933,7 @@ namespace Migs.MPath.Core
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private CellBlocker GetBlocker(Cell* cells, int x, int y)
+        private CellBlocker GetBlocker(PathCell* cells, int x, int y)
         {
             if (!IsPositionValid(x, y))
             {
@@ -961,7 +961,7 @@ namespace Migs.MPath.Core
         /// stands on it (the origin is never tested, so a search from a cell to itself always succeeds).
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool IsDestinationEnterable(Cell* cells, Coordinate from, Coordinate to, int agentSize)
+        private bool IsDestinationEnterable(PathCell* cells, Coordinate from, Coordinate to, int agentSize)
         {
             return from == to || GetWalkableLocation(cells, to.X, to.Y, agentSize) != null;
         }
@@ -1027,7 +1027,7 @@ namespace Migs.MPath.Core
 
         /// <summary>
         /// Releases all resources used by this Pathfinder instance: returns the pooled cell buffer (every
-        /// constructor except the <see cref="Cell"/>[] one rents it), the search-state and open-set buffers, disposes
+        /// constructor except the <see cref="PathCell"/>[] one rents it), the search-state and open-set buffers, disposes
         /// the path cache and ends an active <see cref="StepwiseSearch"/>.
         /// </summary>
         /// <remarks>
@@ -1049,7 +1049,7 @@ namespace Migs.MPath.Core
 
             if (_initializationMode != InitializationMode.CellsArray && _cells != null)
             {
-                ArrayPool<Cell>.Shared.Return(_cells);
+                ArrayPool<PathCell>.Shared.Return(_cells);
             }
 
             _cells = null;
