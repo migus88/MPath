@@ -18,6 +18,25 @@ Same queries on the same machine (Apple M1 Max, .NET 7), with the 1.2.1 release 
 | 2-step path, 1024x1024 open grid | 5,439 µs | 173 µs | 0.21 µs | 42 B → 40 B |
 | `TryGetCost` on each of 2,040 reached cells | 1,614 µs | 17.9 µs | | 2 B → 0 B |
 
+Against other C# A* libraries, 2.0 and 1.2.1 side by side (.NET 8.0.21, same machine; query = one search with a reused pathfinder, ctor = building one pathfinder from a shared bool grid, never disposed; 100x100 has 20% random walls):
+
+![MPath 2.0 and 1.2.1 vs other C# A* libraries](images/comparison-2.0-vs-1.2.1.svg)
+
+<details>
+<summary>Table as text</summary>
+
+| Library | Maze ctor alloc | Maze query | Maze query alloc | 100x100 ctor alloc | 100x100 query | 100x100 query alloc |
+|---|---:|---:|---:|---:|---:|---:|
+| **MPath 2.0** | 11.5 MB | 4.04 ms | 177 B | 719 KB | 123 µs | 40 B |
+| MPath 1.2.1 | 24.5 MB | 5.28 ms | 233 B | 1.41 MB | 869 µs | 35 B |
+| AStarLite 1.3.0-beta.1 | 768 KB | 5.29 ms | 8.75 MB | 39.3 KB | 123 µs | 351 KB |
+| RoyT.AStar 3.0.2 | 103 MB | 63.4 ms | 12.0 MB | 7.21 MB | 3.13 ms | 721 KB |
+| LinqToAStar 1.2.1 | 5.76 MB | 3.56 s | 108 MB | 151 KB | 1.08 ms | 514 KB |
+
+Per-query allocation for both MPath versions is just the result object; the small difference between them is GC and pool noise.
+
+</details>
+
 Most of the gain comes from three changes: search state is reset lazily per query instead of clearing every cell, the open set is a fixed array heap, and range lookups are O(1). Each is described below.
 
 ## Search State Out of the Cell, Reset Lazily
