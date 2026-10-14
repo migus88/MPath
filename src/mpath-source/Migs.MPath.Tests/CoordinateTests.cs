@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using FluentAssertions;
 using Migs.MPath.Core.Data;
 using NUnit.Framework;
@@ -122,17 +123,29 @@ namespace Migs.MPath.Tests
         }
         
         [Test]
-        public void Reset_ShouldSetCoordinatesToZero()
+        public void Default_ShouldEqualZeroWithSameHashCode()
         {
             // Arrange
-            var coordinate = new Coordinate(5, 10);
+            var coordinate = default(Coordinate);
             
-            // Act
-            coordinate.Reset();
-            
-            // Assert
-            coordinate.X.Should().Be(0);
-            coordinate.Y.Should().Be(0);
+            // Act & Assert
+            coordinate.Should().Be(Coordinate.Zero);
+            (coordinate == Coordinate.Zero).Should().BeTrue();
+            coordinate.GetHashCode().Should().Be(Coordinate.Zero.GetHashCode());
+        }
+        
+        [Test]
+        public void Layout_ShouldBeEightBytes()
+        {
+            // Act & Assert
+            Unsafe.SizeOf<Coordinate>().Should().Be(8);
+        }
+        
+        [Test]
+        public void CellLayout_ShouldBeSixteenBytes()
+        {
+            // Act & Assert
+            Unsafe.SizeOf<Cell>().Should().Be(16);
         }
         
         [Test]

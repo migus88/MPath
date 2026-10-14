@@ -33,5 +33,5 @@ var cell = new Cell
 
 ## Remarks
 
-- `Cell` holds only the four public properties. Before the search state moved into the pathfinder it also carried internal scratch fields (56 bytes per cell); it is now 20 bytes, which makes the per-query copy of a matrix, holder or unordered-array grid cheaper.
+- `Cell` holds only the four public properties. Before the search state moved into the pathfinder it also carried internal scratch fields (56 bytes per cell); it is now 16 bytes (an 8-byte `Coordinate`, two `bool`s and the weight), which makes the per-query copy of a matrix, holder or unordered-array grid cheaper.
 - A search never writes into the cells, and a `Cell[]` grid is never reordered: see [`CellLayout`](CellLayout.md).

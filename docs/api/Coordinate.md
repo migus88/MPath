@@ -2,7 +2,13 @@
 
 **Namespace:** `Migs.MPath.Core.Data`
 
-Represents a position in the 2D grid used for pathfinding. This struct provides a simple, immutable representation of an X,Y coordinate pair with optimized equality comparison operations.
+Represents a position in the 2D grid used for pathfinding. This `readonly struct` is an immutable, 8-byte X,Y pair with optimized equality comparison operations.
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `static readonly Zero` | `Coordinate` | The coordinate (0,0). Equal to `default(Coordinate)`. |
 
 ## Properties
 
@@ -10,7 +16,6 @@ Represents a position in the 2D grid used for pathfinding. This struct provides 
 |----------|------|-------------|
 | `X` | `int` | The X-coordinate (horizontal position) in the grid. |
 | `Y` | `int` | The Y-coordinate (vertical position) in the grid. |
-| `IsInitialized` | `bool` | Indicates whether this coordinate has been properly initialized. |
 
 ## Constructors
 
@@ -22,7 +27,6 @@ Represents a position in the 2D grid used for pathfinding. This struct provides 
 
 | Method | Description |
 |--------|-------------|
-| `void Reset()` | Resets the coordinate to (0,0) and marks it as uninitialized. |
 | `bool Equals(Coordinate other)` | Determines whether the specified coordinate is equal to the current coordinate. |
 | `bool Equals(object obj)` | Determines whether the specified object is equal to the current coordinate. |
 | `int GetHashCode()` | Returns a hash code for this coordinate. |
@@ -33,6 +37,7 @@ Represents a position in the 2D grid used for pathfinding. This struct provides 
 | Operator | Description |
 |----------|-------------|
 | `==`, `!=` | Equality and inequality comparison operators. |
+| `+`, `-` | Component-wise addition and subtraction. |
 | `implicit operator (int x, int y)` | Converts a Coordinate to a tuple. |
 | `explicit operator Coordinate` | Converts a tuple to a Coordinate. |
 
@@ -58,4 +63,6 @@ Coordinate fromTuple = (Coordinate)(3, 4);
 - The `Coordinate` struct is optimized for performance with aggressive inlining of methods.
 - The struct implements `IEquatable<Coordinate>` for efficient equality comparison.
 - Coordinates are used throughout the MPath system to identify positions in the grid.
+- `Coordinate` is immutable and has no "uninitialized" state: `default(Coordinate)` is (0,0) and equals `Coordinate.Zero`. To represent "no coordinate", use `Coordinate?` or your own sentinel.
+- Being 8 bytes, it keeps `Cell` at 16 bytes and `PathResult` waypoint arrays compact.
 - The tuple conversion operators provide convenient interoperability with C# tuple syntax. 
