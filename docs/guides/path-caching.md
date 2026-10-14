@@ -43,6 +43,9 @@ The cell-update methods (`SetWalkable`, `SetOccupied`, `SetWeight`, `SetCell`) c
 ```csharp
 // Clear the path cache but keep caching enabled
 pathfinder.InvalidateCache();
+
+// Or, after editing the grid directly: Refresh() also clears the cache (and retakes a Manual snapshot)
+pathfinder.Refresh();
 ```
 
 ## Custom Path Caching Implementation

@@ -18,7 +18,8 @@ A Unity ScriptableObject implementation of the `IPathfinderSettings` interface. 
 | `StraightMovementMultiplier` | `float` | `1.0f` | The cost multiplier for horizontal/vertical movement. |
 | `DiagonalMovementMultiplier` | `float` | `1.41f` | The cost multiplier for diagonal movement. |
 | `TieBreaking` | [`TieBreaking`](TieBreaking.md) | `None` | Which route wins among equal-cost routes. |
-| `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | `PerQuery` | When a `Cell[,]` or cell-holder pathfinder copies the grid: every query, or once and after `Refresh()` (`Manual`). |
+| `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | `PerQuery` | When a `Cell[,]`, cell-holder or unordered `Cell[]` pathfinder copies the grid: every query, or once and after `Refresh()` (`Manual`). |
+| `CellLayout` | [`CellLayout`](CellLayout.md) | `Auto` | Where a `Cell[]` pathfinder finds cell (X, Y): `ColumnMajor`, `RowMajor`, `Unordered`, or `Auto` (detected at the first query). |
 | `InitialBufferSizeSerialized` | `int` | `-1` | **Obsolete, ignored.** The serialized backing value of `InitialBufferSize`. |
 | `InitialBufferSize` | `int?` | `null` | **Obsolete, ignored.** The open set is sized to the grid when the pathfinder is created. |
 

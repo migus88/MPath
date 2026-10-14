@@ -50,9 +50,22 @@ for (var y = 0; y < height; y++)
     }
 }
 
-// Create the pathfinder
-var pathfinder = new Pathfinder(cells, width, height);
+// Create the pathfinder. The array is row-major (y * width + x): say so, and it is searched in place.
+var settings = new PathfinderSettings { CellLayout = CellLayout.RowMajor };
+var pathfinder = new Pathfinder(cells, width, height, settings);
 ```
+
+The pathfinder keeps a reference to your array and reads it on every query; it never reorders or writes it. Set
+[`CellLayout`](../api/CellLayout.md) to the order you filled it in:
+
+- `RowMajor`: `cells[y * width + x]` (as above). `ColumnMajor`: `cells[x * height + y]`. Both are searched in place,
+  so a query costs only the cells it searches and your own writes are seen by the next query. A declared layout is
+  checked once, at the first query, and a mismatch throws `InvalidOperationException`.
+- `Unordered`: any order; each cell's `Coordinate` says where it is. The array is copied into a pooled buffer before
+  every query (or once and after `Refresh()` with `GridSnapshotMode.Manual`), like a `Cell[,]`.
+- `Auto` (the default): detects which of the three at the first query, and again after `Refresh()`.
+
+Only the first `width * height` elements are read; a shorter array throws `ArgumentException`.
 
 **Benefits:**
 - Simple implementation
@@ -60,7 +73,7 @@ var pathfinder = new Pathfinder(cells, width, height);
 - Direct control over cell properties
 
 **Considerations:**
-- Requires manual coordinate-to-index conversion
+- Requires manual coordinate-to-index conversion (`pathfinder.GetIndex(coordinate)` does it for you)
 - No direct integration with game objects
 - Not ideal for dynamic environments as the entire grid must be recreated when cells change
 
@@ -284,7 +297,7 @@ pathfinder.SetWeight(new Coordinate(7, 3), 2.5f);
 using var path = pathfinder.GetPath(start, end);
 ```
 
-The setters find the cell by its coordinate, so they work whatever order your `Cell[]` is in. Writing into the array yourself also works, but then mind the layout: queries expect `cells[X * height + Y]` (column-major, see `pathfinder.GetIndex(coordinate)`) and **sort your array into that order** on every query, so an array you index in another order (for example row-major `y * width + x`) gets reordered under you. After direct writes, call `InvalidateCache()` if path caching is enabled.
+The setters find the cell by its coordinate, so they work whatever order your `Cell[]` is in. Writing into the array yourself also works: queries never reorder it, so your own indexing (or `pathfinder.GetIndex(coordinate)`) stays valid. After direct writes, call `pathfinder.Refresh()` if path caching is enabled (it clears the cache) or if the array is unordered under `GridSnapshotMode.Manual`; moving cells to other indexes or changing their coordinates also needs `Refresh()`.
 
 ### Cell Holder Representation (Options 3 & 4)
 

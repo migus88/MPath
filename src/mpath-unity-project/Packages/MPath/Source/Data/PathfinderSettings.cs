@@ -50,6 +50,9 @@ namespace Migs.MPath.Core.Data
         public GridSnapshotMode GridSnapshotMode { get; set; } = GridSnapshotMode.PerQuery;
 
         /// <inheritdoc/>
+        public CellLayout CellLayout { get; set; } = CellLayout.Auto;
+
+        /// <inheritdoc/>
         [Obsolete("Ignored: the open set is sized to the grid when the pathfinder is created and never grows. This member will be removed in the next major version.")]
         public int? InitialBufferSize { get; set; } = null;
 

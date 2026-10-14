@@ -8,7 +8,7 @@ A high-performance A* pathfinding implementation for grid-based environments.
 
 | Constructor | Description |
 |-------------|-------------|
-| `Pathfinder(Cell[] cells, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)` | Initializes with a pre-existing cell array. |
+| `Pathfinder(Cell[] cells, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)` | Initializes over your cell array, laid out as [`CellLayout`](CellLayout.md) says (default `Auto`: detected). Keeps a reference and never reorders or writes it during queries. Throws `ArgumentException` when the array is shorter than `fieldWidth * fieldHeight`. |
 | `Pathfinder(ICellHolder[] holders, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)` | Initializes with cell holders. |
 | `Pathfinder(Cell[,] cellsMatrix, IPathfinderSettings settings = null)` | Initializes with a cell matrix. |
 | `Pathfinder(ICellHolder[,] cellHoldersMatrix, IPathfinderSettings settings = null)` | Initializes with a cell holder matrix. |
@@ -37,20 +37,20 @@ A high-performance A* pathfinding implementation for grid-based environments.
 | `void SetOccupied(Coordinate coordinate, bool isOccupied)` | Updates one cell's occupancy. See [cell updates](#cell-updates). |
 | `void SetWeight(Coordinate coordinate, float weight)` | Updates one cell's weight. See [cell updates](#cell-updates). |
 | `void SetCell(Coordinate coordinate, in Cell cell)` | Updates walkability, occupancy and weight at once; `cell.Coordinate` is ignored. |
-| `int GetIndex(Coordinate coordinate)` | The cell's index in the layout queries use: `X * fieldHeight + Y` (column-major). |
+| `int GetIndex(Coordinate coordinate)` | `Cell[]`: the cell's index in your array by its [`CellLayout`](CellLayout.md) (`X * fieldHeight + Y`, `Y * fieldWidth + X`, or wherever an unordered array holds it; `Auto` reports column-major until the first query detects the layout). Other modes: `X * fieldHeight + Y` in the snapshot. |
 | `Pathfinder EnablePathCaching(IPathCaching pathCachingHandler = null)` | Enables path caching with optional custom implementation. |
 | `Pathfinder DisablePathCaching()` | Disables path caching. |
-| `Pathfinder InvalidateCache()` | Clears the current path cache without disabling caching. |
-| `Pathfinder Refresh()` | Marks the `Cell[,]`/holder snapshot stale so the next query copies your grid again. Needed only with [`GridSnapshotMode.Manual`](GridSnapshotMode.md), after editing the matrix or the holders directly. |
+| `Pathfinder InvalidateCache()` | Clears the current path cache without disabling caching. `Refresh()` does this too. |
+| `Pathfinder Refresh()` | Says your grid changed outside the `Set*` methods: the next query copies the snapshot again (`Cell[,]`, holders, unordered `Cell[]`), re-checks a `Cell[]` layout (re-detects with `Auto`), and the path cache is cleared now. Needed after direct edits with [`GridSnapshotMode.Manual`](GridSnapshotMode.md) or with caching on, and after moving cells in a `Cell[]`. |
 | `void Dispose()` | Returns the pooled buffers (cells, search state, open set), disposes the path cache and ends an active `StepwiseSearch`. Idempotent. |
 
 ## Remarks
 
-- Implements `IDisposable` and should be disposed when no longer needed. The `Cell[,]`, `ICellHolder[]` and `ICellHolder[,]` constructors rent their cell buffer from `ArrayPool<Cell>.Shared` and `Dispose` gives it back (skipped, the buffer is never reused and is left to the GC). The `Cell[]` constructor uses your array directly and owns no pooled memory, so skipping `Dispose` is harmless there unless path caching is enabled (the cache holds pooled path results).
+- Implements `IDisposable` and should be disposed when no longer needed. The `Cell[,]`, `ICellHolder[]` and `ICellHolder[,]` constructors rent their cell buffer from `ArrayPool<Cell>.Shared` and `Dispose` gives it back (skipped, the buffer is never reused and is left to the GC). The `Cell[]` constructor uses a row- or column-major array directly; only an unordered array gets a pooled snapshot (and an index map). Skipping `Dispose` costs that memory going to the GC instead of the pool.
 - `Dispose` is idempotent: the buffer goes back to the pool exactly once. It ends an active `StepwiseSearch` first (that session's later `Tick()` throws `ObjectDisposedException`). After `Dispose`, every instance method (`GetPath`, `GetReachable`, `HasLineOfSight`, `BeginStepwiseSearch`, `EnablePathCaching`, `DisablePathCaching`, `InvalidateCache`, `Refresh`, `GetCell`, `GetIndex`, the `Set*` cell updates) throws `ObjectDisposedException`; the static distance helpers keep working.
 - Uses unsafe code and array pooling internally to minimize garbage collection.
 - The search state (scores, parents, open/closed) lives in the pathfinder, one node per cell, and is reset lazily: each query starts a new generation instead of clearing the grid, so a search costs the cells it touches, not the grid size. Queries never write into your cells.
-- The `Cell[,]` and holder constructors search a snapshot of your grid. With the default [`GridSnapshotMode.PerQuery`](GridSnapshotMode.md) every query copies the whole grid first (O(grid size)); with `Manual` the copy happens once and after `Refresh()`, so short queries on a large grid stay cheap.
+- A row- or column-major `Cell[]` is searched in place: a query costs only the cells it searches, and direct writes to the array are seen by the next query. The `Cell[,]` and holder constructors, and an unordered `Cell[]`, search a snapshot of your grid. With the default [`GridSnapshotMode.PerQuery`](GridSnapshotMode.md) every query copies the whole grid first (O(grid size)); with `Manual` the copy happens once and after `Refresh()`, so short queries on a large grid stay cheap.
 - The pathfinding algorithm is optimized for speed and memory efficiency.
 - For larger grids, reuse the same `Pathfinder` instance for multiple path calculations.
 - `GetPath` and `BeginStepwiseSearch` throw `ArgumentException` when `from` or `to` is outside the grid, and the `agentSize` overloads throw `ArgumentOutOfRangeException` when `agentSize < 1`.
@@ -77,8 +77,8 @@ using var range = pathfinder.GetReachable(from, 5f, new QueryOptions(OccupancyRu
 
 `SetWalkable`, `SetOccupied`, `SetWeight` and `SetCell` change one cell and keep the bookkeeping in the pathfinder:
 
-- **`Cell[]` and `Cell[,]` constructors:** the write goes to your own array or matrix (the pathfinder keeps the reference), so your grid and the pathfinder stay in sync and the next query sees the change. O(1) and allocation-free while the grid is in layout (`cells[GetIndex(c)]` holds `c`, which every query establishes by sorting a `Cell[]` into that order; a `Cell[,]` holds `c` at `[c.X, c.Y]`). Otherwise the cell is found by a linear search and your array is never reordered by a setter.
-- **`Cell[,]` constructor:** the setters also write the pathfinder's snapshot, so the change is seen at once under [`GridSnapshotMode.Manual`](GridSnapshotMode.md) too (no `Refresh()` needed).
+- **`Cell[]` and `Cell[,]` constructors:** the write goes to your own array or matrix (the pathfinder keeps the reference), so your grid and the pathfinder stay in sync and the next query sees the change. O(1) and allocation-free while the grid is in layout (`cells[GetIndex(c)]` holds `c`; for an unordered `Cell[]` once a query has copied it; a `Cell[,]` holds `c` at `[c.X, c.Y]`). Otherwise the cell is found by a linear search. Your array is never reordered.
+- **`Cell[,]` constructor and unordered `Cell[]`:** the setters also write the pathfinder's snapshot, so the change is seen at once under [`GridSnapshotMode.Manual`](GridSnapshotMode.md) too (no `Refresh()` needed).
 - **`ICellHolder[]` and `ICellHolder[,]` constructors:** the setters throw `NotSupportedException`. The holders are the source of truth the pathfinder reads, so update the holder itself (and call `Refresh()` with `GridSnapshotMode.Manual`, and `InvalidateCache()` when caching is on). `GetCell` and `GetIndex` work in every mode.
 - **Path cache:** a setter that changes a value cached paths depend on clears the cache (walkability always; occupancy only with `IsCalculatingOccupiedCells`; weight only with `IsCellWeightEnabled`). Setting the current value again leaves the cache alone. Direct writes to your grid still need `InvalidateCache()`.
 - Out-of-grid coordinates throw `ArgumentException`; a grid with no cell carrying the coordinate throws `InvalidOperationException`.

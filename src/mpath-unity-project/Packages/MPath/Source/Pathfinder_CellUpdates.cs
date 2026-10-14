@@ -8,23 +8,34 @@ namespace Migs.MPath.Core
     public sealed unsafe partial class Pathfinder
     {
         /// <summary>
-        /// Returns the position of <paramref name="coordinate"/> in the cell layout the pathfinder searches:
-        /// <c>X * fieldHeight + Y</c> (column-major).
+        /// Returns the index of the cell at <paramref name="coordinate"/>. In <see cref="Cell"/>[] mode it is the
+        /// cell's index in the caller's array, by <see cref="IPathfinderSettings.CellLayout"/>:
+        /// <c>X * fieldHeight + Y</c> (column-major) or <c>Y * fieldWidth + X</c> (row-major), and for an unordered
+        /// array wherever the cell with that coordinate is. In the other modes it is the column-major index
+        /// <c>X * fieldHeight + Y</c> of the pathfinder's own snapshot.
         /// </summary>
         /// <remarks>
-        /// In <see cref="Cell"/>[] mode this is where a query expects the cell in the caller's array; every query
-        /// puts the array into this order, so writing <c>cells[GetIndex(c)]</c> directly is valid once the array is
-        /// in layout (after the first query, or when it was built in this order). The coordinate-based setters
-        /// work in any order.
+        /// Queries never reorder the caller's array, so <c>cells[GetIndex(c)]</c> stays valid. With
+        /// <see cref="CellLayout.Auto"/> the layout is detected at the first query; until then this reports the
+        /// column-major index, so declare the layout to use it before the first query on a row-major array. For an
+        /// unordered array it is O(1) after a query has copied the array and a linear search before.
         /// </remarks>
         /// <param name="coordinate">A coordinate inside the grid.</param>
-        /// <returns>The layout index of <paramref name="coordinate"/>.</returns>
+        /// <returns>The index of the cell at <paramref name="coordinate"/>.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="coordinate"/> is outside the grid.</exception>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when an unordered array holds no cell with that coordinate.
+        /// </exception>
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         public int GetIndex(Coordinate coordinate)
         {
             ThrowIfDisposed();
             ThrowIfOutsideGrid(coordinate);
+
+            if (_isArraySnapshotted)
+            {
+                return FindArrayIndex(coordinate);
+            }
 
             return GetLayoutIndex(coordinate.X, coordinate.Y);
         }
@@ -47,7 +58,7 @@ namespace Migs.MPath.Core
             switch (_initializationMode)
             {
                 case InitializationMode.CellsArray:
-                    return _cells[FindArrayIndex(coordinate)];
+                    return _sourceCells[FindArrayIndex(coordinate)];
                 case InitializationMode.CellsMatrix:
                     FindMatrixPosition(coordinate, out var x, out var y);
                     return _cellsMatrix[x, y];
@@ -77,8 +88,9 @@ namespace Migs.MPath.Core
         /// <param name="coordinate">A coordinate inside the grid.</param>
         /// <param name="isWalkable">The new walkability.</param>
         /// <remarks>
-        /// O(1) and allocation-free while the grid is in layout (see <see cref="GetIndex"/>); a <see cref="Cell"/>[]
-        /// in another order is searched once per call and never reordered. The change is written to the caller's
+        /// O(1) and allocation-free while the grid is in layout (see <see cref="GetIndex"/>), and for an unordered
+        /// <see cref="Cell"/>[] once a query has copied it; otherwise the cell is searched for once per call. The
+        /// caller's grid is never reordered. The change is written to the caller's
         /// <see cref="Cell"/>[] or <see cref="Cell"/>[,], so the caller's grid and the pathfinder stay in sync, and
         /// the next query sees it. When the value changes in a way cached paths depend on, the path cache is
         /// cleared, as by <see cref="InvalidateCache"/>; setting the current value again does nothing. Not
@@ -129,7 +141,7 @@ namespace Migs.MPath.Core
         }
 
         /// <summary>
-        /// Writes the user fields to the source cell (and, in matrix mode, to the snapshot the running or next
+        /// Writes the user fields to the source cell (and, in matrix mode and for an unordered array, to the snapshot the running or next
         /// query reads), then clears the path cache when a field cached paths depend on changed. Occupancy and
         /// weight only matter to cached paths when the settings enable them, since cached queries always run under
         /// the settings' own rules.
@@ -142,7 +154,7 @@ namespace Migs.MPath.Core
 
             WriteUserFields(ref target, isWalkable, isOccupied, weight);
 
-            if (_initializationMode == InitializationMode.CellsMatrix)
+            if (_initializationMode == InitializationMode.CellsMatrix || _isArraySnapshotted)
             {
                 WriteUserFields(ref _cells[GetLayoutIndex(coordinate.X, coordinate.Y)], isWalkable, isOccupied, weight);
             }
@@ -174,7 +186,7 @@ namespace Migs.MPath.Core
             switch (_initializationMode)
             {
                 case InitializationMode.CellsArray:
-                    return ref _cells[FindArrayIndex(coordinate)];
+                    return ref _sourceCells[FindArrayIndex(coordinate)];
                 case InitializationMode.CellsMatrix:
                     FindMatrixPosition(coordinate, out var x, out var y);
                     return ref _cellsMatrix[x, y];
@@ -187,20 +199,26 @@ namespace Migs.MPath.Core
 
         /// <summary>
         /// The index of <paramref name="coordinate"/> in the caller's <see cref="Cell"/>[]: its layout index when the
-        /// array is in layout (every query sorts it so), otherwise a linear search that leaves the order untouched.
+        /// array is in layout, for an unordered array the index the last snapshot recorded, otherwise (or when that
+        /// cell has moved since) a linear search that leaves the order untouched.
         /// </summary>
         private int FindArrayIndex(Coordinate coordinate)
         {
             var index = GetLayoutIndex(coordinate.X, coordinate.Y);
 
-            if (index < _cells.Length && _cells[index].Coordinate == coordinate)
+            if (_isArraySnapshotted)
+            {
+                index = _arraySourceIndexes[index];
+            }
+
+            if (_sourceCells[index].Coordinate == coordinate)
             {
                 return index;
             }
 
-            for (var i = 0; i < _cells.Length; i++)
+            for (var i = 0; i < Size; i++)
             {
-                if (_cells[i].Coordinate == coordinate)
+                if (_sourceCells[i].Coordinate == coordinate)
                 {
                     return i;
                 }

@@ -62,14 +62,24 @@ namespace Migs.MPath.Core.Interfaces
         PathSmoothingMethod PathSmoothingMethod { get; }
 
         /// <summary>
-        /// When a pathfinder built over a <see cref="Cell"/>[,] matrix or over cell holders copies the caller's grid
-        /// into its internal snapshot: before every query (<see cref="Data.GridSnapshotMode.PerQuery"/>), or once and
-        /// then only after <see cref="Pathfinder.Refresh"/> (<see cref="Data.GridSnapshotMode.Manual"/>). Has no effect
-        /// on a pathfinder built over a <see cref="Cell"/>[] array.<br/>
+        /// When a pathfinder built over a <see cref="Cell"/>[,] matrix, over cell holders or over an unordered
+        /// <see cref="Cell"/>[] array copies the caller's grid into its internal snapshot: before every query
+        /// (<see cref="Data.GridSnapshotMode.PerQuery"/>), or once and then only after <see cref="Pathfinder.Refresh"/>
+        /// (<see cref="Data.GridSnapshotMode.Manual"/>). Has no effect on a row- or column-major <see cref="Cell"/>[].<br/>
         /// Implementations that don't override it use <see cref="Data.GridSnapshotMode.PerQuery"/>, the behaviour of
         /// versions before this setting existed.
         /// </summary>
         GridSnapshotMode GridSnapshotMode => GridSnapshotMode.PerQuery;
+
+        /// <summary>
+        /// Where a pathfinder built over a <see cref="Cell"/>[] array finds the cell at (X, Y): column-major
+        /// (<c>X * fieldHeight + Y</c>), row-major (<c>Y * fieldWidth + X</c>), unordered (each cell's coordinate
+        /// says where it is), or detected at the first query (<see cref="Data.CellLayout.Auto"/>). Queries never
+        /// reorder the array. Has no effect on the <see cref="Cell"/>[,] and cell holder constructors.<br/>
+        /// Implementations that don't override it use <see cref="Data.CellLayout.Auto"/>, which accepts an array in
+        /// any order like versions before this setting existed.
+        /// </summary>
+        CellLayout CellLayout => CellLayout.Auto;
 
         /// <summary>
         /// Formerly the initial size of the open set buffer. Ignored: the open set is sized to the grid once, when the

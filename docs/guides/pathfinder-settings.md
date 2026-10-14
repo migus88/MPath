@@ -143,7 +143,7 @@ S = Start, E = End, + = Waypoint
 
 #### GridSnapshotMode
 
-Decides when a pathfinder built over a `Cell[,]` matrix or over `ICellHolder`s copies your grid into its internal snapshot. It has no effect on the `Cell[]` constructor, which searches your array directly.
+Decides when a pathfinder built over a `Cell[,]` matrix, over `ICellHolder`s or over an unordered `Cell[]` copies your grid into its internal snapshot. It has no effect on a row- or column-major `Cell[]`, which is searched in place (see `CellLayout` below).
 
 ```csharp
 settings.GridSnapshotMode = GridSnapshotMode.PerQuery; // Copy before every query (default)
@@ -151,7 +151,7 @@ settings.GridSnapshotMode = GridSnapshotMode.Manual;   // Copy once, then only a
 ```
 
 - **PerQuery**: every query sees direct edits to your matrix or holders, but costs at least O(grid size) for the copy, however short the search.
-- **Manual**: a query costs only the cells it searches. `SetWalkable`/`SetOccupied`/`SetWeight`/`SetCell` are seen at once; after editing the matrix or a holder directly, call `pathfinder.Refresh()` before the next query (and `InvalidateCache()` if caching is on).
+- **Manual**: a query costs only the cells it searches. `SetWalkable`/`SetOccupied`/`SetWeight`/`SetCell` are seen at once; after editing the matrix or a holder directly, call `pathfinder.Refresh()` before the next query (it also clears the path cache).
 
 **When to use Manual**: many short queries on a large grid, such as movement ranges per unit during an AI turn or in simulations, with grid changes that go through the `Set*` methods or happen at known points (end of a turn) where you can call `Refresh()`. See [GridSnapshotMode](../api/GridSnapshotMode.md).
 
@@ -171,6 +171,23 @@ settings.TieBreaking = TieBreaking.FewerTurns;     // Fewest direction changes
 - `PathResult.Steps` / `DiagonalSteps` and `ReachableCell.Steps` / `DiagonalSteps` report integer step counts in every mode, so you never have to recover them from costs.
 
 **When to use**: whenever players see the route (units moving on a board, previews). Keep **None** when only the cost matters and you want the fastest search on open ground. See [TieBreaking](../api/TieBreaking.md).
+
+#### CellLayout
+
+Where a pathfinder built over a `Cell[]` array finds the cell at (X, Y). Queries never reorder or write your array.
+
+```csharp
+settings.CellLayout = CellLayout.Auto;        // Detect at the first query (default)
+settings.CellLayout = CellLayout.RowMajor;    // cells[y * width + x], searched in place
+settings.CellLayout = CellLayout.ColumnMajor; // cells[x * height + y], searched in place
+settings.CellLayout = CellLayout.Unordered;   // any order, copied like a Cell[,] (see GridSnapshotMode)
+```
+
+- **RowMajor / ColumnMajor**: no copy, no sort; a query costs only the cells it searches. Checked once at the first query (`InvalidOperationException` on a mismatch).
+- **Unordered**: each cell's `Coordinate` says where it is; the array is copied into a pooled snapshot as `GridSnapshotMode` says.
+- **Auto**: one O(grid size) detection at the first query (and after `Refresh()`), then behaves as the detected layout. Declare the layout to skip it and to get the right `GetIndex` before the first query.
+
+No effect on the `Cell[,]` and `ICellHolder` constructors. See [CellLayout](../api/CellLayout.md).
 
 ### Cell Handling Settings
 

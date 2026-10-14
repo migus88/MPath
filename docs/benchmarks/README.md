@@ -95,6 +95,7 @@ dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchm
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark grid
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark short
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark results
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark layout
 
 # Render result images / print path stats
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- render

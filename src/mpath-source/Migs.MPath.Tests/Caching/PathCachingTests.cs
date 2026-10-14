@@ -324,6 +324,45 @@ namespace Migs.MPath.Tests.Caching
         }
 
         [Test]
+        public void GetPath_AfterADirectEditAndRefresh_RecomputesAroundTheCell()
+        {
+            // Arrange
+            _pathfinder.EnablePathCaching();
+            var from = new Coordinate(0, 0);
+            var to = new Coordinate(5, 0);
+            var blocked = new Coordinate(3, 0);
+
+            using (var cached = _pathfinder.GetPath(from, to))
+            {
+                cached.Path.Should().Contain(blocked);
+            }
+
+            _cells[blocked.Y * FieldSize + blocked.X].IsWalkable = false;
+
+            // Act
+            _pathfinder.Refresh();
+            using var result = _pathfinder.GetPath(from, to);
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            result.Path.Should().NotContain(blocked);
+        }
+
+        [Test]
+        public void Refresh_ClearsTheCache()
+        {
+            // Arrange
+            var cache = Substitute.For<IPathCaching>();
+            _pathfinder.EnablePathCaching(cache);
+
+            // Act
+            _pathfinder.Refresh();
+
+            // Assert
+            cache.Received(1).ClearCache();
+        }
+
+        [Test]
         public void SetWalkable_WithTheCurrentValue_KeepsTheCache()
         {
             // Arrange

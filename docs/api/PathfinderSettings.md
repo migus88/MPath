@@ -17,8 +17,9 @@ Default implementation of the `IPathfinderSettings` interface.
 | `DiagonalMovementMultiplier` | `float` | `1.41f` | The cost multiplier for diagonal movement. |
 | `InitialBufferSize` | `int?` | `null` | **Obsolete, ignored.** The open set is sized to the grid when the pathfinder is created. Will be removed in the next major version. |
 | `PathSmoothingMethod` | `PathSmoothingMethod` | `None` | The method used to smooth the calculated path. |
-| `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | `PerQuery` | When a `Cell[,]` or cell-holder pathfinder copies the grid: every query, or once and after `Refresh()` (`Manual`). No effect on a `Cell[]` pathfinder. |
 | `TieBreaking` | [`TieBreaking`](TieBreaking.md) | `None` | Which route to return when several cost the same (`FewerDiagonals`, `FewerTurns`). |
+| `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | `PerQuery` | When a `Cell[,]`, cell-holder or unordered `Cell[]` pathfinder copies the grid: every query, or once and after `Refresh()` (`Manual`). No effect on a row- or column-major `Cell[]`. |
+| `CellLayout` | [`CellLayout`](CellLayout.md) | `Auto` | Where a `Cell[]` pathfinder finds cell (X, Y): `ColumnMajor`, `RowMajor`, `Unordered`, or `Auto` (detected at the first query). |
 
 ## Example
 
