@@ -29,7 +29,7 @@
 ```csharp
 using Migs.MPath.Core;            // Pathfinder
 using Migs.MPath.Core.Data;       // Cell, Coordinate, PathResult, RangeResult, ReachableCell,
-                                  // PathfinderSettings, LineOfSightMode, PathSmoothingMethod,
+                                  // PathfinderSettings, CornerBlocking, LineOfSightMode, PathSmoothingMethod,
                                   // SearchStep, SearchNode, SearchState, SearchNodeState
 using Migs.MPath.Core.Interfaces; // IAgent, ICellHolder, IPathfinderSettings, IPathCaching
 using Migs.MPath.Core.Caching;    // DefaultPathCaching (only if you need it directly)
@@ -160,6 +160,7 @@ One row per type; click through for full members. The load-bearing facts are rep
 
 | Enum | Values |
 |------|--------|
+| `CornerBlocking` (`[Flags]`) | `None` (0) · `WallAndWall` (1) · `WallAndOccupied` (2) · `OccupiedAndOccupied` (4) · `WallAndOpen` (8) · `OccupiedAndOpen` (16); presets `BetweenBlockedCells` (default) · `BetweenWalls` · `AnyWall` · `All` — [api](api/CornerBlocking.md) |
 | `LineOfSightMode` | `BlockedByUnwalkableCells` (0, default) · `IgnoreUnwalkableCells` (1) |
 | `PathSmoothingMethod` | `None` (0) · `Simple` (1) · `StringPulling` (2) |
 | `SearchState` | `InProgress` · `Success` · `Failure` |
@@ -177,7 +178,8 @@ construction has **no effect** — build a new `Pathfinder` to change settings.
 |----------|------|---------|---------|
 | `IsDiagonalMovementEnabled` | `bool` | `true` | Allow 8-direction movement. |
 | `IsCalculatingOccupiedCells` | `bool` | `true` | Treat `IsOccupied` cells as blocked (for paths *and* line of sight). |
-| `IsMovementBetweenCornersEnabled` | `bool` | `false` | Allow cutting around the corner of an obstacle diagonally. |
+| `IsMovementBetweenCornersEnabled` | `bool` | `false` | All-or-nothing corner-cutting shorthand: `true` = `CornerBlocking.None`, `false` = `BetweenBlockedCells`. A view over `CornerBlocking`. |
+| `CornerBlocking` | `CornerBlocking` (`[Flags]`) | `BetweenBlockedCells` | Which flanking cells block a diagonal step: walls and occupied cells separately. See below. |
 | `IsCellWeightEnabled` | `bool` | `true` | Add per-cell `Weight` to movement cost (terrain cost). |
 | `StraightMovementMultiplier` | `float` | `1f` | Cost of a cardinal step. |
 | `DiagonalMovementMultiplier` | `float` | `1.41f` | Cost of a diagonal step (≈√2). |
@@ -243,6 +245,22 @@ pathfinder.EnablePathCaching();                       // fluent; reuses identica
 // ... after you mutate the grid:
 pathfinder.InvalidateCache();                         // NOT automatic
 ```
+
+### Corner-cutting: walls vs units
+
+A diagonal step passes between two flanking cells, each open, a wall (unwalkable/off-grid) or occupied
+(`IsOccupied` with `IsCalculatingOccupiedCells`). `CornerBlocking` flags pick which pairs block the step:
+
+```csharp
+var settings = new PathfinderSettings
+{
+    IsCalculatingOccupiedCells = true,           // units can't be entered...
+    CornerBlocking = CornerBlocking.BetweenWalls // ...but only two walls block a diagonal
+};
+```
+
+Applies to `GetPath`, `GetReachable`, stepwise search and `StringPulling` smoothing. For `Size > 1` a flank is the agent's footprint
+(wall if any cell is a wall, else occupied if any is occupied). `HasLineOfSight` ignores it.
 
 ### Multi-cell agents & terrain cost
 

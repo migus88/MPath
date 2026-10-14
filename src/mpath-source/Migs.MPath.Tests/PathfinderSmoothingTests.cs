@@ -149,6 +149,28 @@ namespace Migs.MPath.Tests
             result.Path.Should().Equal(new Coordinate(1, 1), new Coordinate(6, 6));
         }
 
+        [TestCase(CornerBlocking.BetweenWalls, true)]
+        [TestCase(CornerBlocking.BetweenBlockedCells, false)]
+        public void GetPath_WithStringPullingBetweenWallAndUnit_FollowsCornerBlocking(CornerBlocking cornerBlocking,
+            bool isPulledThroughCorner)
+        {
+            // Arrange: a wall and an occupied cell touching at a corner on the main diagonal
+            var cells = CreateEmptyGrid(7, 7);
+            SetWall(cells, 7, 3, 2);
+            cells[2 * 7 + 3].IsOccupied = true;
+            var settings = Settings(PathSmoothingMethod.StringPulling);
+            settings.CornerBlocking = cornerBlocking;
+            using var pathfinder = new Pathfinder(cells, 7, 7, settings);
+
+            // Act
+            using var result = pathfinder.GetPath(new Agent(), new Coordinate(0, 0), new Coordinate(6, 6));
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            result.Path.SequenceEqual(new[] { new Coordinate(1, 1), new Coordinate(6, 6) })
+                .Should().Be(isPulledThroughCorner);
+        }
+
         [Test]
         public void GetPath_WithStringPullingAndDiagonalMovementDisabled_NeverSqueezesBetweenTouchingWalls()
         {

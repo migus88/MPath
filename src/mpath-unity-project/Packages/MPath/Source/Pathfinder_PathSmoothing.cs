@@ -2,6 +2,8 @@ using System;
 using System.Buffers;
 using System.Runtime.CompilerServices;
 using Migs.MPath.Core.Data;
+using Migs.MPath.Core.Interfaces;
+using Migs.MPath.Core.Internal;
 
 namespace Migs.MPath.Core
 {
@@ -155,21 +157,23 @@ namespace Migs.MPath.Core
         }
 
         /// <summary>
-        /// Mirrors the diagonal rule of <see cref="PopulateNeighbors"/>: unless movement between corners is
-        /// allowed, a diagonal step needs at least one of its two cardinal intermediates to fit the agent.
+        /// Mirrors the diagonal rule of <see cref="PopulateNeighbors"/>: the step must pass the
+        /// <see cref="IPathfinderSettings.CornerBlocking"/> rule for its two flanking footprints.
         /// When diagonal movement is disabled the step always needs a cardinal detour, since the search
         /// could only have made it as two cardinal moves.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool IsDiagonalStepAllowed(Cell* cells, int x, int y, int nextX, int nextY, int agentSize)
         {
-            if (_settings.IsDiagonalMovementEnabled && _settings.IsMovementBetweenCornersEnabled)
+            var first = GetFootprintBlocker(cells, nextX, y, agentSize);
+            var second = GetFootprintBlocker(cells, x, nextY, agentSize);
+
+            if (!_settings.IsDiagonalMovementEnabled)
             {
-                return true;
+                return first == CellBlocker.Open || second == CellBlocker.Open;
             }
 
-            return GetWalkableLocation(cells, nextX, y, agentSize) != null
-                   || GetWalkableLocation(cells, x, nextY, agentSize) != null;
+            return _settings.IsCornerPassable(first, second);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

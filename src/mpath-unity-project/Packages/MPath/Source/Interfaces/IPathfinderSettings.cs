@@ -22,7 +22,22 @@ namespace Migs.MPath.Core.Interfaces
         /// ◻◼◎◻<br/>
         /// * Circle is the movement path, blank squares - walkable cells and black squares - walls.
         /// </summary>
+        /// <remarks>
+        /// This is the all-or-nothing shorthand for <see cref="CornerBlocking"/>: <c>true</c> means
+        /// <see cref="Data.CornerBlocking.None"/>, <c>false</c> means <see cref="Data.CornerBlocking.BetweenBlockedCells"/>.
+        /// The pathfinder reads only <see cref="CornerBlocking"/>.
+        /// </remarks>
         bool IsMovementBetweenCornersEnabled { get; }
+
+        /// <summary>
+        /// Decides which cells beside a diagonal step block it (corner-cutting), separately for walls and
+        /// occupied cells. See <see cref="Data.CornerBlocking"/> for the flags and presets.<br/>
+        /// Implementations that don't override it derive it from <see cref="IsMovementBetweenCornersEnabled"/>,
+        /// which reproduces the behaviour of versions before this setting existed.
+        /// </summary>
+        CornerBlocking CornerBlocking => IsMovementBetweenCornersEnabled
+            ? CornerBlocking.None
+            : CornerBlocking.BetweenBlockedCells;
 
         /// <summary>
         /// Is additional cell weight calculation enabled.

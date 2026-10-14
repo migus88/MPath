@@ -493,10 +493,10 @@ namespace Migs.MPath.Core
             var position = current->Coordinate;
 
             // Add cardinal directions first
-            PopulateNeighbor(cells, position.X - 1, position.Y, agentSize, neighbors, West);
-            PopulateNeighbor(cells, position.X + 1, position.Y, agentSize, neighbors, East);
-            PopulateNeighbor(cells, position.X, position.Y + 1, agentSize, neighbors, South);
-            PopulateNeighbor(cells, position.X, position.Y - 1, agentSize, neighbors, North);
+            neighbors[West] = GetWalkableLocation(cells, position.X - 1, position.Y, agentSize, out var west);
+            neighbors[East] = GetWalkableLocation(cells, position.X + 1, position.Y, agentSize, out var east);
+            neighbors[South] = GetWalkableLocation(cells, position.X, position.Y + 1, agentSize, out var south);
+            neighbors[North] = GetWalkableLocation(cells, position.X, position.Y - 1, agentSize, out var north);
 
             if (!_settings.IsDiagonalMovementEnabled)
             {
@@ -509,21 +509,15 @@ namespace Migs.MPath.Core
                 return;
             }
 
-            // Add diagonal directions depending on settings and walkability
-            var canGoWest = neighbors[West] != null;
-            var canGoEast = neighbors[East] != null;
-            var canGoSouth = neighbors[South] != null;
-            var canGoNorth = neighbors[North] != null;
-            var isCornersCutAllowed = _settings.IsMovementBetweenCornersEnabled;
-
+            // Add diagonal directions when the corner rule lets the step pass between its two flanking cells
             PopulateNeighbor(cells, position.X - 1, position.Y + 1, agentSize, neighbors, SouthWest,
-                canGoWest || canGoSouth || isCornersCutAllowed);
+                _settings.IsCornerPassable(west, south));
             PopulateNeighbor(cells, position.X - 1, position.Y - 1, agentSize, neighbors, NorthWest,
-                canGoWest || canGoNorth || isCornersCutAllowed);
+                _settings.IsCornerPassable(west, north));
             PopulateNeighbor(cells, position.X + 1, position.Y + 1, agentSize, neighbors, SouthEast,
-                canGoEast || canGoSouth || isCornersCutAllowed);
+                _settings.IsCornerPassable(east, south));
             PopulateNeighbor(cells, position.X + 1, position.Y - 1, agentSize, neighbors, NorthEast,
-                canGoEast || canGoNorth || isCornersCutAllowed);
+                _settings.IsCornerPassable(east, north));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -543,54 +537,80 @@ namespace Migs.MPath.Core
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Cell* GetWalkableLocation(Cell* cells, int x, int y)
-        {
-            if (!IsPositionValid(x, y) || cells == null)
-                return null;
-                
-            var cell = GetCell(cells, x, y);
-
-            return (_settings.IsCalculatingOccupiedCells && cell->IsOccupied) || !cell->IsWalkable
-                ? null
-                : cell;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Cell* GetWalkableLocation(Cell* cells, int x, int y, int agentSize)
         {
-            if (!IsPositionValid(x, y) || cells == null)
-                return null;
+            return GetWalkableLocation(cells, x, y, agentSize, out _);
+        }
 
-            var location = GetWalkableLocation(cells, x, y);
+        /// <summary>
+        /// Returns the cell at (<paramref name="x"/>, <paramref name="y"/>) when an agent of
+        /// <paramref name="agentSize"/> can stand there, otherwise <c>null</c>, and reports what blocks the
+        /// agent's footprint (the input of the corner-cutting rule).
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private Cell* GetWalkableLocation(Cell* cells, int x, int y, int agentSize, out CellBlocker blocker)
+        {
+            blocker = GetFootprintBlocker(cells, x, y, agentSize);
 
-            if (location == null)
+            return blocker == CellBlocker.Open ? GetCell(cells, x, y) : null;
+        }
+
+        /// <summary>
+        /// Classifies the <paramref name="agentSize"/> x <paramref name="agentSize"/> footprint anchored at
+        /// (<paramref name="x"/>, <paramref name="y"/>): <see cref="CellBlocker.Wall"/> when any cell is not
+        /// walkable or outside the grid, else <see cref="CellBlocker.Occupied"/> when any cell is occupied (and
+        /// occupancy is calculated), else <see cref="CellBlocker.Open"/>.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private CellBlocker GetFootprintBlocker(Cell* cells, int x, int y, int agentSize)
+        {
+            var blocker = GetBlocker(cells, x, y);
+
+            if (agentSize == SingleCellAgentSize || blocker == CellBlocker.Wall)
             {
-                return null;
+                return blocker;
             }
 
-            if (agentSize == SingleCellAgentSize)
-            {
-                return location;
-            }
-
-            // Check for enough clearance for the agent
+            // Check for enough clearance for the agent. A wall anywhere in the footprint wins over occupancy.
             for (var nY = 0; nY < agentSize; nY++)
             {
                 for (var nX = 0; nX < agentSize; nX++)
                 {
-                    if (!IsPositionValid(x + nX, y + nY))
-                        return null;
+                    var cellBlocker = GetBlocker(cells, x + nX, y + nY);
 
-                    var neighbor = GetWalkableLocation(cells, x + nX, y + nY);
-
-                    if (neighbor == null)
+                    if (cellBlocker == CellBlocker.Wall)
                     {
-                        return null;
+                        return CellBlocker.Wall;
+                    }
+
+                    if (cellBlocker == CellBlocker.Occupied)
+                    {
+                        blocker = CellBlocker.Occupied;
                     }
                 }
             }
 
-            return location;
+            return blocker;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private CellBlocker GetBlocker(Cell* cells, int x, int y)
+        {
+            if (!IsPositionValid(x, y))
+            {
+                return CellBlocker.Wall;
+            }
+
+            var cell = GetCell(cells, x, y);
+
+            if (!cell->IsWalkable)
+            {
+                return CellBlocker.Wall;
+            }
+
+            return _settings.IsCalculatingOccupiedCells && cell->IsOccupied
+                ? CellBlocker.Occupied
+                : CellBlocker.Open;
         }
 
         /// <summary>

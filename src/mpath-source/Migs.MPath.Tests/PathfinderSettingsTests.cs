@@ -18,6 +18,7 @@ namespace Migs.MPath.Tests
             settings.IsDiagonalMovementEnabled.Should().BeTrue();
             settings.IsCalculatingOccupiedCells.Should().BeTrue();
             settings.IsMovementBetweenCornersEnabled.Should().BeFalse();
+            settings.CornerBlocking.Should().Be(CornerBlocking.BetweenBlockedCells);
             settings.IsCellWeightEnabled.Should().BeTrue();
             settings.StraightMovementMultiplier.Should().Be(1.0f);
             settings.DiagonalMovementMultiplier.Should().Be(1.41f);
@@ -61,6 +62,34 @@ namespace Migs.MPath.Tests
             settings.InitialBufferSize.Should().Be(bufferSize);
         }
         
+        [TestCase(true, CornerBlocking.None)]
+        [TestCase(false, CornerBlocking.BetweenBlockedCells)]
+        public void IsMovementBetweenCornersEnabled_SetFromDefault_MapsToCornerBlocking(bool value, CornerBlocking expected)
+        {
+            // Arrange
+            var settings = new PathfinderSettings();
+
+            // Act
+            settings.IsMovementBetweenCornersEnabled = value;
+
+            // Assert
+            settings.CornerBlocking.Should().Be(expected);
+        }
+
+        [Test]
+        public void IsMovementBetweenCornersEnabled_SetFalse_KeepsCustomCornerBlocking()
+        {
+            // Arrange
+            var settings = new PathfinderSettings { CornerBlocking = CornerBlocking.BetweenWalls };
+
+            // Act
+            settings.IsMovementBetweenCornersEnabled = false;
+
+            // Assert
+            settings.CornerBlocking.Should().Be(CornerBlocking.BetweenWalls);
+            settings.IsMovementBetweenCornersEnabled.Should().BeFalse();
+        }
+
         [Test]
         public void Settings_ShouldImplementIPathfinderSettings()
         {

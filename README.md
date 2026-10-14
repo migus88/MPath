@@ -11,6 +11,7 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 - Allocates memory only when necessary to maximize performance
 - Designed for 2D grid-based navigation in games
 - Movement-range queries (`GetReachable`) for "where can this unit move?" mechanics
+- Configurable corner-cutting (`CornerBlocking`): walls and occupied cells can block diagonal steps separately
 - Distance metrics (Manhattan, Chebyshev) and line-of-sight checks for range and visibility logic
 - Stepwise search (`BeginStepwiseSearch`) for visualizing how the algorithm explores the grid
 - First-class support for Unity with dedicated integration components

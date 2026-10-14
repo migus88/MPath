@@ -71,6 +71,30 @@ When false, this movement is illegal:
 
 **Effect on pathfinding**: When disabled, paths are more realistic as agents can't "squeeze" through impossible corners. When enabled, more paths become available but may look unnatural.
 
+This is the all-or-nothing shorthand for `CornerBlocking` below: `true` is `CornerBlocking.None`, `false` is `CornerBlocking.BetweenBlockedCells`.
+
+#### CornerBlocking
+
+Decides, separately for walls and occupied cells, which cells beside a diagonal step block it. A diagonal step passes between two flanking cells; each is **open**, a **wall** (not walkable or off-grid) or **occupied** (when `IsCalculatingOccupiedCells` is on). Each [`CornerBlocking`](../api/CornerBlocking.md) flag blocks one combination:
+
+```csharp
+// Default: blocked only between two blocked cells (same as IsMovementBetweenCornersEnabled = false)
+settings.CornerBlocking = CornerBlocking.BetweenBlockedCells;
+
+// Tactics games: walls block squeezing between them; units can't be entered but never block a diagonal
+settings.CornerBlocking = CornerBlocking.BetweenWalls;
+
+// No cutting past a single wall corner, units never block
+settings.CornerBlocking = CornerBlocking.AnyWall;
+
+// Any mix of flags
+settings.CornerBlocking = CornerBlocking.WallAndWall | CornerBlocking.WallAndOpen | CornerBlocking.OccupiedAndOccupied;
+```
+
+Flags: `WallAndWall`, `WallAndOccupied`, `OccupiedAndOccupied`, `WallAndOpen`, `OccupiedAndOpen`. Presets: `None`, `BetweenBlockedCells` (default), `BetweenWalls`, `AnyWall`, `All`.
+
+For agents with `Size > 1`, a flanking cell is the agent's whole footprint at that position: a wall if any of its cells is a wall, else occupied if any is occupied. The rule applies to `GetPath`, `GetReachable`, the stepwise search and `StringPulling` smoothing; it is read once at construction, so it costs nothing per query.
+
 #### PathSmoothingMethod
 
 Controls what type of path smoothing is applied to the calculated path.

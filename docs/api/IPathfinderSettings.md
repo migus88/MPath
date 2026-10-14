@@ -10,7 +10,8 @@ Defines the configuration settings for the MPath pathfinding system. This interf
 |----------|------|-------------|
 | `IsDiagonalMovementEnabled` | `bool` | Whether agents can move diagonally. |
 | `IsCalculatingOccupiedCells` | `bool` | Whether occupied cells are considered as blocked. |
-| `IsMovementBetweenCornersEnabled` | `bool` | Whether agents can move between two diagonal corners. |
+| `IsMovementBetweenCornersEnabled` | `bool` | All-or-nothing corner-cutting shorthand (`true` = `CornerBlocking.None`). |
+| `CornerBlocking` | [`CornerBlocking`](CornerBlocking.md) | Which flanking cells block a diagonal step. Default interface implementation: derived from `IsMovementBetweenCornersEnabled`, so existing implementations keep working unchanged. |
 | `IsCellWeightEnabled` | `bool` | Whether cell weight calculation is enabled. |
 | `StraightMovementMultiplier` | `float` | The cost multiplier for horizontal/vertical movement. |
 | `DiagonalMovementMultiplier` | `float` | The cost multiplier for diagonal movement. |
