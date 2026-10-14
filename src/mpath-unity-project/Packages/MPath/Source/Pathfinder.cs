@@ -402,21 +402,15 @@ namespace Migs.MPath.Core
                     continue;
                 }
 
-                var neighborCoord = neighbor->Coordinate;
-                var scoreH = GetH(neighborCoord.X, neighborCoord.Y, to.X, to.Y);
-                var neighborWeight = GetCellWeightMultiplier(neighbor);
-                
-                var neighborTravelWeight = GetNeighborTravelWeightMultiplier(
-                    current->Coordinate.X, current->Coordinate.Y,
-                    neighborCoord.X, neighborCoord.Y);
-
-                var scoreG = current->ScoreG + (neighborTravelWeight * scoreH) + (neighborWeight * scoreH);
+                var scoreG = current->ScoreG + GetStepCost(current, neighbor);
 
                 if (!_openSet.Contains(neighbor))
                 {
+                    var neighborCoord = neighbor->Coordinate;
+                    var scoreH = GetH(neighborCoord.X, neighborCoord.Y, to.X, to.Y);
                     AddNeighborToOpenSet(current, neighbor, scoreG, scoreH);
                 }
-                else if (scoreG + neighbor->ScoreH < neighbor->ScoreF)
+                else if (scoreG < neighbor->ScoreG)
                 {
                     UpdateNeighborInOpenSet(current, neighbor, scoreG);
                 }
@@ -445,9 +439,11 @@ namespace Migs.MPath.Core
         private void UpdateNeighborInOpenSet(Cell* current, Cell* neighbor, float scoreG)
         {
             neighbor->ScoreG = scoreG;
-            neighbor->ScoreF = scoreG + neighbor->ScoreH;
             neighbor->ParentCoordinate = current->Coordinate;
             neighbor->Depth = current->Depth + 1;
+
+            // A cheaper g lowers f, so the cell must move up the heap (a decrease-key), not just change in place.
+            _openSet.UpdatePriority(neighbor, scoreG + neighbor->ScoreH);
         }
 
         /// <summary>
@@ -569,6 +565,23 @@ namespace Migs.MPath.Core
                 var coordinate = cellHolder.CellData.Coordinate;
                 _cells[coordinate.X * Height + coordinate.Y] = cellHolder.CellData;
             }
+        }
+
+        /// <summary>
+        /// The cost of stepping from <paramref name="current"/> into the adjacent <paramref name="neighbor"/>: the
+        /// straight or diagonal travel multiplier plus the entered cell's <see cref="Cell.Weight"/> (when cell
+        /// weighting is enabled). The single step-cost function of both <see cref="GetPath"/> and
+        /// <see cref="GetReachable"/>, so a route's cost means the same in both. The weight is added, not
+        /// multiplied: <see cref="Cell.Weight"/> defaults to 0, and a multiplier would make every step free.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private float GetStepCost(Cell* current, Cell* neighbor)
+        {
+            var travel = GetNeighborTravelWeightMultiplier(
+                current->Coordinate.X, current->Coordinate.Y,
+                neighbor->Coordinate.X, neighbor->Coordinate.Y);
+
+            return travel + GetCellWeightMultiplier(neighbor);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -737,10 +750,21 @@ namespace Migs.MPath.Core
             return x >= 0 && x < Width && y >= 0 && y < Height;
         }
 
+        /// <summary>
+        /// The A* heuristic: the cheapest cost of reaching the destination over an empty grid with the configured
+        /// step costs (octile distance with diagonals, Manhattan without, scaled by the multipliers; see
+        /// <see cref="FastPathfinderSettings"/>). It never overestimates, so <see cref="GetPath"/> returns a
+        /// cheapest route.
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private float GetH(int startX, int startY, int destX, int destY)
         {
-            return Math.Abs(destX - startX) + Math.Abs(destY - startY);
+            var dx = Math.Abs(destX - startX);
+            var dy = Math.Abs(destY - startY);
+
+            return dx > dy
+                ? _settings.HeuristicMajorAxisCost * dx + _settings.HeuristicMinorAxisCost * dy
+                : _settings.HeuristicMajorAxisCost * dy + _settings.HeuristicMinorAxisCost * dx;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

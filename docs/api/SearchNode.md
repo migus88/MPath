@@ -11,7 +11,7 @@ A readonly value type capturing a single cell that has been touched by a stepwis
 | `Coordinate` | `Coordinate` | The coordinate of the cell. |
 | `State` | `SearchNodeState` | Whether the cell is on the `Open` frontier or has been expanded into the `Closed` set. |
 | `ScoreG` | `float` | The cost of the cheapest path discovered so far from the origin (A* `g`). |
-| `ScoreH` | `float` | The heuristic estimate to the destination (A* `h`, Manhattan distance). |
+| `ScoreH` | `float` | The heuristic estimate to the destination (A* `h`): the cheapest cost over an empty grid with the configured multipliers (octile distance with diagonals, Manhattan without). |
 | `ScoreF` | `float` | The priority by which the open set is ordered: `g + h` (A* `f`). |
 
 ## Constructors

@@ -135,7 +135,7 @@ namespace Migs.MPath.Core
                         continue;
                     }
 
-                    var tentativeG = current->ScoreG + GetReachableStepCost(current, neighbor);
+                    var tentativeG = current->ScoreG + GetStepCost(current, neighbor);
 
                     // Cells that cannot be entered within the budget are pruned from the search.
                     if (tentativeG > budget)
@@ -157,23 +157,6 @@ namespace Migs.MPath.Core
             }
 
             return RangeResult.Create(reachable, count);
-        }
-
-        /// <summary>
-        /// Calculates the cost of moving from <paramref name="current"/> into <paramref name="neighbor"/>:
-        /// a straight or diagonal travel multiplier plus the destination cell's weight (when cell weighting
-        /// is enabled). The weight is added, mirroring how the main A* pathfinder folds in
-        /// <see cref="GetCellWeightMultiplier"/> — treating it as a multiplier would let a default
-        /// <see cref="Cell.Weight"/> of 0 zero out the step cost and flood the entire board.
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private float GetReachableStepCost(Cell* current, Cell* neighbor)
-        {
-            var travel = GetNeighborTravelWeightMultiplier(
-                current->Coordinate.X, current->Coordinate.Y,
-                neighbor->Coordinate.X, neighbor->Coordinate.Y);
-
-            return travel + GetCellWeightMultiplier(neighbor);
         }
     }
 }

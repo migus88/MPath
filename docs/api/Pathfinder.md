@@ -141,7 +141,7 @@ The session **pins** the pathfinder's cell buffer for the lifetime of the search
 
 For lightweight spatial queries that don't need a full path, `Pathfinder` exposes grid metrics and a line-of-sight test:
 
-- `GetManhattanDistance(from, to)` — the taxicab distance `|dx| + |dy|` (cardinal steps). This is the metric used by the A* heuristic.
+- `GetManhattanDistance(from, to)` — the taxicab distance `|dx| + |dy|` (cardinal steps).
 - `GetChebyshevDistance(from, to)` — the chessboard distance `max(|dx|, |dy|)` (steps when diagonals cost the same as cardinals).
 - `HasLineOfSight(from, to)` — whether a straight line between two cells is unobstructed.
 
