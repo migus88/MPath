@@ -35,12 +35,15 @@ public sealed class BenchmarkCommand : Command<BenchmarkCommand.Settings>
 
         /// <summary>Reading results: enumerating paths and ranges, and looking up costs in a range.</summary>
         Results,
+
+        /// <summary>2-step queries on a 256x256 grid given as a matrix or as an array in each cell layout.</summary>
+        Layout,
     }
 
     public sealed class Settings : CommandSettings
     {
         [CommandArgument(0, "[suite]")]
-        [Description("Which suite to run: maze (default), smoothing, internal, reachability, grid, short or results.")]
+        [Description("Which suite to run: maze (default), smoothing, internal, reachability, grid, short, results or layout.")]
         [DefaultValue(BenchmarkSuite.Maze)]
         public BenchmarkSuite Suite { get; init; }
     }
@@ -73,6 +76,9 @@ public sealed class BenchmarkCommand : Command<BenchmarkCommand.Settings>
             case BenchmarkSuite.Results:
                 BenchmarkRunner.Run<ResultAccessBenchmarkRunner>(
                     config.WithSummaryStyle(SummaryStyle.Default.WithTimeUnit(TimeUnit.Microsecond)));
+                break;
+            case BenchmarkSuite.Layout:
+                BenchmarkRunner.Run<ArrayLayoutBenchmarkRunner>(config);
                 break;
         }
 

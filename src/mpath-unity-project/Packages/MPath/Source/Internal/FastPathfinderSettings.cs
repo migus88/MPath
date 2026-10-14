@@ -71,6 +71,7 @@ namespace Migs.MPath.Core.Internal
         /// <see cref="HeuristicMinorAxisCost"/> for cost keys, derived from the rounded step keys so it stays exact.
         /// </summary>
         public readonly long HeuristicMinorAxisKey;
+        public readonly CellLayout CellLayout;
 
         /// <summary>
         /// Heuristic cost per unit of the larger axis distance to the destination
@@ -94,7 +95,7 @@ namespace Migs.MPath.Core.Internal
         private FastPathfinderSettings(bool isDiagonalMovementEnabled, bool isCalculatingOccupiedCells,
             CornerBlocking cornerBlocking, bool isCellWeightEnabled, PathSmoothingMethod pathSmoothingMethod,
             float straightMovementMultiplier, float diagonalMovementMultiplier, GridSnapshotMode gridSnapshotMode,
-            TieBreaking tieBreaking)
+            TieBreaking tieBreaking, CellLayout cellLayout)
         {
             IsDiagonalMovementEnabled = isDiagonalMovementEnabled;
             IsCalculatingOccupiedCells = isCalculatingOccupiedCells;
@@ -104,6 +105,7 @@ namespace Migs.MPath.Core.Internal
             StraightMovementMultiplier = straightMovementMultiplier;
             DiagonalMovementMultiplier = diagonalMovementMultiplier;
             GridSnapshotMode = gridSnapshotMode;
+            CellLayout = cellLayout;
             (HeuristicMajorAxisCost, HeuristicMinorAxisCost) = GetHeuristicAxisCosts(isDiagonalMovementEnabled,
                 straightMovementMultiplier, diagonalMovementMultiplier);
             _cornerBlockingTable = BuildCornerBlockingTable(cornerBlocking);
@@ -120,7 +122,7 @@ namespace Migs.MPath.Core.Internal
             return new FastPathfinderSettings(settings.IsDiagonalMovementEnabled, settings.IsCalculatingOccupiedCells,
                 settings.CornerBlocking, settings.IsCellWeightEnabled, settings.PathSmoothingMethod,
                 settings.StraightMovementMultiplier, settings.DiagonalMovementMultiplier, settings.GridSnapshotMode,
-                settings.TieBreaking);
+                settings.TieBreaking, settings.CellLayout);
         }
 
         /// <summary>

@@ -16,6 +16,7 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 - Per-query options (`QueryOptions`): units block or not, and specific occupied cells can be entered for one query, without touching the grid
 - Single-cell updates (`SetWalkable`, `SetOccupied`, `SetWeight`, `SetCell`): O(1) writes into your grid that keep the path cache valid
 - Short queries stay short on large grids: search state lives in the pathfinder and is reset lazily, and `GridSnapshotMode.Manual` stops `Cell[,]`/holder grids from being copied per query
+- Flat `Cell[]` grids in your own order (`CellLayout`: row-major, column-major or unordered, detected by default): searched in place and never reordered
 - Distance metrics (Manhattan, Chebyshev) and line-of-sight checks for range and visibility logic
 - Stepwise search (`BeginStepwiseSearch`) for visualizing how the algorithm explores the grid
 - First-class support for Unity with dedicated integration components

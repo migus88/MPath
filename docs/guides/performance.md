@@ -54,15 +54,18 @@ the grid size. Searches never write into your cells.
 
 The grid representation affects performance:
 
-1. **Flat Cell Array**: Fastest option, best for performance-critical scenarios
-2. **Cell Matrix**: Slightly slower due to 2D indexing
+1. **Flat Cell Array**: Fastest option when the array is row- or column-major: it is searched in place, so a query
+   never copies the grid (declare the order with [`CellLayout`](../api/CellLayout.md); `Auto` detects it once). An
+   unordered array is copied per query like a matrix.
+2. **Cell Matrix**: Copied into a snapshot per query (see `GridSnapshotMode` below)
 3. **Cell Holder Array**: Additional overhead from interface calls
 4. **Cell Holder Matrix**: Most overhead but most convenient
 
 ```csharp
 // For best performance, use flat arrays when possible
-Cell[] cells = new Cell[width * height];
+Cell[] cells = new Cell[width * height];        // cells[y * width + x]
 // Initialize cells...
+settings.CellLayout = CellLayout.RowMajor;
 var pathfinder = new Pathfinder(cells, width, height, settings);
 ```
 

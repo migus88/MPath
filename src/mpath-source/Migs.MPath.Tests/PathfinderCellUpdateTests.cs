@@ -12,7 +12,8 @@ namespace Migs.MPath.Tests
     /// Pins the cell-update API (<see cref="Pathfinder.SetWalkable"/>, <see cref="Pathfinder.SetOccupied"/>,
     /// <see cref="Pathfinder.SetWeight"/>, <see cref="Pathfinder.SetCell"/>, <see cref="Pathfinder.GetCell"/>,
     /// <see cref="Pathfinder.GetIndex"/>): updates reach the next query in the writable modes whatever the order of
-    /// the caller's array, land in the caller's own grid, and are rejected in the holder modes.
+    /// the caller's array (row-major, column-major or shuffled), land in the caller's own grid, and are rejected in
+    /// the holder modes.
     /// </summary>
     [TestFixture]
     public class PathfinderCellUpdateTests
@@ -26,15 +27,17 @@ namespace Migs.MPath.Tests
 
         public enum Mode
         {
-            UnorderedArray,
-            OrderedArray,
+            RowMajorArray,
+            ColumnMajorArray,
+            ShuffledArray,
             Matrix,
             HolderArray,
             HolderMatrix
         }
 
-        [TestCase(Mode.UnorderedArray)]
-        [TestCase(Mode.OrderedArray)]
+        [TestCase(Mode.RowMajorArray)]
+        [TestCase(Mode.ColumnMajorArray)]
+        [TestCase(Mode.ShuffledArray)]
         [TestCase(Mode.Matrix)]
         public void SetWalkable_BlockingAColumn_BlocksTheNextPathAndReachableQuery(Mode mode)
         {
@@ -55,7 +58,8 @@ namespace Migs.MPath.Tests
             reachable.Contains(End).Should().BeFalse();
         }
 
-        [TestCase(Mode.UnorderedArray)]
+        [TestCase(Mode.RowMajorArray)]
+        [TestCase(Mode.ShuffledArray)]
         [TestCase(Mode.Matrix)]
         public void SetWalkable_AfterAQuery_IsSeenByTheNextQuery(Mode mode)
         {
@@ -182,7 +186,7 @@ namespace Migs.MPath.Tests
         }
 
         [Test]
-        public void SetWalkable_OnAnUnorderedArray_UpdatesTheCellWithoutReorderingTheArray()
+        public void SetWalkable_OnARowMajorArray_UpdatesTheCellWithoutReorderingTheArray()
         {
             // Arrange
             var cells = CreateRowMajorArray();
@@ -213,7 +217,7 @@ namespace Migs.MPath.Tests
             matrix[3, 2].IsWalkable.Should().BeFalse();
         }
 
-        [TestCase(Mode.UnorderedArray)]
+        [TestCase(Mode.RowMajorArray)]
         [TestCase(Mode.Matrix)]
         [TestCase(Mode.HolderArray)]
         [TestCase(Mode.HolderMatrix)]
@@ -271,7 +275,7 @@ namespace Migs.MPath.Tests
             action.Should().Throw<InvalidOperationException>();
         }
 
-        [TestCase(Mode.OrderedArray)]
+        [TestCase(Mode.ColumnMajorArray)]
         [TestCase(Mode.Matrix)]
         public void Setters_InLayout_DoNotAllocate(Mode mode)
         {
@@ -340,10 +344,14 @@ namespace Migs.MPath.Tests
 
             switch (mode)
             {
-                case Mode.UnorderedArray:
+                case Mode.RowMajorArray:
                     cells = CreateRowMajorArray();
                     return new Pathfinder(cells, Width, Height);
-                case Mode.OrderedArray:
+                case Mode.ShuffledArray:
+                    var shuffled = CreateRowMajorArray().OrderBy(c => (c.Coordinate.X * 7 + c.Coordinate.Y * 3) % 5)
+                        .ThenByDescending(c => c.Coordinate.Y).ToArray();
+                    return new Pathfinder(shuffled, Width, Height);
+                case Mode.ColumnMajorArray:
                     var ordered = CreateRowMajorArray().OrderBy(c => c.Coordinate.X).ThenBy(c => c.Coordinate.Y).ToArray();
                     return new Pathfinder(ordered, Width, Height);
                 case Mode.Matrix:

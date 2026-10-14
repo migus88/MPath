@@ -34,6 +34,8 @@ namespace Migs.MPath.Settings
         /// <inheritdoc/>
         [field: SerializeField] public GridSnapshotMode GridSnapshotMode { get; set; } = GridSnapshotMode.PerQuery;
         [field: SerializeField] public TieBreaking TieBreaking { get; set; } = TieBreaking.None;
+        /// <inheritdoc/>
+        [field: SerializeField] public CellLayout CellLayout { get; set; } = CellLayout.Auto;
         /// <inheritdoc cref="InitialBufferSize"/>
         [Obsolete("Ignored: the open set is sized to the grid when the pathfinder is created and never grows. This member will be removed in the next major version.")]
         [field: SerializeField] public int InitialBufferSizeSerialized { get; set; } = -1;
