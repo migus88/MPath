@@ -12,6 +12,7 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 - Designed for 2D grid-based navigation in games
 - Movement-range queries (`GetReachable`) for "where can this unit move?" mechanics
 - Configurable corner-cutting (`CornerBlocking`): walls and occupied cells can block diagonal steps separately
+- Deterministic tie-breaking (`TieBreaking`): among equal-cost routes, the one with fewer diagonals or fewer turns, with exact integer costs; results report integer `Steps` / `DiagonalSteps`
 - Per-query options (`QueryOptions`): units block or not, and specific occupied cells can be entered for one query, without touching the grid
 - Single-cell updates (`SetWalkable`, `SetOccupied`, `SetWeight`, `SetCell`): O(1) writes into your grid that keep the path cache valid
 - Short queries stay short on large grids: search state lives in the pathfinder and is reset lazily, and `GridSnapshotMode.Manual` stops `Cell[,]`/holder grids from being copied per query

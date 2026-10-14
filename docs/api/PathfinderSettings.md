@@ -18,6 +18,7 @@ Default implementation of the `IPathfinderSettings` interface.
 | `InitialBufferSize` | `int?` | `null` | **Obsolete, ignored.** The open set is sized to the grid when the pathfinder is created. Will be removed in the next major version. |
 | `PathSmoothingMethod` | `PathSmoothingMethod` | `None` | The method used to smooth the calculated path. |
 | `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | `PerQuery` | When a `Cell[,]` or cell-holder pathfinder copies the grid: every query, or once and after `Refresh()` (`Manual`). No effect on a `Cell[]` pathfinder. |
+| `TieBreaking` | [`TieBreaking`](TieBreaking.md) | `None` | Which route to return when several cost the same (`FewerDiagonals`, `FewerTurns`). |
 
 ## Example
 

@@ -155,6 +155,23 @@ settings.GridSnapshotMode = GridSnapshotMode.Manual;   // Copy once, then only a
 
 **When to use Manual**: many short queries on a large grid, such as movement ranges per unit during an AI turn or in simulations, with grid changes that go through the `Set*` methods or happen at known points (end of a turn) where you can call `Refresh()`. See [GridSnapshotMode](../api/GridSnapshotMode.md).
 
+#### TieBreaking
+
+Decides which route is returned when several routes cost the same (common on open ground, and always with equal straight and diagonal costs).
+
+```csharp
+settings.TieBreaking = TieBreaking.None;           // Default: whichever the search expands first
+settings.TieBreaking = TieBreaking.FewerDiagonals; // Fewest diagonal steps, then fewest steps
+settings.TieBreaking = TieBreaking.FewerTurns;     // Fewest direction changes
+```
+
+**Effect on pathfinding**:
+- With **None**, equal-cost routes resolve by search order: open ground can produce interleaved diagonal/straight zig-zags, and an unrelated grid edit can change the route.
+- With **FewerDiagonals** or **FewerTurns**, costs are compared exactly (multipliers, weights and budgets rounded to four decimal places), the tie-break key decides, and a fixed rule settles the rest (keep the direction, else West, East, North, South, then the diagonals). The route depends on the grid alone.
+- `PathResult.Steps` / `DiagonalSteps` and `ReachableCell.Steps` / `DiagonalSteps` report integer step counts in every mode, so you never have to recover them from costs.
+
+**When to use**: whenever players see the route (units moving on a board, previews). Keep **None** when only the cost matters and you want the fastest search on open ground. See [TieBreaking](../api/TieBreaking.md).
+
 ### Cell Handling Settings
 
 #### IsCalculatingOccupiedCells

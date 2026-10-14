@@ -33,6 +33,7 @@ The role a node currently plays in the search — the distinction most useful wh
 
 - This is a `readonly struct`; enumerate it via [`SearchStep.Searched`](SearchStep.md).
 - Visualizers typically colour `Open` and `Closed` cells differently and may label each with its `ScoreG`/`ScoreF` to show how A* prioritizes the frontier.
+- With a [`TieBreaking`](TieBreaking.md) the search runs on exact costs (four decimal places); the scores are those costs converted back to `float`.
 
 ## See also
 

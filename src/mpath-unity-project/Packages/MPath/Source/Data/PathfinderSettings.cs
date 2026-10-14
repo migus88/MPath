@@ -52,5 +52,8 @@ namespace Migs.MPath.Core.Data
         /// <inheritdoc/>
         [Obsolete("Ignored: the open set is sized to the grid when the pathfinder is created and never grows. This member will be removed in the next major version.")]
         public int? InitialBufferSize { get; set; } = null;
+
+        /// <inheritdoc/>
+        public TieBreaking TieBreaking { get; set; } = TieBreaking.None;
     }
 }

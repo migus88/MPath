@@ -77,5 +77,12 @@ namespace Migs.MPath.Core.Interfaces
         /// </summary>
         [Obsolete("Ignored: the open set is sized to the grid when the pathfinder is created and never grows. This member will be removed in the next major version.")]
         int? InitialBufferSize { get; }
+
+        /// <summary>
+        /// Which route to return when several cost the same. See <see cref="Data.TieBreaking"/>.<br/>
+        /// Implementations that don't override it get <see cref="Data.TieBreaking.None"/>, the behaviour of versions
+        /// before this setting existed.
+        /// </summary>
+        TieBreaking TieBreaking => TieBreaking.None;
     }
 }

@@ -18,6 +18,7 @@ Defines the configuration settings for the MPath pathfinding system. This interf
 | `InitialBufferSize` | `int?` | **Obsolete, ignored.** The open set is sized to the grid when the pathfinder is created. Will be removed in the next major version. |
 | `PathSmoothingMethod` | `PathSmoothingMethod` | The method used to smooth the calculated path. |
 | `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | When a `Cell[,]` or cell-holder pathfinder copies the grid: every query (`PerQuery`) or once and after `Refresh()` (`Manual`). Default interface implementation: `PerQuery`, so existing implementations keep working unchanged. |
+| `TieBreaking` | [`TieBreaking`](TieBreaking.md) | Which route to return when several cost the same. Default interface implementation: `None`, so existing implementations keep working unchanged. |
 
 ## Implementations
 
