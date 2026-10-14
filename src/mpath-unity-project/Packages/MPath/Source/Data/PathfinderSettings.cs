@@ -31,7 +31,7 @@ namespace Migs.MPath.Core.Data
         public GridSnapshotMode GridSnapshotMode { get; set; } = GridSnapshotMode.PerQuery;
 
         /// <inheritdoc/>
-        public CellLayout CellLayout { get; set; } = CellLayout.Auto;
+        public CellLayout CellLayout { get; set; } = CellLayout.ColumnMajor;
 
         /// <inheritdoc/>
         public TieBreaking TieBreaking { get; set; } = TieBreaking.None;

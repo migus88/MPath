@@ -33,29 +33,17 @@ namespace Migs.MPath.Core
         private readonly ICellHolder[,] _cellHoldersMatrix;
         private readonly Cell[,] _cellsMatrix;
 
-        // The caller's array in Cell[] mode. Queries only read it.
-        private readonly Cell[] _sourceCells;
-
-        // The buffer searches read, laid out by GetLayoutIndex: the caller's Cell[] when it is in row- or column-major
-        // order, otherwise a pooled snapshot of the caller's grid.
+        // The buffer searches read, laid out by GetLayoutIndex: the caller's array in Cell[] mode (queries only read
+        // it), otherwise a pooled snapshot of the caller's grid. A cell's index is its position.
         private Cell[] _cells;
 
         // Whether the snapshot in _cells has been taken and not marked stale by Refresh since.
         private bool _isSnapshotCurrent;
 
-        // Cell[] mode: whether the array's layout has been checked (CellLayout.Auto: detected) since construction or
-        // the last Refresh, and whether it is unordered, so _cells is a snapshot (_arraySnapshot) of it.
-        private bool _isArrayLayoutResolved;
-        private bool _isArraySnapshotted;
-
-        // Cell[] mode, unordered arrays only: the pooled snapshot, and the caller's index of each snapshot cell
-        // (so the cell-update API finds a cell without a search). Rented on first use, returned by Dispose.
-        private Cell[] _arraySnapshot;
-        private int[] _arraySourceIndexes;
-
-        // The layout of _cells: the flat index of (x, y) is x * _xStride + y * _yStride.
+        // The layout of _cells: the flat index of (x, y) is x * _xStride + y * _yStride, row-major or column-major.
         private int _xStride;
         private int _yStride;
+        private bool _isRowMajor;
 
         // The search state of every cell (same index as _cells). Only nodes stamped with the current generation
         // belong to the running search, so starting a search never walks the grid.
@@ -72,9 +60,8 @@ namespace Migs.MPath.Core
         /// </summary>
         /// <param name="cells">
         /// Array of Cells, laid out as <see cref="IPathfinderSettings.CellLayout"/> says: column-major
-        /// (<c>X * fieldHeight + Y</c>), row-major (<c>Y * fieldWidth + X</c>) or in any order, each cell carrying its
-        /// <see cref="Cell.Coordinate"/>. The default, <see cref="CellLayout.Auto"/>, detects which at the first
-        /// query. Only the first <c>fieldWidth * fieldHeight</c> elements are read. Cannot be null.
+        /// (<c>X * fieldHeight + Y</c>, the default) or row-major (<c>Y * fieldWidth + X</c>). A cell's index is its
+        /// position. Only the first <c>fieldWidth * fieldHeight</c> elements are read. Cannot be null.
         /// </param>
         /// <param name="fieldWidth">The width of the field.</param>
         /// <param name="fieldHeight">The height of the field.</param>
@@ -83,61 +70,55 @@ namespace Migs.MPath.Core
         /// <exception cref="ArgumentException">
         /// Thrown when <paramref name="cells"/> is shorter than <c>fieldWidth * fieldHeight</c>.
         /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// Thrown when the settings are invalid, for example a <see cref="IPathfinderSettings.CellLayout"/> that is
+        /// neither <see cref="CellLayout.ColumnMajor"/> nor <see cref="CellLayout.RowMajor"/>.
+        /// </exception>
         /// <remarks>
-        /// A row- or column-major array is searched in place: a query costs only the cells it searches, and direct
-        /// edits to the array are seen by the next query. An unordered array is copied into a pooled buffer, like a
-        /// <see cref="Cell"/>[,] matrix, before every query or as <see cref="IPathfinderSettings.GridSnapshotMode"/>
-        /// says. Changing the layout of the array itself (moving cells or changing their coordinates) needs a
-        /// <see cref="Refresh"/>.
+        /// The array is searched in place, with no copy: a query costs only the cells it searches, and direct edits to
+        /// the array are seen by the next query.
         /// </remarks>
         public Pathfinder(Cell[] cells, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
             : this(fieldWidth, fieldHeight, settings)
         {
-            _sourceCells = cells ?? throw new ArgumentNullException(nameof(cells));
-
-            if (cells.Length < Size)
-            {
-                throw new ArgumentException(
-                    $"The array holds {cells.Length} cells, fewer than the {Size} of a {Width}x{Height} field.",
-                    nameof(cells));
-            }
-
-            _cells = cells;
+            _cells = cells ?? throw new ArgumentNullException(nameof(cells));
+            ThrowIfShorterThanGrid(cells.Length, nameof(cells));
             _initializationMode = InitializationMode.CellsArray;
-
-            switch (_settings.CellLayout)
-            {
-                case CellLayout.RowMajor:
-                    SetLayout(CellLayout.RowMajor);
-                    break;
-                case CellLayout.Unordered:
-                    ResolveArrayLayout();
-                    break;
-            }
+            SetLayout(_settings.CellLayout);
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Pathfinder"/> class with cell holders.
         /// This constructor borrows a cell array from the shared array pool and returns it when disposed.
         /// </summary>
-        /// <param name="holders">Array of Cell Holders. Cannot be null.</param>
+        /// <param name="holders">
+        /// Array of Cell Holders, laid out as <see cref="IPathfinderSettings.CellLayout"/> says, like the
+        /// <see cref="Cell"/>[] constructor's array: a holder's index is its cell's position. A <c>null</c> holder is a
+        /// non-walkable cell. Only the first <c>fieldWidth * fieldHeight</c> elements are read. Cannot be null.
+        /// </param>
         /// <param name="fieldWidth">The width of the field.</param>
         /// <param name="fieldHeight">The height of the field.</param>
         /// <param name="settings">Optional pathfinder settings. If null, default settings will be used.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="holders"/> is null.</exception>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="holders"/> is shorter than <c>fieldWidth * fieldHeight</c>.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the settings are invalid.</exception>
         public Pathfinder(ICellHolder[] holders, int fieldWidth, int fieldHeight, IPathfinderSettings settings = null)
             : this(fieldWidth, fieldHeight, settings)
         {
             _cellHolders = holders ?? throw new ArgumentNullException(nameof(holders));
+            ThrowIfShorterThanGrid(holders.Length, nameof(holders));
             _cells = ArrayPool<Cell>.Shared.Rent(Size);
             _initializationMode = InitializationMode.CellHoldersArray;
+            SetLayout(_settings.CellLayout);
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Pathfinder"/> class with a cell matrix.
         /// This constructor borrows a cell array from the shared array pool and returns it when disposed.
         /// </summary>
-        /// <param name="cellsMatrix">Matrix of Cells. Cannot be null.</param>
+        /// <param name="cellsMatrix">Matrix of Cells: the cell at (X, Y) is <c>[X, Y]</c>. Cannot be null.</param>
         /// <param name="settings">Optional pathfinder settings. If null, default settings will be used.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="cellsMatrix"/> is null.</exception>
         public Pathfinder(Cell[,] cellsMatrix, IPathfinderSettings settings = null)
@@ -154,7 +135,10 @@ namespace Migs.MPath.Core
         /// Initializes a new instance of the <see cref="Pathfinder"/> class with a cell holder matrix.
         /// This constructor borrows a cell array from the shared array pool and returns it when disposed.
         /// </summary>
-        /// <param name="cellHoldersMatrix">Matrix of Cell Holders. Cannot be null.</param>
+        /// <param name="cellHoldersMatrix">
+        /// Matrix of Cell Holders: the cell at (X, Y) is held by <c>[X, Y]</c>, and a <c>null</c> holder is a
+        /// non-walkable cell. Cannot be null.
+        /// </param>
         /// <param name="settings">Optional pathfinder settings. If null, default settings will be used.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="cellHoldersMatrix"/> is null.</exception>
         public Pathfinder(ICellHolder[,] cellHoldersMatrix, IPathfinderSettings settings = null)
@@ -202,18 +186,17 @@ namespace Migs.MPath.Core
 
         /// <summary>
         /// Tells the pathfinder the caller's grid changed outside the cell-update methods: the next query copies the
-        /// <see cref="Cell"/>[,] matrix, the cell holders or an unordered <see cref="Cell"/>[] again, a
-        /// <see cref="Cell"/>[] array's layout is checked (or, with <see cref="CellLayout.Auto"/>, detected) again,
-        /// and the path cache is cleared, as by <see cref="InvalidateCache"/>.
+        /// <see cref="Cell"/>[,] matrix or the cell holders again, and the path cache is cleared, as by
+        /// <see cref="InvalidateCache"/>.
         /// </summary>
         /// <returns>The current pathfinder instance.</returns>
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         /// <remarks>
-        /// Cheap: the copy and the layout check happen on the next query, once, however many times this is called
-        /// before it. Needed after direct edits to the grid when they must be seen: with
-        /// <see cref="GridSnapshotMode.Manual"/> (snapshots are not retaken otherwise), after moving cells or changing
-        /// their coordinates in a <see cref="Cell"/>[] array, and whenever path caching is enabled (cached paths do not
-        /// see direct edits). Edits through the cell-update methods (<see cref="SetWalkable"/>, ...) are seen at once
+        /// Cheap: the copy happens on the next query, once, however many times this is called before it. Needed
+        /// after direct edits to the grid when they must be seen: with <see cref="GridSnapshotMode.Manual"/>
+        /// (snapshots are not retaken otherwise), and whenever path caching is enabled (cached paths do not see
+        /// direct edits). A <see cref="Cell"/>[] array is searched in place, so without caching its direct edits
+        /// need no refresh. Edits through the cell-update methods (<see cref="SetWalkable"/>, ...) are seen at once
         /// and clear the cache themselves.
         /// </remarks>
         public Pathfinder Refresh()
@@ -221,7 +204,6 @@ namespace Migs.MPath.Core
             ThrowIfDisposed();
 
             _isSnapshotCurrent = false;
-            _isArrayLayoutResolved = false;
             InvalidateCache();
 
             return this;
@@ -459,13 +441,14 @@ namespace Migs.MPath.Core
             OpenNode(nodes, GetLayoutIndex(from.X, from.Y), PathNode.NoParent, 0, 0,
                 GetH(from.X, from.Y, to.X, to.Y));
 
+            var toIndex = GetLayoutIndex(to.X, to.Y);
             var neighbors = stackalloc Cell*[MaxNeighbors];
 
             // A* algorithm main loop. Each iteration expands one cell; ExpandNextPlain (behind ExpandNext) is the
             // single source of truth for that step, shared with the stepwise (tick-by-tick) search.
             while (_openSet.Count > 0)
             {
-                if (ExpandNextPlain(cells, nodes, to, agentSize, neighbors, out var current))
+                if (ExpandNextPlain(cells, nodes, to, toIndex, agentSize, neighbors, out var current))
                 {
                     // Destination dequeued — search is done.
                     return ReconstructPath(current, cells, nodes, agentSize);
@@ -524,16 +507,18 @@ namespace Migs.MPath.Core
         /// factored out so the batch <see cref="GetPath"/> and the stepwise <see cref="StepwiseSearch"/> run the
         /// exact same logic. The caller is responsible for ensuring the open set is non-empty.
         /// </summary>
+        /// <param name="to">The destination, for the heuristic.</param>
+        /// <param name="toIndex">The destination's index (<see cref="GetLayoutIndex"/> of <paramref name="to"/>).</param>
         /// <param name="current">The index of the dequeued cell.</param>
         /// <returns><c>true</c> when the dequeued cell is the destination and the search should stop;
         /// otherwise <c>false</c>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool ExpandNext(Cell* cells, PathNode* nodes, Coordinate to, int agentSize, Cell** neighbors,
-            out int current)
+        private bool ExpandNext(Cell* cells, PathNode* nodes, Coordinate to, int toIndex, int agentSize,
+            Cell** neighbors, out int current)
         {
             return _settings.IsTieBreaking
-                ? ExpandNextKeyed(cells, nodes, to, agentSize, neighbors, out current)
-                : ExpandNextPlain(cells, nodes, to, agentSize, neighbors, out current);
+                ? ExpandNextKeyed(cells, nodes, to, toIndex, agentSize, neighbors, out current)
+                : ExpandNextPlain(cells, nodes, to, toIndex, agentSize, neighbors, out current);
         }
 
         /// <summary>
@@ -541,22 +526,21 @@ namespace Migs.MPath.Core
         /// directly so its loop has no mode check.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool ExpandNextPlain(Cell* cells, PathNode* nodes, Coordinate to, int agentSize, Cell** neighbors,
-            out int current)
+        private bool ExpandNextPlain(Cell* cells, PathNode* nodes, Coordinate to, int toIndex, int agentSize,
+            Cell** neighbors, out int current)
         {
             current = _openSet.Dequeue();
 
-            var cell = cells + current;
-
-            if (cell->Coordinate == to)
+            if (current == toIndex)
             {
                 return true;
             }
 
             nodes[current].QueueIndex = PathNode.ClosedQueueIndex;
 
-            PopulateNeighbors(cells, cell, agentSize, neighbors);
-            ProcessNeighbors(cells, nodes, current, neighbors, to);
+            GetPosition(current, out var x, out var y);
+            PopulateNeighbors(cells, x, y, agentSize, neighbors);
+            ProcessNeighbors(cells, nodes, current, x, y, neighbors, to);
 
             return false;
         }
@@ -565,8 +549,10 @@ namespace Migs.MPath.Core
         /// Processes each neighbor of the current cell in the pathfinding algorithm. A node this search has not
         /// touched yet is opened; a touched one is either closed (skipped) or open (decrease-key when cheaper).
         /// A step whose route would cost more than <see cref="FastPathfinderSettings.MaxCost"/> is not taken.
+        /// (<paramref name="x"/>, <paramref name="y"/>) is the position of <paramref name="current"/>.
         /// </summary>
-        private void ProcessNeighbors(Cell* cells, PathNode* nodes, int current, Cell** neighbors, Coordinate to)
+        private void ProcessNeighbors(Cell* cells, PathNode* nodes, int current, int x, int y, Cell** neighbors,
+            Coordinate to)
         {
             var currentNode = nodes + current;
             var currentG = currentNode->ScoreG;
@@ -601,9 +587,8 @@ namespace Migs.MPath.Core
 
                 if (!isTouched)
                 {
-                    var neighborCoord = neighbor->Coordinate;
                     OpenNode(nodes, index, current, currentNode->Depth + 1, scoreG,
-                        GetH(neighborCoord.X, neighborCoord.Y, to.X, to.Y));
+                        GetH(x + GetOffsetX(n), y + GetOffsetY(n), to.X, to.Y));
                     continue;
                 }
 
@@ -631,17 +616,19 @@ namespace Migs.MPath.Core
             var diagonalSteps = 0;
 
             var index = lastIndex;
+            var coordinate = GetCoordinate(index);
             for (var i = depth - 1; i >= 0; i--)
             {
-                var coordinate = cells[index].Coordinate;
                 path[i] = coordinate;
                 index = nodes[index].ParentIndex;
 
-                var parent = cells[index].Coordinate;
+                var parent = GetCoordinate(index);
                 if (IsDiagonalMovement(parent.X, parent.Y, coordinate.X, coordinate.Y))
                 {
                     diagonalSteps++;
                 }
+
+                coordinate = parent;
             }
 
             return CreatePathResult(path, depth, diagonalSteps, cells, agentSize);
@@ -679,12 +666,40 @@ namespace Migs.MPath.Core
         }
 
         /// <summary>
+        /// The position of the cell at <paramref name="index"/> in <see cref="_cells"/>: the inverse of
+        /// <see cref="GetLayoutIndex"/>. One division.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void GetPosition(int index, out int x, out int y)
+        {
+            if (_isRowMajor)
+            {
+                y = index / Width;
+                x = index - y * Width;
+            }
+            else
+            {
+                x = index / Height;
+                y = index - x * Height;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private Coordinate GetCoordinate(int index)
+        {
+            GetPosition(index, out var x, out var y);
+            return new Coordinate(x, y);
+        }
+
+        /// <summary>
         /// Sets the layout of <see cref="_cells"/>: row-major for <see cref="CellLayout.RowMajor"/>, otherwise
-        /// column-major (the layout of every snapshot).
+        /// column-major (the layout of matrix snapshots).
         /// </summary>
         private void SetLayout(CellLayout layout)
         {
-            if (layout == CellLayout.RowMajor)
+            _isRowMajor = layout == CellLayout.RowMajor;
+
+            if (_isRowMajor)
             {
                 _xStride = 1;
                 _yStride = Width;
@@ -696,25 +711,25 @@ namespace Migs.MPath.Core
             }
         }
 
+        private void ThrowIfShorterThanGrid(int length, string paramName)
+        {
+            if (length < Size)
+            {
+                throw new ArgumentException(
+                    $"The array holds {length} cells, fewer than the {Size} of a {Width}x{Height} field.", paramName);
+            }
+        }
+
         /// <summary>
-        /// Brings <see cref="_cells"/> up to date for a query: resolves the layout of a <see cref="Cell"/>[] once,
-        /// then copies the caller's grid into the snapshot when the grid has one and the snapshot mode asks for it.
-        /// A row- or column-major <see cref="Cell"/>[] is searched in place and needs nothing.
+        /// Brings <see cref="_cells"/> up to date for a query: copies the caller's grid into the snapshot when the
+        /// snapshot mode asks for it. A <see cref="Cell"/>[] is searched in place and needs nothing.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void InitializeCellsArray()
         {
             if (_initializationMode == InitializationMode.CellsArray)
             {
-                if (!_isArrayLayoutResolved)
-                {
-                    ResolveArrayLayout();
-                }
-
-                if (!_isArraySnapshotted)
-                {
-                    return;
-                }
+                return;
             }
 
             if (_isSnapshotCurrent && _settings.GridSnapshotMode == GridSnapshotMode.Manual)
@@ -727,118 +742,13 @@ namespace Migs.MPath.Core
         }
 
         /// <summary>
-        /// Settles where the cells of the caller's <see cref="Cell"/>[] are: detected for <see cref="CellLayout.Auto"/>,
-        /// checked for a declared row- or column-major layout. An unordered array switches the search to a pooled,
-        /// column-major snapshot. Runs at the first query and at the first one after <see cref="Refresh"/>.
-        /// </summary>
-        /// <exception cref="InvalidOperationException">
-        /// Thrown when a declared row- or column-major array holds a cell at the wrong index.
-        /// </exception>
-        private void ResolveArrayLayout()
-        {
-            var layout = _settings.CellLayout;
-
-            switch (layout)
-            {
-                case CellLayout.Auto:
-                    layout = DetectArrayLayout();
-                    break;
-                case CellLayout.ColumnMajor:
-                case CellLayout.RowMajor:
-                    if (!IsArrayInLayout(layout))
-                    {
-                        throw new InvalidOperationException(
-                            $"The cell array is not in {layout} order: a cell's coordinate does not match its index. " +
-                            "Fix the array, or set CellLayout to Auto or Unordered.");
-                    }
-
-                    break;
-            }
-
-            SetLayout(layout);
-            _isArraySnapshotted = layout == CellLayout.Unordered;
-
-            if (_isArraySnapshotted)
-            {
-                RentArraySnapshot();
-                _cells = _arraySnapshot;
-                _isSnapshotCurrent = false;
-            }
-            else
-            {
-                _cells = _sourceCells;
-            }
-
-            _isArrayLayoutResolved = true;
-        }
-
-        private CellLayout DetectArrayLayout()
-        {
-            if (IsArrayInLayout(CellLayout.ColumnMajor))
-            {
-                return CellLayout.ColumnMajor;
-            }
-
-            return IsArrayInLayout(CellLayout.RowMajor) ? CellLayout.RowMajor : CellLayout.Unordered;
-        }
-
-        private bool IsArrayInLayout(CellLayout layout)
-        {
-            var isRowMajor = layout == CellLayout.RowMajor;
-            var outer = isRowMajor ? Height : Width;
-            var inner = isRowMajor ? Width : Height;
-
-            fixed (Cell* cells = _sourceCells)
-            {
-                var cell = cells;
-
-                for (var major = 0; major < outer; major++)
-                {
-                    for (var minor = 0; minor < inner; minor++, cell++)
-                    {
-                        var coordinate = cell->Coordinate;
-                        var isInPlace = isRowMajor
-                            ? coordinate.X == minor && coordinate.Y == major
-                            : coordinate.X == major && coordinate.Y == minor;
-
-                        if (!isInPlace)
-                        {
-                            return false;
-                        }
-                    }
-                }
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Rents the snapshot of an unordered <see cref="Cell"/>[] and its source-index map, once. Both start cleared,
-        /// so a grid cell the array does not hold reads as a wall and maps to no source cell.
-        /// </summary>
-        private void RentArraySnapshot()
-        {
-            if (_arraySnapshot != null)
-            {
-                return;
-            }
-
-            _arraySnapshot = ArrayPool<Cell>.Shared.Rent(Size);
-            Array.Clear(_arraySnapshot, 0, Size);
-            _arraySourceIndexes = ArrayPool<int>.Shared.Rent(Size);
-            Array.Clear(_arraySourceIndexes, 0, Size);
-        }
-
-        /// <summary>
-        /// Copies the caller's grid into <see cref="_cells"/> at each cell's own coordinate.
+        /// Copies the caller's grid into <see cref="_cells"/> slot by slot: every grid cell is written, and a
+        /// <c>null</c> holder becomes a non-walkable cell, so nothing a pooled buffer held before survives.
         /// </summary>
         private void TakeSnapshot()
         {
             switch (_initializationMode)
             {
-                case InitializationMode.CellsArray:
-                    CopyUnorderedArray();
-                    break;
                 case InitializationMode.CellHoldersArray:
                     CopyCellHolders();
                     break;
@@ -851,72 +761,46 @@ namespace Migs.MPath.Core
             }
         }
 
-        private void CopyUnorderedArray()
+        /// <summary>
+        /// The holder array and the snapshot share the declared layout, so holder <c>i</c> fills cell <c>i</c>.
+        /// </summary>
+        private void CopyCellHolders()
         {
-            var source = _sourceCells;
-            var snapshot = _cells;
-            var sourceIndexes = _arraySourceIndexes;
+            var holders = _cellHolders;
+            var cells = _cells;
 
             for (var i = 0; i < Size; i++)
             {
-                var coordinate = source[i].Coordinate;
-
-                if (!IsPositionValid(coordinate.X, coordinate.Y))
-                {
-                    throw new InvalidOperationException(
-                        $"The cell at index {i} has coordinate {coordinate}, outside the {Width}x{Height} field.");
-                }
-
-                var index = GetLayoutIndex(coordinate.X, coordinate.Y);
-                snapshot[index] = source[i];
-                sourceIndexes[index] = i;
+                var holder = holders[i];
+                cells[i] = holder == null ? default : holder.CellData;
             }
         }
 
-        private void CopyCellHolders()
-        {
-            if (_cellHolders == null)
-            {
-                return;
-            }
-
-            foreach (var cellHolder in _cellHolders)
-            {
-                if (cellHolder == null)
-                    continue;
-                    
-                var coordinate = cellHolder.CellData.Coordinate;
-                _cells[GetLayoutIndex(coordinate.X, coordinate.Y)] = cellHolder.CellData;
-            }
-        }
-        
+        /// <summary>
+        /// A <c>T[,]</c> is stored with its last index varying fastest, so <c>[x, y]</c> sits at
+        /// <c>x * Height + y</c>: the column-major layout of the snapshot. One block copy.
+        /// </summary>
         private void CopyCellsMatrix()
         {
-            if (_cellsMatrix == null)
+            fixed (Cell* source = _cellsMatrix)
             {
-                return;
-            }
-            
-            foreach (var cell in _cellsMatrix)
-            {
-                _cells[GetLayoutIndex(cell.Coordinate.X, cell.Coordinate.Y)] = cell;
+                new ReadOnlySpan<Cell>(source, Size).CopyTo(_cells);
             }
         }
-        
+
         private void CopyCellHoldersMatrix()
         {
-            if (_cellHoldersMatrix == null)
-            {
-                return;
-            }
+            var holders = _cellHoldersMatrix;
+            var cells = _cells;
+            var index = 0;
 
-            foreach (var cellHolder in _cellHoldersMatrix)
+            for (var x = 0; x < Width; x++)
             {
-                if (cellHolder == null)
-                    continue;
-                    
-                var coordinate = cellHolder.CellData.Coordinate;
-                _cells[GetLayoutIndex(coordinate.X, coordinate.Y)] = cellHolder.CellData;
+                for (var y = 0; y < Height; y++, index++)
+                {
+                    var holder = holders[x, y];
+                    cells[index] = holder == null ? default : holder.CellData;
+                }
             }
         }
 
@@ -940,19 +824,18 @@ namespace Migs.MPath.Core
                 : travel;
         }
 
+        /// <summary>
+        /// Fills <paramref name="neighbors"/> (one slot per <see cref="DirectionIndexes"/> direction) with the cells
+        /// an agent standing at (<paramref name="x"/>, <paramref name="y"/>) can step into, <c>null</c> elsewhere.
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void PopulateNeighbors(Cell* cells, Cell* current, int agentSize, Cell** neighbors)
+        private void PopulateNeighbors(Cell* cells, int x, int y, int agentSize, Cell** neighbors)
         {
-            if (current == null || neighbors == null)
-                return;
-                
-            var position = current->Coordinate;
-
             // Add cardinal directions first
-            neighbors[West] = GetWalkableLocation(cells, position.X - 1, position.Y, agentSize, out var west);
-            neighbors[East] = GetWalkableLocation(cells, position.X + 1, position.Y, agentSize, out var east);
-            neighbors[South] = GetWalkableLocation(cells, position.X, position.Y + 1, agentSize, out var south);
-            neighbors[North] = GetWalkableLocation(cells, position.X, position.Y - 1, agentSize, out var north);
+            neighbors[West] = GetWalkableLocation(cells, x - 1, y, agentSize, out var west);
+            neighbors[East] = GetWalkableLocation(cells, x + 1, y, agentSize, out var east);
+            neighbors[South] = GetWalkableLocation(cells, x, y + 1, agentSize, out var south);
+            neighbors[North] = GetWalkableLocation(cells, x, y - 1, agentSize, out var north);
 
             if (!_settings.IsDiagonalMovementEnabled)
             {
@@ -966,13 +849,13 @@ namespace Migs.MPath.Core
             }
 
             // Add diagonal directions when the corner rule lets the step pass between its two flanking cells
-            PopulateNeighbor(cells, position.X - 1, position.Y + 1, agentSize, neighbors, SouthWest,
+            PopulateNeighbor(cells, x - 1, y + 1, agentSize, neighbors, SouthWest,
                 _settings.IsCornerPassable(west, south));
-            PopulateNeighbor(cells, position.X - 1, position.Y - 1, agentSize, neighbors, NorthWest,
+            PopulateNeighbor(cells, x - 1, y - 1, agentSize, neighbors, NorthWest,
                 _settings.IsCornerPassable(west, north));
-            PopulateNeighbor(cells, position.X + 1, position.Y + 1, agentSize, neighbors, SouthEast,
+            PopulateNeighbor(cells, x + 1, y + 1, agentSize, neighbors, SouthEast,
                 _settings.IsCornerPassable(east, south));
-            PopulateNeighbor(cells, position.X + 1, position.Y - 1, agentSize, neighbors, NorthEast,
+            PopulateNeighbor(cells, x + 1, y - 1, agentSize, neighbors, NorthEast,
                 _settings.IsCornerPassable(east, north));
         }
 
@@ -1144,9 +1027,8 @@ namespace Migs.MPath.Core
 
         /// <summary>
         /// Releases all resources used by this Pathfinder instance: returns the pooled cell buffer (every
-        /// constructor except the <see cref="Cell"/>[] one rents it, and that one for an unordered array), the search-state and open-set buffers, disposes
-        /// the path cache and ends an active
-        /// <see cref="StepwiseSearch"/>.
+        /// constructor except the <see cref="Cell"/>[] one rents it), the search-state and open-set buffers, disposes
+        /// the path cache and ends an active <see cref="StepwiseSearch"/>.
         /// </summary>
         /// <remarks>
         /// Idempotent: calling it again does nothing, so the pooled buffer is returned exactly once. An active
@@ -1168,14 +1050,6 @@ namespace Migs.MPath.Core
             if (_initializationMode != InitializationMode.CellsArray && _cells != null)
             {
                 ArrayPool<Cell>.Shared.Return(_cells);
-            }
-
-            if (_arraySnapshot != null)
-            {
-                ArrayPool<Cell>.Shared.Return(_arraySnapshot);
-                ArrayPool<int>.Shared.Return(_arraySourceIndexes);
-                _arraySnapshot = null;
-                _arraySourceIndexes = null;
             }
 
             _cells = null;

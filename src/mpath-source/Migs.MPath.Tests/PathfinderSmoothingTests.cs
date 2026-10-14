@@ -32,7 +32,7 @@ namespace Migs.MPath.Tests
             var cells = CreateEmptyGrid(6, 6);
             foreach (var index in Enumerable.Range(0, cells.Length))
             {
-                var coordinate = cells[index].Coordinate;
+                var coordinate = new Coordinate(index / 6, index % 6);
                 cells[index].IsWalkable = coordinate.Y == 0 || coordinate.X == 5;
             }
 
@@ -55,7 +55,7 @@ namespace Migs.MPath.Tests
             var cells = CreateEmptyGrid(6, 6);
             foreach (var index in Enumerable.Range(0, cells.Length))
             {
-                var coordinate = cells[index].Coordinate;
+                var coordinate = new Coordinate(index / 6, index % 6);
                 cells[index].IsWalkable = coordinate.Y == 0 || (coordinate.X == 5 && coordinate.Y == 1);
             }
 
@@ -318,7 +318,7 @@ namespace Migs.MPath.Tests
             {
                 for (var y = 0; y < height; y++)
                 {
-                    cells[x * height + y] = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true };
+                    cells[x * height + y] = new Cell { IsWalkable = true };
                 }
             }
 

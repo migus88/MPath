@@ -298,8 +298,8 @@ namespace Migs.MPath.Core.Data
         /// <summary>
         /// Writes the result into a dense per-cell cost field: the cost of each reachable cell at its layout index
         /// (<see cref="Pathfinder.GetIndex"/>), and <paramref name="unreached"/> in every other entry of
-        /// <paramref name="costByCellIndex"/>. For a pathfinder over an unordered <see cref="Cell"/>[] array the field
-        /// is column-major (<c>X * fieldHeight + Y</c>), not the caller's array order.
+        /// <paramref name="costByCellIndex"/>. For a pathfinder over an array the field is in the array's own
+        /// <see cref="CellLayout"/>, for one over a matrix it is column-major (<c>X * fieldHeight + Y</c>).
         /// </summary>
         /// <param name="costByCellIndex">The field to fill, at least as long as the grid has cells.</param>
         /// <param name="unreached">The value written for the cells that are not reachable.</param>

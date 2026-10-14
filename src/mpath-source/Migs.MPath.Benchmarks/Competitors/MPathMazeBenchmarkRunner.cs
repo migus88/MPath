@@ -65,13 +65,16 @@ public class MPathMazeBenchmarkRunner : BaseMazeBenchmarkRunner
         var queueIndexField = nodeType.GetField("QueueIndex");
         var height = _maze.Cells.GetLength(1);
 
-        foreach (var cell in _maze.Cells)
+        for (var x = 0; x < _maze.Cells.GetLength(0); x++)
         {
-            var node = nodes.GetValue(cell.Coordinate.X * height + cell.Coordinate.Y);
-
-            if ((uint)generationField.GetValue(node) == generation && (int)queueIndexField.GetValue(node) == -1)
+            for (var y = 0; y < height; y++)
             {
-                _maze.SetClosed(cell.Coordinate);
+                var node = nodes.GetValue(x * height + y);
+
+                if ((uint)generationField.GetValue(node) == generation && (int)queueIndexField.GetValue(node) == -1)
+                {
+                    _maze.SetClosed(new Coordinate(x, y));
+                }
             }
         }
     }

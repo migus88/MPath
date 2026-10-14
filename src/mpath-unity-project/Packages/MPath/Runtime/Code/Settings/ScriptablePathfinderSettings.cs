@@ -28,6 +28,6 @@ namespace Migs.MPath.Settings
         /// <inheritdoc/>
         [field: SerializeField] public TieBreaking TieBreaking { get; set; } = TieBreaking.None;
         /// <inheritdoc/>
-        [field: SerializeField] public CellLayout CellLayout { get; set; } = CellLayout.Auto;
+        [field: SerializeField] public CellLayout CellLayout { get; set; } = CellLayout.ColumnMajor;
     }
 }

@@ -23,7 +23,7 @@
 | Thread-safe? | **No.** One `Pathfinder` per thread; never share across threads. |
 | Allocations | Near-zero on the hot path — uses `unsafe` pointers + `ArrayPool`. |
 | Lifecycle rule | `Pathfinder` is **long-lived & reused** (dispose once). Each result (`PathResult` / `RangeResult` / `StepwiseSearch`) is **per-query & must be disposed** (`using`). |
-| Grid indexing | A flat `Cell[]` may be column-major (`x * Height + y`), row-major (`y * Width + x`) or unordered; `CellLayout.Auto` (default) detects which. Queries never reorder it. |
+| Grid indexing | A cell's slot is its position (`Cell` has no coordinate): `[x, y]` in a matrix; in a flat `Cell[]`/`ICellHolder[]` the index under `CellLayout`, column-major `x * Height + y` (default) or row-major `y * Width + x`. Queries never reorder it. |
 | Coordinate origin | `(0,0)` is one corner; `X`/`Y` are non-negative grid indices, not world units. |
 
 ## Namespaces (what to `using`)
@@ -56,8 +56,8 @@ openupm add com.migsweb.mpath          # Unity (run in the project folder)
 
 ## Mental model — four building blocks
 
-1. **`Cell`** — one grid square. Public, mutable fields: `Coordinate`, `IsWalkable`, `IsOccupied`,
-   `Weight`. *You* own the grid data; MPath reads it.
+1. **`Cell`** — one grid square, 8 bytes. Public, mutable fields: `IsWalkable`, `IsOccupied`, `Weight`; its
+   position is its slot in the grid. *You* own the grid data; MPath reads it.
 2. **Agent size** — the thing moving, as an `int agentSize` (in cells; `1` = one tile, the default; `> 1`
    triggers a clearance scan so the agent only fits where a `Size×Size` block is walkable). Every query
    takes it as its **third** argument (optional, default `1`); `QueryOptions` go after it. There is no
@@ -84,7 +84,7 @@ using Migs.MPath.Core.Data;
 var grid = new Cell[10, 10];
 for (int x = 0; x < 10; x++)
 for (int y = 0; y < 10; y++)
-    grid[x, y] = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true, Weight = 0 };
+    grid[x, y] = new Cell { IsWalkable = true, Weight = 0 }; // the slot [x, y] is the position
 
 grid[3, 3].IsWalkable = false; // a wall
 
@@ -120,10 +120,10 @@ Pathfinder(ICellHolder[,] cellHoldersMatrix,                                 IPa
 ```
 
 Matrix constructors infer width/height from the array. The flat `Cell[]` form keeps a reference to your array
-and never reorders or writes it during queries: a column-major (`x * Height + y`) or row-major (`y * Width + x`)
-array is searched in place (no copy), an unordered one is copied like a matrix (`CellLayout`, default `Auto`
-detects which at the first query and after `Refresh()`). The others flatten into a pooled snapshot — before every
-query by default, or once and after `Refresh()` with `GridSnapshotMode.Manual`. `ICellHolder` lets you back cells with your own
+and never reorders or writes it during queries: it is searched in place (no copy), column-major (`x * Height + y`,
+the default) or row-major (`y * Width + x`) as `CellLayout` says. The others flatten into a pooled snapshot — before
+every query by default, or once and after `Refresh()` with `GridSnapshotMode.Manual`; a `null` holder is a wall, and
+an `ICellHolder[]` follows `CellLayout` like a `Cell[]`. A flat array shorter than `width * height` throws. `ICellHolder` lets you back cells with your own
 objects (e.g. Unity `MonoBehaviour`s) via `Cell CellData { get; }`. Queries never write into your cells: the search
 state lives in the pathfinder and is reset lazily, so a short search costs only the cells it touches.
 
@@ -144,14 +144,14 @@ options after it.
 | `static GetChebyshevDistance(Coordinate from, Coordinate to)` | `int` | `max(|dx|, |dy|)`. Pure metric, allocation-free. |
 | `BeginStepwiseSearch(Coordinate from, Coordinate to, int agentSize = 1)` | `StepwiseSearch` | Educational/visualization driver running the same A* one expansion at a time. **Pins the grid until disposed** — the pathfinder can't serve other queries meanwhile, and a second concurrent session throws. |
 | `BeginStepwiseSearch(Coordinate from, Coordinate to, int agentSize, QueryOptions options)` | `StepwiseSearch` | Same, with per-query rules applied on every tick. |
-| `SetWalkable(Coordinate c, bool isWalkable)` · `SetOccupied(Coordinate c, bool isOccupied)` · `SetWeight(Coordinate c, int weight)` | `void` | Update one cell (`SetWeight`/`SetCell` throw `ArgumentOutOfRangeException` for a negative weight). Writes into your `Cell[]`/`Cell[,]` (any order; O(1), allocation-free once in layout) and clears the path cache when the change can affect cached paths. **Throws `NotSupportedException` in `ICellHolder` modes** (update the holder). `ArgumentException` outside the grid. |
-| `SetCell(Coordinate c, in Cell cell)` | `void` | Same, all three fields at once; `cell.Coordinate` is ignored. |
-| `GetCell(Coordinate c)` | `Cell` | Current cell read from your grid, every mode. |
-| `GetIndex(Coordinate c)` | `int` | `Cell[]`: the cell's index in your array by its `CellLayout` (`X * fieldHeight + Y`, `Y * fieldWidth + X`, or where an unordered cell is). `Auto` reports column-major until the first query detects the layout. Other modes: `X * fieldHeight + Y` in the snapshot. |
+| `SetWalkable(Coordinate c, bool isWalkable)` · `SetOccupied(Coordinate c, bool isOccupied)` · `SetWeight(Coordinate c, int weight)` | `void` | Update one cell (`SetWeight`/`SetCell` throw `ArgumentOutOfRangeException` for a negative weight). Writes into your `Cell[]`/`Cell[,]` (O(1), allocation-free) and clears the path cache when the change can affect cached paths. **Throws `NotSupportedException` in `ICellHolder` modes** (update the holder). `ArgumentException` outside the grid. |
+| `SetCell(Coordinate c, in Cell cell)` | `void` | Same, all three fields at once. |
+| `GetCell(Coordinate c)` | `Cell` | Current cell read from your grid, every mode (a `null` holder reads as `default`, a wall). |
+| `GetIndex(Coordinate c)` | `int` | `Cell[]`/`ICellHolder[]`: the cell's index in your array by its `CellLayout` (`X * fieldHeight + Y` or `Y * fieldWidth + X`). Matrices: `X * fieldHeight + Y`. The same index `RangeResult.CopyCostsTo` uses. |
 | `EnablePathCaching(IPathCaching handler = null)` | `Pathfinder` | Fluent (returns `this`). Opt-in. Pass your own `IPathCaching` or use the built-in `DefaultPathCaching`. |
 | `DisablePathCaching()` | `Pathfinder` | Fluent. |
 | `InvalidateCache()` | `Pathfinder` | Fluent. The `Set*` cell updates and `Refresh()` invalidate for you; **direct writes to your grid or holders do NOT** — call this (or `Refresh()`) after them. |
-| `Refresh()` | `Pathfinder` | Fluent. "The grid changed behind my back": the next query copies the snapshot again (`Cell[,]`, holders, unordered `Cell[]`) and re-checks a `Cell[]` layout, and the path cache is cleared. Needed after direct edits with `GridSnapshotMode.Manual` or caching on, or after moving cells in a `Cell[]`. |
+| `Refresh()` | `Pathfinder` | Fluent. "The grid changed behind my back": the next query copies the snapshot again (`Cell[,]`, holders), and the path cache is cleared. Needed after direct edits with `GridSnapshotMode.Manual` or caching on. |
 | `Dispose()` | `void` | Returns the rented buffers (cells, search state, open set) to the pool, disposes the cache, ends an active `StepwiseSearch`. Idempotent; every instance method throws `ObjectDisposedException` afterwards. |
 
 ### Everything else — type map
@@ -168,7 +168,7 @@ One row per type; click through for full members. The load-bearing facts are rep
 | `SearchStep` | immutable class | Per-tick snapshot: `Searched`, `Open/ClosedCount`, `Current`, `Iteration`, `Path` | [api](api/SearchStep.md) |
 | `SearchNode` | `readonly struct` | `Coordinate` + `State` + `ScoreG/ScoreH/ScoreF` | [api](api/SearchNode.md) |
 | `QueryOptions` | `readonly ref struct` | Per-query rules: `Occupancy` (`OccupancyRule`), `AlwaysEnterable` (`ReadOnlySpan<Coordinate>`), `IsDestinationAlwaysEnterable`; `default` = no override | [api](api/QueryOptions.md) |
-| `Cell` | `struct` | Grid square: `Coordinate`, `IsWalkable`, `IsOccupied`, `Weight` — **all default to zero** | [api](api/Cell.md) |
+| `Cell` | `struct` | Grid square: `IsWalkable`, `IsOccupied`, `Weight` — **all default to zero**; its slot is its position | [api](api/Cell.md) |
 | `Coordinate` | `readonly struct` (8 B) | `X`, `Y`, `static Zero` (`== default`); ctor `(x,y)`; `== != + -`; `↔ (int,int)` | [api](api/Coordinate.md) |
 | `ICellHolder` | interface | `Cell CellData` — back cells with your own objects | [api](api/ICellHolder.md) |
 | `IPathfinderSettings` · `PathfinderSettings` | settings | See [Settings reference](#settings-reference) below | [api](api/PathfinderSettings.md) |
@@ -179,7 +179,7 @@ One row per type; click through for full members. The load-bearing facts are rep
 | Enum | Values |
 |------|--------|
 | `GridSnapshotMode` | `PerQuery` (0, default) · `Manual` (1) — [api](api/GridSnapshotMode.md) |
-| `CellLayout` | `Auto` (0, default) · `ColumnMajor` (1) · `RowMajor` (2) · `Unordered` (3) — [api](api/CellLayout.md) |
+| `CellLayout` | `ColumnMajor` (1, default) · `RowMajor` (2); any other value throws at construction — [api](api/CellLayout.md) |
 | `CornerBlocking` (`[Flags]`) | `None` (0) · `WallAndWall` (1) · `WallAndOccupied` (2) · `OccupiedAndOccupied` (4) · `WallAndOpen` (8) · `OccupiedAndOpen` (16); presets `BetweenBlockedCells` (default) · `BetweenWalls` · `AnyWall` · `All` — [api](api/CornerBlocking.md) |
 | `LineOfSightMode` | `BlockedByUnwalkableCells` (0, default) · `IgnoreUnwalkableCells` (1) |
 | `OccupancyRule` | `UseSettings` (0, default) · `Block` (1) · `Ignore` (2) — [api](api/OccupancyRule.md) |
@@ -207,8 +207,8 @@ ones it doesn't care about.
 | `StraightStepCost` | `int` | `100` | Cost of a cardinal step, at least 1. All costs are `int` in a unit you pick (default: hundredths of a step); weights, budgets and reported costs use it. |
 | `DiagonalStepCost` | `int` | `141` | Cost of a diagonal step (1.41 straight steps), at least 1. |
 | `PathSmoothingMethod` | `PathSmoothingMethod` | `None` | Post-process the path (`Simple`: first step + turn points + destination; `StringPulling`: straight shortcuts that keep the agent's footprint and the corner rule). |
-| `GridSnapshotMode` | `GridSnapshotMode` | `PerQuery` | `Cell[,]`/`ICellHolder` grids and unordered `Cell[]` arrays: copy the grid before every query (`PerQuery`, O(grid) per query) or once and after `Refresh()` (`Manual`, O(cells searched)). `Set*` updates are seen at once in both. |
-| `CellLayout` | `CellLayout` | `Auto` | `Cell[]` only: where cell (X, Y) is — `ColumnMajor` (`X * fieldHeight + Y`), `RowMajor` (`Y * fieldWidth + X`), `Unordered` (copied like a matrix), or `Auto` (detected at the first query and after `Refresh()`). A declared row/column-major layout is checked once and throws `InvalidOperationException` on a mismatch. Never reordered. |
+| `GridSnapshotMode` | `GridSnapshotMode` | `PerQuery` | `Cell[,]`/`ICellHolder` grids: copy the grid before every query (`PerQuery`, O(grid) per query) or once and after `Refresh()` (`Manual`, O(cells searched)). `Set*` updates are seen at once in both. |
+| `CellLayout` | `CellLayout` | `ColumnMajor` | `Cell[]`/`ICellHolder[]` only: which index holds cell (X, Y) — `ColumnMajor` (`X * fieldHeight + Y`) or `RowMajor` (`Y * fieldWidth + X`). The index is the position: nothing is checked or reordered. |
 | `TieBreaking` | `TieBreaking` | `None` | Which route wins among equal-cost routes: `FewerDiagonals` (then fewer steps) or `FewerTurns`, with a fixed final rule. `None` = the fastest search; ties resolve by search order. |
 
 > **Weight is additive, not multiplicative.** With `IsCellWeightEnabled`, step cost = straight/diagonal step cost
@@ -369,7 +369,7 @@ matrix[x, y].IsWalkable = false; pathfinder.Refresh(); // direct edit: Refresh (
 place, never reordered, so your indexing stays valid and direct writes are seen by the next query:
 
 ```csharp
-var cells = new Cell[width * height];                 // cells[y * width + x], Coordinate set on each
+var cells = new Cell[width * height];                 // cells[y * width + x]: the index is the position
 var settings = new PathfinderSettings { CellLayout = CellLayout.RowMajor };
 using var pathfinder = new Pathfinder(cells, width, height, settings);
 cells[y * width + x].IsWalkable = false;              // seen by the next query (Refresh() if caching is on)
@@ -417,10 +417,9 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
 7. **Settings are frozen at construction.** Mutating the `PathfinderSettings` object afterward does
    nothing — create a new `Pathfinder`. To vary occupancy per query, pass `QueryOptions` instead of
    flipping `IsOccupied` around the call.
-8. **A `Cell[]` keeps your order.** Queries never sort or write it. Row-major (`y * width + x`) and
-   column-major (`x * height + y`) arrays are searched in place; any other order is copied per query
-   (`GridSnapshotMode.PerQuery`) — declare `CellLayout` to skip detection and get `GetIndex(c)` right before
-   the first query. If you move cells around in the array or change their coordinates, call `Refresh()`.
+8. **A cell's slot is its position.** `Cell` has no coordinate. A `Cell[]`/`ICellHolder[]` must be column-major
+   (`x * height + y`, the default) or row-major (`y * width + x`, set `CellLayout = RowMajor`); nothing checks it,
+   so a row-major array under the default layout is silently transposed. Queries never sort or write it.
 9. **`Cell` fields default to zero.** `IsWalkable` defaults to `false` — initialize every cell or the
    whole grid is unwalkable.
 10. **Stepwise search is exclusive.** While a `StepwiseSearch` is alive, the owning pathfinder throws on

@@ -4,8 +4,9 @@ namespace Migs.Mpath.Examples
     {
         public static int FieldCellComparison(FieldCell a, FieldCell b)
         {
-            var result = a.CellData.Coordinate.Y.CompareTo(b.CellData.Coordinate.Y);
-            return result == 0 ? a.CellData.Coordinate.X.CompareTo(b.CellData.Coordinate.X) : result;
+            // Column-major (X, then Y): the default CellLayout, so a holder's index is its position.
+            var result = a.Position.x.CompareTo(b.Position.x);
+            return result == 0 ? a.Position.y.CompareTo(b.Position.y) : result;
         }
     }
 }

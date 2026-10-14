@@ -112,6 +112,7 @@ namespace Migs.MPath.Core
             private readonly Pathfinder _pathfinder;
             private readonly Coordinate _from;
             private readonly Coordinate _to;
+            private readonly int _toIndex;
             private readonly int _agentSize;
 
             // The per-query rules, re-applied to the pathfinder around every expansion.
@@ -144,6 +145,7 @@ namespace Migs.MPath.Core
                 _pathfinder = pathfinder;
                 _from = from;
                 _to = to;
+                _toIndex = pathfinder.GetLayoutIndex(to.X, to.Y);
                 _agentSize = agentSize;
                 _occupancy = occupancy;
                 _enterableCells = enterableCells;
@@ -245,7 +247,7 @@ namespace Migs.MPath.Core
 
                 var neighbors = stackalloc Cell*[MaxNeighbors];
                 var reachedGoal = ExpandNext(neighbors, out var current);
-                _current = _cells[current].Coordinate;
+                _current = _pathfinder.GetCoordinate(current);
 
                 if (reachedGoal)
                 {
@@ -308,7 +310,8 @@ namespace Migs.MPath.Core
 
                     try
                     {
-                        return _pathfinder.ExpandNext(_cells, _nodes, _to, _agentSize, neighbors, out current);
+                        return _pathfinder.ExpandNext(_cells, _nodes, _to, _toIndex, _agentSize, neighbors,
+                            out current);
                     }
                     finally
                     {
@@ -338,7 +341,7 @@ namespace Migs.MPath.Core
                 }
 
                 _seen[index] = true;
-                _discovered.Add(cell->Coordinate);
+                _discovered.Add(_pathfinder.GetCoordinate(index));
             }
 
             /// <summary>
@@ -363,7 +366,7 @@ namespace Migs.MPath.Core
                 var index = lastIndex;
                 for (var i = depth - 1; i >= 0; i--)
                 {
-                    path[i] = _cells[index].Coordinate;
+                    path[i] = _pathfinder.GetCoordinate(index);
                     index = _nodes[index].ParentIndex;
                 }
 

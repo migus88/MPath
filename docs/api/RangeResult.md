@@ -25,7 +25,7 @@ Represents the result of a movement-range (reachability) query produced by `Path
 | `bool Contains(Coordinate coordinate)` | Determines whether the coordinate is reachable (O(1)). |
 | `bool TryGetCost(Coordinate coordinate, out int cost)` | Gets the cheapest path cost to the coordinate, if reachable (O(1)). |
 | `bool TryGetCell(Coordinate coordinate, out ReachableCell cell)` | Gets the reachable cell (cost and step counts) at the coordinate, if reachable (O(1)). |
-| `int CopyCostsTo(Span<int> costByCellIndex, int unreached = -1)` | Fills a dense per-cell cost field: each reachable cell's cost at its layout index (`Pathfinder.GetIndex`; column-major `X * fieldHeight + Y` for an unordered `Cell[]`), `unreached` in every other entry. Returns `Length`. Throws `ArgumentException` when the span is shorter than the grid, and `InvalidOperationException` for a non-empty result built with `Create` (it knows no grid). |
+| `int CopyCostsTo(Span<int> costByCellIndex, int unreached = -1)` | Fills a dense per-cell cost field: each reachable cell's cost at its layout index (`Pathfinder.GetIndex`: the array's own `CellLayout`, column-major `X * fieldHeight + Y` for a matrix), `unreached` in every other entry. Returns `Length`. Throws `ArgumentException` when the span is shorter than the grid, and `InvalidOperationException` for a non-empty result built with `Create` (it knows no grid). |
 | `void Dispose()` | Releases resources used by the RangeResult. |
 
 ## Remarks

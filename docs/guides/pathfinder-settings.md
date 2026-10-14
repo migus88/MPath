@@ -132,7 +132,7 @@ S = Start, E = End, + = Waypoint
 
 #### GridSnapshotMode
 
-Decides when a pathfinder built over a `Cell[,]` matrix, over `ICellHolder`s or over an unordered `Cell[]` copies your grid into its internal snapshot. It has no effect on a row- or column-major `Cell[]`, which is searched in place (see `CellLayout` below).
+Decides when a pathfinder built over a `Cell[,]` matrix or over `ICellHolder`s copies your grid into its internal snapshot. It has no effect on a `Cell[]`, which is searched in place (see `CellLayout` below).
 
 ```csharp
 settings.GridSnapshotMode = GridSnapshotMode.PerQuery; // Copy before every query (default)
@@ -163,20 +163,18 @@ settings.TieBreaking = TieBreaking.FewerTurns;     // Fewest direction changes
 
 #### CellLayout
 
-Where a pathfinder built over a `Cell[]` array finds the cell at (X, Y). Queries never reorder or write your array.
+Which index of a `Cell[]` or `ICellHolder[]` array holds the cell at (X, Y). A cell's slot is its position; queries never reorder or write your array.
 
 ```csharp
-settings.CellLayout = CellLayout.Auto;        // Detect at the first query (default)
-settings.CellLayout = CellLayout.RowMajor;    // cells[y * width + x], searched in place
-settings.CellLayout = CellLayout.ColumnMajor; // cells[x * height + y], searched in place
-settings.CellLayout = CellLayout.Unordered;   // any order, copied like a Cell[,] (see GridSnapshotMode)
+settings.CellLayout = CellLayout.ColumnMajor; // cells[x * height + y] (default)
+settings.CellLayout = CellLayout.RowMajor;    // cells[y * width + x]
 ```
 
-- **RowMajor / ColumnMajor**: no copy, no sort; a query costs only the cells it searches. Checked once at the first query (`InvalidOperationException` on a mismatch).
-- **Unordered**: each cell's `Coordinate` says where it is; the array is copied into a pooled snapshot as `GridSnapshotMode` says.
-- **Auto**: one O(grid size) detection at the first query (and after `Refresh()`), then behaves as the detected layout. Declare the layout to skip it and to get the right `GetIndex` before the first query.
+- A `Cell[]` is searched in place in either layout: no copy, no sort; a query costs only the cells it searches. An `ICellHolder[]` is copied in the same layout, as `GridSnapshotMode` says.
+- `pathfinder.GetIndex(c)` and `RangeResult.CopyCostsTo` use the same layout.
+- Any other value throws `ArgumentOutOfRangeException` when the pathfinder is created.
 
-No effect on the `Cell[,]` and `ICellHolder` constructors. See [CellLayout](../api/CellLayout.md).
+No effect on the `Cell[,]` and `ICellHolder[,]` constructors (the cell at (X, Y) is `[X, Y]`). See [CellLayout](../api/CellLayout.md).
 
 ### Cell Handling Settings
 
@@ -316,7 +314,7 @@ public class GamePathfinderSettings : MonoBehaviour, IPathfinderSettings
     public int DiagonalStepCost => DiagonalCost;
     public PathSmoothingMethod PathSmoothingMethod => PathSmoothingMethod.None;
     public GridSnapshotMode GridSnapshotMode => GridSnapshotMode.PerQuery;
-    public CellLayout CellLayout => CellLayout.Auto;
+    public CellLayout CellLayout => CellLayout.ColumnMajor;
     public TieBreaking TieBreaking => TieBreaking.None;
     
     // This allows you to easily swap between different pathfinding presets

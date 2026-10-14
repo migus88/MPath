@@ -83,14 +83,23 @@ namespace Migs.MPath.Core.Internal
         }
 
         /// <summary>
-        /// Checks the step costs for a <paramref name="width"/> x <paramref name="height"/> grid: each must be at
-        /// least 1 (the searches need every step to cost something), and crossing the grid at the dearer one in use
-        /// (the diagonal cost counts only with diagonal movement) must stay within <see cref="MaxCost"/>, which
-        /// bounds the heuristic so <c>g + h</c> cannot overflow.
+        /// Checks the cell layout, and the step costs for a <paramref name="width"/> x <paramref name="height"/>
+        /// grid: each must be at least 1 (the searches need every step to cost something), and crossing the grid at
+        /// the dearer one in use (the diagonal cost counts only with diagonal movement) must stay within
+        /// <see cref="MaxCost"/>, which bounds the heuristic so <c>g + h</c> cannot overflow.
         /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when a step cost is out of range.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// Thrown when a step cost is out of range, or <see cref="CellLayout"/> is neither
+        /// <see cref="Data.CellLayout.ColumnMajor"/> nor <see cref="Data.CellLayout.RowMajor"/>.
+        /// </exception>
         public void Validate(int width, int height)
         {
+            if (CellLayout != CellLayout.ColumnMajor && CellLayout != CellLayout.RowMajor)
+            {
+                throw new ArgumentOutOfRangeException(nameof(IPathfinderSettings.CellLayout), CellLayout,
+                    "The cell layout must be ColumnMajor or RowMajor.");
+            }
+
             if (StraightStepCost < 1)
             {
                 throw new ArgumentOutOfRangeException(nameof(IPathfinderSettings.StraightStepCost), StraightStepCost,

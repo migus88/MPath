@@ -86,9 +86,9 @@ Each entry says what changed, who notices it, and what to do, if anything. Entri
 
 - **What changed:**
   - Searches never write into the caller's cells.
-  - `Cell` shrank from 56 to 20 bytes and lost its internal search fields (16 bytes in 2.0; see [Coordinate cleanup](#58-coordinate-cleanup)).
+  - `Cell` shrank from 56 to 20 bytes and lost its internal search fields (8 bytes in 2.0; see [Coordinate cleanup](#58-coordinate-cleanup) and [Drop Coordinate from the cell](#61-drop-coordinate-from-the-cell)).
   - The pathfinder rents 24 bytes per cell of search state when it is created.
-  - The new `GridSnapshotMode` setting decides when a matrix, holder or unordered-array pathfinder copies the grid. The default, `PerQuery`, copies it before every query, as in 1.2.1; `Manual` copies it once and again only after the new `Refresh()`.
+  - The new `GridSnapshotMode` setting decides when a matrix or holder pathfinder copies the grid. The default, `PerQuery`, copies it before every query, as in 1.2.1; `Manual` copies it once and again only after the new `Refresh()`.
   - `Cell.Reset()` does nothing.
 - **Who notices:** code that reflects over `Cell`'s internal fields or assumes its layout (unsafe code, binary serializers), and code that called `Cell.Reset()`.
 - **What to do:** stop relying on `Cell`'s internal fields or size. `Cell.Reset()` is removed in 2.0; see [Remove compatibility shims](#57-remove-compatibility-shims).
@@ -102,11 +102,11 @@ Each entry says what changed, who notices it, and what to do, if anything. Entri
 #### A `Cell[]` grid is never sorted or reordered
 
 - **What changed:**
-  - 1.2.1 sorted the caller's `Cell[]` in place into column-major order. Now the pathfinder never writes the order of your array: the new `CellLayout` setting (default `Auto`) detects a column-major, row-major or unordered array, or checks a declared layout. A row- or column-major array is searched in place; an unordered one is copied.
-  - `Refresh()` re-reads the array's layout, and also clears the path cache.
+  - 1.2.1 sorted the caller's `Cell[]` in place into column-major order. Now the pathfinder never writes the order of your array: the new `CellLayout` setting (`ColumnMajor`, the default, or `RowMajor`) says which index holds which cell, and the array is searched in place, without a copy.
+  - `Refresh()` also clears the path cache.
   - A `Cell[]` shorter than `width * height` throws `ArgumentException` when the pathfinder is created.
-- **Who notices:** code that relied on 1.2.1 re-sorting the array and then indexed it as `x * height + y`, and code that passed an array shorter than the grid.
-- **What to do:** build the array in a known order and declare it with `CellLayout`, or find a cell's index with `pathfinder.GetIndex(coordinate)`. Call `Refresh()` after moving cells inside the array. 2.0 narrows `CellLayout`; see [Drop Coordinate from the cell](#61-drop-coordinate-from-the-cell).
+- **Who notices:** code that relied on 1.2.1 re-sorting the array, and code that passed an array shorter than the grid.
+- **What to do:** see [Drop Coordinate from the cell](#61-drop-coordinate-from-the-cell): in 2.0 a cell's index is its position, so the array must be in the declared order.
 
 #### Faster results API
 
@@ -162,7 +162,7 @@ Members that 1.2.1 had and 2.0 no longer reads are removed outright, and `IPathf
 
 - **`IsMovementBetweenCornersEnabled` is removed** from `IPathfinderSettings`, `PathfinderSettings` and `ScriptablePathfinderSettings`. Set `CornerBlocking` instead: `true` is `CornerBlocking.None`, `false` is `CornerBlocking.BetweenBlockedCells` (the default).
 - **`InitialBufferSize` is removed** from the same three types (and `ScriptablePathfinderSettings.InitialBufferSizeSerialized`). The open set is sized to the grid, so there is nothing to replace it with.
-- **Custom `IPathfinderSettings` implementations** must implement `CornerBlocking`, `GridSnapshotMode`, `CellLayout` and `TieBreaking`. To keep 1.2.1 behaviour, return `CornerBlocking.BetweenBlockedCells` (or `CornerBlocking.None` if your bool returned `true`), `GridSnapshotMode.PerQuery`, `CellLayout.Auto` and `TieBreaking.None`. [Drop Coordinate from the cell](#61-drop-coordinate-from-the-cell) later narrows `CellLayout`.
+- **Custom `IPathfinderSettings` implementations** must implement `CornerBlocking`, `GridSnapshotMode`, `CellLayout` and `TieBreaking`. To keep 1.2.1 behaviour, return `CornerBlocking.BetweenBlockedCells` (or `CornerBlocking.None` if your bool returned `true`), `GridSnapshotMode.PerQuery`, `CellLayout.ColumnMajor` (or `RowMajor`; see [Drop Coordinate from the cell](#61-drop-coordinate-from-the-cell)) and `TieBreaking.None`.
 - **`ScriptablePathfinderSettings` assets saved with 1.2.1:** the old bool is no longer read. An asset that had **Is Movement Between Corners Enabled** ticked must set **Corner Blocking** to `None` (`Nothing` in the Inspector's flags field). Every other asset already gets the default, `BetweenBlockedCells`.
 - **`Cell.Reset()` is removed.** Searches never write into cells, so there is nothing to reset.
 - **`PathResult.Success(path, length)` is removed.** Callers that build results themselves (custom caches, test doubles) pass the step counts: `Success(path, length, steps, diagonalSteps)`.
@@ -182,7 +182,7 @@ var result = PathResult.Success(path, length, steps: length, diagonalSteps: 0);
 // A custom IPathfinderSettings adds:
 public CornerBlocking CornerBlocking => CornerBlocking.BetweenBlockedCells;
 public GridSnapshotMode GridSnapshotMode => GridSnapshotMode.PerQuery;
-public CellLayout CellLayout => CellLayout.Auto;
+public CellLayout CellLayout => CellLayout.ColumnMajor;
 public TieBreaking TieBreaking => TieBreaking.None;
 ```
 
@@ -191,7 +191,7 @@ public TieBreaking TieBreaking => TieBreaking.None;
 - **What changed:**
   - `Coordinate` is a `readonly struct`: `X` and `Y` are get-only and set only by the constructor.
   - `IsInitialized` and `Reset()` are removed. `default(Coordinate)` is `(0,0)` and is the same value as `Coordinate.Zero` (they were already `==` in 1.2.1, but their `IsInitialized` differed).
-  - `Coordinate` is 8 bytes instead of 12, so `Cell` is 16 bytes and `PathResult` waypoint arrays are a third smaller.
+  - `Coordinate` is 8 bytes instead of 12, so `PathResult` waypoint arrays are a third smaller (and `Cell` drops it altogether; see [Drop Coordinate from the cell](#61-drop-coordinate-from-the-cell)).
 - **Who notices:** code that reads `IsInitialized` or calls `Reset()` (it no longer compiles), and code that assumes the size of `Coordinate` or `Cell` (unsafe code, binary serializers).
 - **What to do:** to mean "no coordinate", use `Coordinate?` or your own sentinel; to clear a coordinate, assign a new value.
 
@@ -257,9 +257,36 @@ public bool AreOccupiedCellsBlocking => true;
 
 #### #61 Drop Coordinate from the cell
 
-Drop Coordinate from the cell: a cell's position is its slot.
+- **What changed:**
+  - `Cell` has no `Coordinate`: it is `IsWalkable`, `IsOccupied` and `Weight`, 8 bytes (20 in 1.2.1). A cell's position is its slot in the grid:
+    - `Cell[,]` and `ICellHolder[,]`: the element `[x, y]`;
+    - `Cell[]` and `ICellHolder[]`: the index under `CellLayout`, `x * height + y` (`ColumnMajor`, the default) or `y * width + x` (`RowMajor`).
+  - Nothing is sorted, checked or placed by coordinate any more. In 1.2.1 every grid was placed by each cell's `Coordinate`: an array or matrix whose slots disagreed with the coordinates was silently moved, and two cells with the same coordinate left a slot holding whatever the pooled buffer held before.
+  - A `null` holder is a non-walkable cell. 1.2.1 skipped it, so its slot kept stale data from the pooled buffer. `GetCell` on it returns a `default` (non-walkable) cell.
+  - `CellLayout` keeps only `ColumnMajor = 1` (the default) and `RowMajor = 2`, and now also applies to `ICellHolder[]`. Any other value throws `ArgumentOutOfRangeException` when the pathfinder is created.
+  - An `ICellHolder[]` shorter than `width * height` throws `ArgumentException` when the pathfinder is created, like a `Cell[]`.
+  - `GetIndex` and `RangeResult.CopyCostsTo` always share one index space: the caller's layout for arrays, column-major for matrices. `GetIndex`, `GetCell` and the cell setters are O(1).
+  - Path coordinates, `ReachableCell.Coordinate` and `SearchNode.Coordinate` are computed from the slot. `GetCell(Coordinate)` and `SetCell(Coordinate, in Cell)` keep their signatures: the coordinate is the argument.
+- **Who notices:** every caller that builds cells (`Coordinate = ...` no longer compiles) or reads `cell.Coordinate`; callers whose array is not column-major, whose holders sit in slots other than their position, or whose holder grid has `null` holders or is shorter than the grid.
+- **What to do:**
+  - Delete `Coordinate = ...` from cell initializers; put each cell in its slot instead.
+  - A `y * width + x` array (1.2.1 sorted it): set `CellLayout = CellLayout.RowMajor`.
+  - An array in any other order (1.2.1 sorted it too): lay it out column- or row-major. An `ICellHolder[]` follows the same rule.
+  - `ScriptablePathfinderSettings` assets saved with 1.2.1 get `ColumnMajor`; pick `RowMajor` in the Inspector for a row-major grid.
+  - Code that read `cell.Coordinate` from `GetCell` or a holder already has the coordinate: it is the argument, or the slot.
 
-Pending: filled by #61.
+```csharp
+// 1.2.1
+cells[x, y] = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true };
+rowMajor[y * width + x] = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true };
+class Tile : ICellHolder { public Cell CellData => new Cell { Coordinate = _position, IsWalkable = _isOpen }; }
+
+// 2.0: the slot is the position
+cells[x, y] = new Cell { IsWalkable = true };
+rowMajor[y * width + x] = new Cell { IsWalkable = true };
+var pathfinder = new Pathfinder(rowMajor, width, height, new PathfinderSettings { CellLayout = CellLayout.RowMajor });
+class Tile : ICellHolder { public Cell CellData => new Cell { IsWalkable = _isOpen }; } // its array slot is its position
+```
 
 #### #62 Rename Cell to PathCell
 
@@ -270,12 +297,13 @@ Pending: filled by #62.
 ### Checklist
 
 1. Dispose every `PathResult`, `RangeResult` and `StepwiseSearch`, including path-cache hits.
-2. If you index a `Cell[]` grid yourself, declare its order with `CellLayout` or use `pathfinder.GetIndex`.
+2. Lay out a `Cell[]` or `ICellHolder[]` grid column-major, or row-major with `CellLayout = RowMajor`; `pathfinder.GetIndex` gives a cell's index.
 3. Regenerate any stored or asserted routes, smoothed paths or stepwise scores.
 4. Replace `IsMovementBetweenCornersEnabled` with `CornerBlocking`, including in `ScriptablePathfinderSettings` assets that had it ticked; delete `InitialBufferSize` and `Cell.Reset()` calls; pass step counts to `PathResult.Success`; add the four settings members to a custom `IPathfinderSettings`.
 5. Replace `Coordinate.IsInitialized` and `Coordinate.Reset()` with a `Coordinate?` (or your own sentinel).
 6. Pick a cost resolution and scale every cost to `int`: `StraightStepCost`/`DiagonalStepCost` (renamed from the multipliers), `Cell.Weight`, budgets, and the costs you read back. Re-enter the step costs on `ScriptablePathfinderSettings` assets.
 7. Replace every `IAgent` argument with its size as the third argument (`GetPath(from, to, agent.Size)`), drop `: IAgent` from your types, and key a custom `IPathCaching` on `int agentSize`.
 8. Rename `IsCalculatingOccupiedCells` to `AreOccupiedCellsBlocking`, including in custom `IPathfinderSettings` implementations.
+9. Delete `Cell.Coordinate` from cell initializers and reads; put every cell (and holder) in its slot: `[x, y]` in a matrix, column-major in an array, or row-major with `CellLayout = RowMajor`.
 
 Steps for the breaking changes are added as their entries are filled.

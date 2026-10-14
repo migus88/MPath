@@ -185,7 +185,7 @@ namespace Migs.MPath.Tests
             {
                 for (var y = 0; y < gridSize; y++)
                 {
-                    cells[x * gridSize + y] = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true };
+                    cells[x * gridSize + y] = new Cell { IsWalkable = true };
                 }
             }
 
@@ -225,7 +225,7 @@ namespace Migs.MPath.Tests
             public int DiagonalStepCost => Diagonal;
             public PathSmoothingMethod PathSmoothingMethod => PathSmoothingMethod.None;
             public GridSnapshotMode GridSnapshotMode => GridSnapshotMode.PerQuery;
-            public CellLayout CellLayout => CellLayout.Auto;
+            public CellLayout CellLayout => CellLayout.ColumnMajor;
             public TieBreaking TieBreaking => TieBreaking.None;
         }
     }

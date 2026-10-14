@@ -434,7 +434,6 @@ namespace Migs.MPath.Tests
                 {
                     cells[x, y] = new Cell
                     {
-                        Coordinate = new Coordinate(x, y),
                         IsWalkable = random.NextDouble() >= wallChance,
                         Weight = wallChance > 0 ? random.Next(3) * 100 : 0
                     };

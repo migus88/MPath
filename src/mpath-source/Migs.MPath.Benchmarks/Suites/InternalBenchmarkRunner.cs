@@ -24,7 +24,8 @@ public class InternalBenchmarkRunner : IDisposable
     {
         _pathfinder = new Pathfinder(_maze.Cells);
         _cellsArray = _maze.Cells.Cast<Cell>().ToArray();
-        _wallDestination = _cellsArray.First(cell => !cell.IsWalkable).Coordinate;
+        var wall = Array.FindIndex(_cellsArray, cell => !cell.IsWalkable);
+        _wallDestination = new Coordinate(wall / _maze.Height, wall % _maze.Height);
     }
 
     [Benchmark]

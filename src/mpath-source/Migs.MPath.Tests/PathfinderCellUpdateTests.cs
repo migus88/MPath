@@ -11,9 +11,9 @@ namespace Migs.MPath.Tests
     /// <summary>
     /// Pins the cell-update API (<see cref="Pathfinder.SetWalkable"/>, <see cref="Pathfinder.SetOccupied"/>,
     /// <see cref="Pathfinder.SetWeight"/>, <see cref="Pathfinder.SetCell"/>, <see cref="Pathfinder.GetCell"/>,
-    /// <see cref="Pathfinder.GetIndex"/>): updates reach the next query in the writable modes whatever the order of
-    /// the caller's array (row-major, column-major or shuffled), land in the caller's own grid, and are rejected in
-    /// the holder modes.
+    /// <see cref="Pathfinder.GetIndex"/>): updates reach the next query in the writable modes whatever the layout of
+    /// the caller's array (row-major or column-major), land in the caller's own grid, and are rejected in the holder
+    /// modes.
     /// </summary>
     [TestFixture]
     public class PathfinderCellUpdateTests
@@ -29,7 +29,6 @@ namespace Migs.MPath.Tests
         {
             RowMajorArray,
             ColumnMajorArray,
-            ShuffledArray,
             Matrix,
             HolderArray,
             HolderMatrix
@@ -37,7 +36,6 @@ namespace Migs.MPath.Tests
 
         [TestCase(Mode.RowMajorArray)]
         [TestCase(Mode.ColumnMajorArray)]
-        [TestCase(Mode.ShuffledArray)]
         [TestCase(Mode.Matrix)]
         public void SetWalkable_BlockingAColumn_BlocksTheNextPathAndReachableQuery(Mode mode)
         {
@@ -59,7 +57,6 @@ namespace Migs.MPath.Tests
         }
 
         [TestCase(Mode.RowMajorArray)]
-        [TestCase(Mode.ShuffledArray)]
         [TestCase(Mode.Matrix)]
         public void SetWalkable_AfterAQuery_IsSeenByTheNextQuery(Mode mode)
         {
@@ -111,7 +108,7 @@ namespace Migs.MPath.Tests
         {
             // Arrange
             var settings = new PathfinderSettings { AreOccupiedCellsBlocking = areOccupiedCellsBlocking };
-            using var pathfinder = new Pathfinder(CreateRowMajorArray(), Width, Height, settings);
+            using var pathfinder = new Pathfinder(CreateOpenArray(), Width, Height, settings);
 
             // Act
             for (var y = 0; y < Height; y++)
@@ -146,18 +143,17 @@ namespace Migs.MPath.Tests
         }
 
         [Test]
-        public void SetCell_CopiesTheUserFieldsAndKeepsTheCoordinate()
+        public void SetCell_CopiesTheUserFieldsIntoThatCellOnly()
         {
             // Arrange
             using var pathfinder = new Pathfinder(CreateMatrix());
             var target = new Coordinate(3, 2);
 
             // Act
-            pathfinder.SetCell(target, new Cell { Coordinate = new Coordinate(0, 0), IsOccupied = true, Weight = 400 });
+            pathfinder.SetCell(target, new Cell { IsOccupied = true, Weight = 400 });
 
             // Assert
             var cell = pathfinder.GetCell(target);
-            cell.Coordinate.Should().Be(target);
             cell.IsWalkable.Should().BeFalse();
             cell.IsOccupied.Should().BeTrue();
             cell.Weight.Should().Be(400);
@@ -168,8 +164,8 @@ namespace Migs.MPath.Tests
         public void SetOccupied_InArrayMode_IsVisibleInTheCallersArrayAtGetIndex()
         {
             // Arrange
-            var cells = CreateRowMajorArray();
-            using var pathfinder = new Pathfinder(cells, Width, Height);
+            var cells = CreateOpenArray();
+            using var pathfinder = new Pathfinder(cells, Width, Height, RowMajor);
             using (pathfinder.GetPath(Start, End))
             {
             }
@@ -181,24 +177,23 @@ namespace Migs.MPath.Tests
 
             // Assert
             var index = pathfinder.GetIndex(target);
-            cells[index].Coordinate.Should().Be(target);
+            index.Should().Be(target.Y * Width + target.X);
             cells[index].IsOccupied.Should().BeTrue();
+            cells.Count(c => c.IsOccupied).Should().Be(1);
         }
 
         [Test]
-        public void SetWalkable_OnARowMajorArray_UpdatesTheCellWithoutReorderingTheArray()
+        public void SetWalkable_OnARowMajorArray_UpdatesTheCellAtItsRowMajorIndex()
         {
             // Arrange
-            var cells = CreateRowMajorArray();
-            var order = cells.Select(c => c.Coordinate).ToArray();
-            using var pathfinder = new Pathfinder(cells, Width, Height);
+            var cells = CreateOpenArray();
+            using var pathfinder = new Pathfinder(cells, Width, Height, RowMajor);
             var target = new Coordinate(3, 2);
 
             // Act
             pathfinder.SetWalkable(target, false);
 
             // Assert
-            cells.Select(c => c.Coordinate).Should().Equal(order);
             cells[target.Y * Width + target.X].IsWalkable.Should().BeFalse();
             cells.Count(c => !c.IsWalkable).Should().Be(1);
         }
@@ -230,7 +225,7 @@ namespace Migs.MPath.Tests
             // Act
             if (holders != null)
             {
-                holders.Single(h => h.CellData.Coordinate == target).IsOccupied = true;
+                holders[target.X, target.Y].IsOccupied = true;
             }
             else if (cells != null)
             {
@@ -242,9 +237,7 @@ namespace Migs.MPath.Tests
             }
 
             // Assert
-            var cell = pathfinder.GetCell(target);
-            cell.Coordinate.Should().Be(target);
-            cell.IsOccupied.Should().BeTrue();
+            pathfinder.GetCell(target).IsOccupied.Should().BeTrue();
         }
 
         [Test]
@@ -258,21 +251,6 @@ namespace Migs.MPath.Tests
 
             // Assert
             index.Should().Be(3 * Height + 2);
-        }
-
-        [Test]
-        public void SetWalkable_WhenTheArrayHasNoSuchCell_ThrowsInvalidOperationException()
-        {
-            // Arrange
-            var cells = CreateRowMajorArray();
-            cells[cells.Length - 1].Coordinate = new Coordinate(0, 0);
-            using var pathfinder = new Pathfinder(cells, Width, Height);
-
-            // Act
-            var action = () => pathfinder.SetWalkable(new Coordinate(Width - 1, Height - 1), false);
-
-            // Assert
-            action.Should().Throw<InvalidOperationException>();
         }
 
         [TestCase(Mode.ColumnMajorArray)]
@@ -337,51 +315,63 @@ namespace Migs.MPath.Tests
             action.Should().Throw<ArgumentException>();
         }
 
-        private static Pathfinder Create(Mode mode, out Cell[] cells, out List<Holder> holders)
+        private static readonly PathfinderSettings RowMajor = new PathfinderSettings
         {
-            cells = null;
-            holders = null;
+            CellLayout = CellLayout.RowMajor
+        };
+
+        private static Pathfinder Create(Mode mode, out Cell[] cells, out Holder[,] holders)
+        {
+            cells = null!;
+            holders = null!;
 
             switch (mode)
             {
                 case Mode.RowMajorArray:
-                    cells = CreateRowMajorArray();
-                    return new Pathfinder(cells, Width, Height);
-                case Mode.ShuffledArray:
-                    var shuffled = CreateRowMajorArray().OrderBy(c => (c.Coordinate.X * 7 + c.Coordinate.Y * 3) % 5)
-                        .ThenByDescending(c => c.Coordinate.Y).ToArray();
-                    return new Pathfinder(shuffled, Width, Height);
+                    cells = CreateOpenArray();
+                    return new Pathfinder(cells, Width, Height, RowMajor);
                 case Mode.ColumnMajorArray:
-                    var ordered = CreateRowMajorArray().OrderBy(c => c.Coordinate.X).ThenBy(c => c.Coordinate.Y).ToArray();
-                    return new Pathfinder(ordered, Width, Height);
+                    return new Pathfinder(CreateOpenArray(), Width, Height);
                 case Mode.Matrix:
                     return new Pathfinder(CreateMatrix());
                 case Mode.HolderArray:
-                    holders = CreateRowMajorArray().Select(c => new Holder(c)).ToList();
-                    return new Pathfinder(holders.Cast<ICellHolder>().ToArray(), Width, Height);
-                default:
-                    holders = new List<Holder>();
-                    var holderMatrix = new ICellHolder[Width, Height];
-                    foreach (var cell in CreateRowMajorArray())
+                    holders = CreateHolders();
+                    var holderArray = new ICellHolder[Width * Height];
+                    for (var x = 0; x < Width; x++)
                     {
-                        var holder = new Holder(cell);
-                        holders.Add(holder);
-                        holderMatrix[cell.Coordinate.X, cell.Coordinate.Y] = holder;
+                        for (var y = 0; y < Height; y++)
+                        {
+                            holderArray[x * Height + y] = holders[x, y];
+                        }
                     }
 
-                    return new Pathfinder(holderMatrix);
+                    return new Pathfinder(holderArray, Width, Height);
+                default:
+                    holders = CreateHolders();
+                    return new Pathfinder((ICellHolder[,])holders);
             }
         }
 
-        private static Cell[] CreateRowMajorArray()
+        private static Holder[,] CreateHolders()
+        {
+            var holders = new Holder[Width, Height];
+            for (var x = 0; x < Width; x++)
+            {
+                for (var y = 0; y < Height; y++)
+                {
+                    holders[x, y] = new Holder(new Cell { IsWalkable = true });
+                }
+            }
+
+            return holders;
+        }
+
+        private static Cell[] CreateOpenArray()
         {
             var cells = new Cell[Width * Height];
-            for (var y = 0; y < Height; y++)
+            for (var i = 0; i < cells.Length; i++)
             {
-                for (var x = 0; x < Width; x++)
-                {
-                    cells[y * Width + x] = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true };
-                }
+                cells[i] = new Cell { IsWalkable = true };
             }
 
             return cells;
@@ -394,7 +384,7 @@ namespace Migs.MPath.Tests
             {
                 for (var y = 0; y < Height; y++)
                 {
-                    matrix[x, y] = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true };
+                    matrix[x, y] = new Cell { IsWalkable = true };
                 }
             }
 

@@ -4,14 +4,17 @@ using System.Linq;
 using FluentAssertions;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
+using Migs.MPath.Core.Interfaces;
 
 namespace Migs.MPath.Tests
 {
     /// <summary>
-    /// Pins <see cref="CellLayout"/>: a <see cref="Cell"/>[] array in column-major, row-major or any order gives the
-    /// same results as the matching <see cref="Cell"/>[,] matrix, queries never reorder or write the caller's array,
-    /// direct edits reach the next query (in place, or through the snapshot of an unordered array), a declared layout
-    /// is checked, and <see cref="Pathfinder.GetIndex"/> follows the layout.
+    /// Pins that a cell's slot is its position: every grid representation (a column- or row-major <see cref="Cell"/>[]
+    /// or <see cref="ICellHolder"/>[] under <see cref="CellLayout"/>, a <see cref="Cell"/>[,] or
+    /// <see cref="ICellHolder"/>[,] at <c>[x, y]</c>) gives the same results, every coordinate a query reports is the
+    /// slot it came from, a <c>null</c> holder is a wall whatever the pooled buffer held, queries never write the
+    /// caller's array, and <see cref="Pathfinder.GetIndex"/> and <see cref="RangeResult.CopyCostsTo"/> share one index
+    /// space.
     /// </summary>
     [TestFixture]
     public class PathfinderCellLayoutTests
@@ -21,31 +24,28 @@ namespace Migs.MPath.Tests
         private const int Seed = 42;
         private const float WallRatio = 0.25f;
 
-        public enum Order
+        public enum Representation
         {
-            ColumnMajor,
-            RowMajor,
-            Shuffled
+            ColumnMajorArray,
+            RowMajorArray,
+            ColumnMajorHolders,
+            RowMajorHolders,
+            Matrix,
+            HolderMatrix
         }
 
-        public static IEnumerable<TestCaseData> MatchingLayouts()
+        public static IEnumerable<Representation> Representations()
         {
-            yield return new TestCaseData(Order.ColumnMajor, CellLayout.Auto);
-            yield return new TestCaseData(Order.RowMajor, CellLayout.Auto);
-            yield return new TestCaseData(Order.Shuffled, CellLayout.Auto);
-            yield return new TestCaseData(Order.ColumnMajor, CellLayout.ColumnMajor);
-            yield return new TestCaseData(Order.RowMajor, CellLayout.RowMajor);
-            yield return new TestCaseData(Order.Shuffled, CellLayout.Unordered);
-            yield return new TestCaseData(Order.RowMajor, CellLayout.Unordered);
+            return Enum.GetValues(typeof(Representation)).Cast<Representation>();
         }
 
-        [TestCaseSource(nameof(MatchingLayouts))]
-        public void Queries_OnAnArray_MatchTheMatrix(Order order, CellLayout layout)
+        [TestCaseSource(nameof(Representations))]
+        public void Queries_OnEveryRepresentation_MatchTheColumnMajorArray(Representation representation)
         {
             // Arrange
             var matrix = CreateRandomMatrix();
-            using var reference = new Pathfinder(matrix);
-            using var pathfinder = new Pathfinder(ToArray(matrix, order), Width, Height, Settings(layout));
+            using var reference = new Pathfinder(ToArray(matrix, CellLayout.ColumnMajor), Width, Height);
+            using var pathfinder = Create(matrix, representation);
             var random = new Random(Seed);
 
             for (var i = 0; i < 40; i++)
@@ -67,11 +67,82 @@ namespace Migs.MPath.Tests
             }
         }
 
-        [TestCaseSource(nameof(MatchingLayouts))]
-        public void Queries_NeverChangeTheCallersArray(Order order, CellLayout layout)
+        [TestCaseSource(nameof(Representations))]
+        public void Queries_ReportTheCoordinatesOfTheSlotsTheyCameFrom(Representation representation)
+        {
+            // Arrange: only a cross is walkable (row y = 2 and column x = 3), so a transposed slot would be off it.
+            var matrix = new Cell[Width, Height];
+            var cross = new HashSet<Coordinate>();
+
+            for (var x = 0; x < Width; x++)
+            {
+                for (var y = 0; y < Height; y++)
+                {
+                    if (y == 2 || x == 3)
+                    {
+                        matrix[x, y].IsWalkable = true;
+                        cross.Add(new Coordinate(x, y));
+                    }
+                }
+            }
+
+            using var pathfinder = Create(matrix, representation);
+            var from = new Coordinate(Width - 1, 2);
+            var to = new Coordinate(3, Height - 1);
+
+            // Act
+            using var path = pathfinder.GetPath(from, to);
+            using var range = pathfinder.GetReachable(from, int.MaxValue);
+            SearchStep step;
+            using (var search = pathfinder.BeginStepwiseSearch(from, to))
+            {
+                step = search.RunToCompletion();
+            }
+
+            // Assert
+            path.IsSuccess.Should().BeTrue();
+            path.Path.Last().Should().Be(to);
+            path.Path.Should().OnlyContain(c => cross.Contains(c));
+            range.Cells.Select(c => c.Coordinate).Should().BeEquivalentTo(cross);
+            step.State.Should().Be(SearchState.Success);
+            step.Path.Should().Equal(path.Path);
+            step.Searched.Select(n => n.Coordinate).Should().OnlyContain(c => cross.Contains(c));
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void NullHolder_AfterTheCellPoolHeldWalkableCells_IsAWall(bool isMatrix)
+        {
+            // Arrange: a fully walkable matrix pathfinder fills a pooled cell buffer of the same size and returns it.
+            var open = CreateOpenMatrix();
+            using (var dirty = new Pathfinder(open))
+            using (dirty.GetPath(new Coordinate(0, 0), new Coordinate(1, 0)))
+            {
+            }
+
+            var wall = new Coordinate(4, 0);
+            var holders = ToHolderMatrix(open);
+            holders[wall.X, wall.Y] = null!;
+
+            using var pathfinder = isMatrix
+                ? new Pathfinder(holders)
+                : new Pathfinder(ToHolderArray(holders, CellLayout.ColumnMajor), Width, Height);
+
+            // Act
+            using var range = pathfinder.GetReachable(new Coordinate(0, 0), int.MaxValue);
+
+            // Assert
+            range.Contains(wall).Should().BeFalse();
+            range.Length.Should().Be(Width * Height - 1);
+            pathfinder.GetCell(wall).IsWalkable.Should().BeFalse();
+        }
+
+        [TestCase(CellLayout.ColumnMajor)]
+        [TestCase(CellLayout.RowMajor)]
+        public void Queries_NeverChangeTheCallersArray(CellLayout layout)
         {
             // Arrange
-            var cells = ToArray(CreateRandomMatrix(), order);
+            var cells = ToArray(CreateRandomMatrix(), layout);
             var before = (Cell[])cells.Clone();
             using var pathfinder = new Pathfinder(cells, Width, Height, Settings(layout));
             var from = new Coordinate(0, 0);
@@ -90,244 +161,104 @@ namespace Migs.MPath.Tests
             cells.Should().Equal(before);
         }
 
-        [TestCase(Order.ColumnMajor)]
-        [TestCase(Order.RowMajor)]
-        [TestCase(Order.Shuffled)]
-        public void DirectEdit_BetweenQueries_IsSeenByTheNextQuery(Order order)
+        [TestCase(CellLayout.ColumnMajor)]
+        [TestCase(CellLayout.RowMajor)]
+        public void DirectEdit_BetweenQueries_IsSeenByTheNextQuery(CellLayout layout)
         {
             // Arrange
-            var cells = ToArray(CreateOpenMatrix(), order);
-            using var pathfinder = new Pathfinder(cells, Width, Height);
-            var from = new Coordinate(0, 0);
-            var to = new Coordinate(Width - 1, 0);
-
-            using (pathfinder.GetPath(from, to))
-            {
-            }
-
-            // Act
-            cells[IndexOf(cells, to)].IsWalkable = false;
-
-            // Assert
-            using var result = pathfinder.GetPath(from, to);
-            result.IsSuccess.Should().BeFalse();
-        }
-
-        [Test]
-        public void UnorderedManualSnapshot_DirectEdit_IsSeenOnlyAfterRefresh()
-        {
-            // Arrange
-            var cells = ToArray(CreateOpenMatrix(), Order.Shuffled);
-            using var pathfinder = new Pathfinder(cells, Width, Height, new PathfinderSettings
-            {
-                GridSnapshotMode = GridSnapshotMode.Manual
-            });
-            var from = new Coordinate(0, 0);
-            var to = new Coordinate(Width - 1, 0);
-
-            using (pathfinder.GetPath(from, to))
-            {
-            }
-
-            cells[IndexOf(cells, to)].IsWalkable = false;
-
-            // Act
-            bool isSuccessBeforeRefresh;
-            using (var result = pathfinder.GetPath(from, to))
-            {
-                isSuccessBeforeRefresh = result.IsSuccess;
-            }
-
-            pathfinder.Refresh();
-
-            bool isSuccessAfterRefresh;
-            using (var result = pathfinder.GetPath(from, to))
-            {
-                isSuccessAfterRefresh = result.IsSuccess;
-            }
-
-            // Assert
-            isSuccessBeforeRefresh.Should().BeTrue();
-            isSuccessAfterRefresh.Should().BeFalse();
-        }
-
-        [Test]
-        public void UnorderedManualSnapshot_SetWalkable_WritesTheArrayAndTheNextQuery()
-        {
-            // Arrange
-            var cells = ToArray(CreateOpenMatrix(), Order.Shuffled);
-            using var pathfinder = new Pathfinder(cells, Width, Height, new PathfinderSettings
-            {
-                GridSnapshotMode = GridSnapshotMode.Manual
-            });
-            var from = new Coordinate(0, 0);
-            var to = new Coordinate(Width - 1, 0);
-
-            using (pathfinder.GetPath(from, to))
-            {
-            }
-
-            // Act
-            pathfinder.SetWalkable(to, false);
-
-            // Assert
-            using var result = pathfinder.GetPath(from, to);
-            result.IsSuccess.Should().BeFalse();
-            cells[IndexOf(cells, to)].IsWalkable.Should().BeFalse();
-        }
-
-        [Test]
-        public void AutoLayout_ArrayReorderedAndRefreshed_IsDetectedAgain()
-        {
-            // Arrange
-            var matrix = CreateRandomMatrix();
-            var cells = ToArray(matrix, Order.RowMajor);
-            using var reference = new Pathfinder(matrix);
-            using var pathfinder = new Pathfinder(cells, Width, Height);
-            var from = new Coordinate(0, 0);
-            var to = new Coordinate(Width - 1, Height - 1);
-
-            using (pathfinder.GetPath(from, to))
-            {
-            }
-
-            ToArray(matrix, Order.Shuffled).CopyTo(cells, 0);
-
-            // Act
-            pathfinder.Refresh();
-            using var result = pathfinder.GetPath(from, to);
-
-            // Assert
-            using var expected = reference.GetPath(from, to);
-            result.Path.Should().Equal(expected.Path);
-        }
-
-        [TestCase(Order.RowMajor, CellLayout.ColumnMajor)]
-        [TestCase(Order.ColumnMajor, CellLayout.RowMajor)]
-        [TestCase(Order.Shuffled, CellLayout.RowMajor)]
-        public void DeclaredLayout_ArrayInAnotherOrder_ThrowsOnTheFirstQuery(Order order, CellLayout layout)
-        {
-            // Arrange
-            var cells = ToArray(CreateOpenMatrix(), order);
+            var cells = ToArray(CreateOpenMatrix(), layout);
             using var pathfinder = new Pathfinder(cells, Width, Height, Settings(layout));
+            var from = new Coordinate(0, 0);
+            var to = new Coordinate(Width - 1, 0);
+
+            using (pathfinder.GetPath(from, to))
+            {
+            }
 
             // Act
-            var action = () => pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(1, 0));
+            cells[pathfinder.GetIndex(to)].IsWalkable = false;
 
             // Assert
-            action.Should().Throw<InvalidOperationException>();
+            using var result = pathfinder.GetPath(from, to);
+            result.IsSuccess.Should().BeFalse();
         }
 
-        [Test]
-        public void GetIndex_DeclaredRowMajor_IsTheRowMajorIndexBeforeAnyQuery()
+        [TestCase(CellLayout.ColumnMajor, 3 * Height + 2)]
+        [TestCase(CellLayout.RowMajor, 2 * Width + 3)]
+        public void GetIndex_IsTheIndexUnderTheDeclaredLayout(CellLayout layout, int expected)
         {
             // Arrange
-            var cells = ToArray(CreateOpenMatrix(), Order.RowMajor);
-            using var pathfinder = new Pathfinder(cells, Width, Height, Settings(CellLayout.RowMajor));
+            using var pathfinder = new Pathfinder(ToArray(CreateOpenMatrix(), layout), Width, Height,
+                Settings(layout));
 
             // Act
             var index = pathfinder.GetIndex(new Coordinate(3, 2));
 
             // Assert
-            index.Should().Be(2 * Width + 3);
+            index.Should().Be(expected);
         }
 
-        [Test]
-        public void GetIndex_AutoRowMajor_IsTheRowMajorIndexAfterTheFirstQuery()
+        [TestCase(Representation.RowMajorArray)]
+        [TestCase(Representation.RowMajorHolders)]
+        [TestCase(Representation.ColumnMajorArray)]
+        [TestCase(Representation.HolderMatrix)]
+        public void CopyCostsTo_WritesEachCostAtGetIndexOfItsCell(Representation representation)
         {
             // Arrange
-            var cells = ToArray(CreateOpenMatrix(), Order.RowMajor);
-            using var pathfinder = new Pathfinder(cells, Width, Height);
+            using var pathfinder = Create(CreateRandomMatrix(), representation);
+            using var range = pathfinder.GetReachable(new Coordinate(0, 0), 600);
+            var costs = new int[Width * Height];
 
-            using (pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(1, 0)))
+            // Act
+            range.CopyCostsTo(costs);
+
+            // Assert
+            range.Length.Should().BeGreaterThan(1);
+            var expected = Enumerable.Repeat(-1, costs.Length).ToArray();
+            foreach (var cell in range)
             {
+                expected[pathfinder.GetIndex(cell.Coordinate)] = cell.Cost;
             }
 
-            // Act
-            var index = pathfinder.GetIndex(new Coordinate(3, 2));
-
-            // Assert
-            index.Should().Be(2 * Width + 3);
+            costs.Should().Equal(expected);
         }
 
-        [TestCase(false)]
-        [TestCase(true)]
-        public void GetIndex_Unordered_IsTheCellsIndexInTheCallersArray(bool afterAQuery)
+        [TestCase(0)]
+        [TestCase(3)]
+        [TestCase(-1)]
+        public void Constructor_WithALayoutOtherThanColumnOrRowMajor_ThrowsArgumentOutOfRange(int layout)
         {
             // Arrange
-            var cells = ToArray(CreateOpenMatrix(), Order.Shuffled);
-            using var pathfinder = new Pathfinder(cells, Width, Height, Settings(CellLayout.Unordered));
-            var target = new Coordinate(3, 2);
-
-            if (afterAQuery)
-            {
-                using (pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(1, 0)))
-                {
-                }
-            }
+            var settings = Settings((CellLayout)layout);
 
             // Act
-            var index = pathfinder.GetIndex(target);
+            var array = () => new Pathfinder(new Cell[Width * Height], Width, Height, settings);
+            var matrix = () => new Pathfinder(new Cell[Width, Height], settings);
 
             // Assert
-            cells[index].Coordinate.Should().Be(target);
-        }
-
-        [Test]
-        public void Unordered_ArrayWithoutACell_TreatsTheMissingCellAsAWall()
-        {
-            // Arrange
-            var cells = ToArray(CreateOpenMatrix(), Order.Shuffled);
-            var missing = new Coordinate(4, 0);
-            cells[IndexOf(cells, missing)].Coordinate = new Coordinate(0, 0);
-            using var pathfinder = new Pathfinder(cells, Width, Height);
-
-            // Act
-            using var result = pathfinder.GetReachable(new Coordinate(0, 0), 10000);
-
-            // Assert
-            result.Contains(missing).Should().BeFalse();
-            result.Contains(new Coordinate(5, 0)).Should().BeTrue();
-        }
-
-        [Test]
-        public void Unordered_CellOutsideTheGrid_ThrowsOnTheQuery()
-        {
-            // Arrange
-            var cells = ToArray(CreateOpenMatrix(), Order.Shuffled);
-            cells[3].Coordinate = new Coordinate(Width, 0);
-            using var pathfinder = new Pathfinder(cells, Width, Height);
-
-            // Act
-            var action = () => pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(1, 0));
-
-            // Assert
-            action.Should().Throw<InvalidOperationException>();
+            array.Should().Throw<ArgumentOutOfRangeException>();
+            matrix.Should().Throw<ArgumentOutOfRangeException>();
         }
 
         [Test]
         public void Constructor_ArrayShorterThanTheField_ThrowsArgumentException()
         {
-            // Arrange
-            var cells = new Cell[Width * Height - 1];
-
             // Act
-            var action = () => new Pathfinder(cells, Width, Height);
+            var cells = () => new Pathfinder(new Cell[Width * Height - 1], Width, Height);
+            var holders = () => new Pathfinder(new ICellHolder[Width * Height - 1], Width, Height);
 
             // Assert
-            action.Should().Throw<ArgumentException>();
+            cells.Should().Throw<ArgumentException>();
+            holders.Should().Throw<ArgumentException>();
         }
 
-        [TestCase(Order.RowMajor, GridSnapshotMode.PerQuery)]
-        [TestCase(Order.ColumnMajor, GridSnapshotMode.PerQuery)]
-        [TestCase(Order.Shuffled, GridSnapshotMode.PerQuery)]
-        [TestCase(Order.Shuffled, GridSnapshotMode.Manual)]
-        public void GetPath_OnAnArray_AllocatesOnlyTheResult(Order order, GridSnapshotMode snapshotMode)
+        [TestCase(CellLayout.ColumnMajor)]
+        [TestCase(CellLayout.RowMajor)]
+        public void GetPath_OnAnArray_AllocatesOnlyTheResult(CellLayout layout)
         {
             // Arrange
-            var cells = ToArray(CreateOpenMatrix(), order);
-            using var pathfinder = new Pathfinder(cells, Width, Height,
-                new PathfinderSettings { GridSnapshotMode = snapshotMode });
+            var cells = ToArray(CreateOpenMatrix(), layout);
+            using var pathfinder = new Pathfinder(cells, Width, Height, Settings(layout));
             var from = new Coordinate(0, 0);
             var to = new Coordinate(Width - 1, Height - 1);
 
@@ -351,6 +282,28 @@ namespace Migs.MPath.Tests
             allocated.Should().BeLessThan(100 * 64);
         }
 
+        private static Pathfinder Create(Cell[,] matrix, Representation representation)
+        {
+            switch (representation)
+            {
+                case Representation.ColumnMajorArray:
+                    return new Pathfinder(ToArray(matrix, CellLayout.ColumnMajor), Width, Height);
+                case Representation.RowMajorArray:
+                    return new Pathfinder(ToArray(matrix, CellLayout.RowMajor), Width, Height,
+                        Settings(CellLayout.RowMajor));
+                case Representation.ColumnMajorHolders:
+                    return new Pathfinder(ToHolderArray(ToHolderMatrix(matrix), CellLayout.ColumnMajor), Width,
+                        Height);
+                case Representation.RowMajorHolders:
+                    return new Pathfinder(ToHolderArray(ToHolderMatrix(matrix), CellLayout.RowMajor), Width, Height,
+                        Settings(CellLayout.RowMajor));
+                case Representation.Matrix:
+                    return new Pathfinder(matrix);
+                default:
+                    return new Pathfinder(ToHolderMatrix(matrix));
+            }
+        }
+
         private static PathfinderSettings Settings(CellLayout layout)
         {
             return new PathfinderSettings { CellLayout = layout };
@@ -368,12 +321,12 @@ namespace Migs.MPath.Tests
             return list.OrderBy(c => c.Coordinate.X).ThenBy(c => c.Coordinate.Y).ToList();
         }
 
-        private static int IndexOf(Cell[] cells, Coordinate coordinate)
+        private static int GetIndex(int x, int y, CellLayout layout)
         {
-            return Array.FindIndex(cells, c => c.Coordinate == coordinate);
+            return layout == CellLayout.RowMajor ? y * Width + x : x * Height + y;
         }
 
-        private static Cell[] ToArray(Cell[,] matrix, Order order)
+        private static Cell[] ToArray(Cell[,] matrix, CellLayout layout)
         {
             var cells = new Cell[Width * Height];
 
@@ -381,22 +334,41 @@ namespace Migs.MPath.Tests
             {
                 for (var y = 0; y < Height; y++)
                 {
-                    cells[order == Order.RowMajor ? y * Width + x : x * Height + y] = matrix[x, y];
-                }
-            }
-
-            if (order == Order.Shuffled)
-            {
-                var random = new Random(Seed);
-
-                for (var i = cells.Length - 1; i > 0; i--)
-                {
-                    var j = random.Next(i + 1);
-                    (cells[i], cells[j]) = (cells[j], cells[i]);
+                    cells[GetIndex(x, y, layout)] = matrix[x, y];
                 }
             }
 
             return cells;
+        }
+
+        private static ICellHolder[,] ToHolderMatrix(Cell[,] matrix)
+        {
+            var holders = new ICellHolder[Width, Height];
+
+            for (var x = 0; x < Width; x++)
+            {
+                for (var y = 0; y < Height; y++)
+                {
+                    holders[x, y] = new Holder { CellData = matrix[x, y] };
+                }
+            }
+
+            return holders;
+        }
+
+        private static ICellHolder[] ToHolderArray(ICellHolder[,] matrix, CellLayout layout)
+        {
+            var holders = new ICellHolder[Width * Height];
+
+            for (var x = 0; x < Width; x++)
+            {
+                for (var y = 0; y < Height; y++)
+                {
+                    holders[GetIndex(x, y, layout)] = matrix[x, y];
+                }
+            }
+
+            return holders;
         }
 
         private static Cell[,] CreateOpenMatrix()
@@ -407,7 +379,7 @@ namespace Migs.MPath.Tests
             {
                 for (var y = 0; y < Height; y++)
                 {
-                    matrix[x, y] = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true };
+                    matrix[x, y] = new Cell { IsWalkable = true };
                 }
             }
 
@@ -432,6 +404,11 @@ namespace Migs.MPath.Tests
             matrix[Width - 1, Height - 1].IsWalkable = true;
 
             return matrix;
+        }
+
+        private sealed class Holder : ICellHolder
+        {
+            public Cell CellData { get; set; }
         }
     }
 }

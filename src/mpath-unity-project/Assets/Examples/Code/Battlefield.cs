@@ -16,7 +16,7 @@ namespace Migs.Mpath.Examples
         
         public Pathfinder Pathfinder { get; private set; }
         
-        public event Action<Cell> CellClicked;
+        public event Action<Coordinate> CellClicked;
 
         [SerializeField] private ScriptablePathfinderSettings _settings;
         [SerializeField] private Player _player;
@@ -69,7 +69,7 @@ namespace Migs.Mpath.Examples
 
         private int GetFieldIndex(int column, int row)
         {
-            var index = row * _fieldSize.x + column;
+            var index = column * _fieldSize.y + row;
                 
             if (index >= _fieldCells.Length || row < 0 || column < 0)
             {
@@ -87,7 +87,7 @@ namespace Migs.Mpath.Examples
 
         private void OnCellClicked(FieldCell clickedCell)
         {
-            CellClicked?.Invoke(clickedCell.CellData);
+            CellClicked?.Invoke(new Coordinate(clickedCell.Position.x, clickedCell.Position.y));
         }  
 
         private void OnDestroy()

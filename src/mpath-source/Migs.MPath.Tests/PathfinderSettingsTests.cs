@@ -23,7 +23,7 @@ namespace Migs.MPath.Tests
             settings.DiagonalStepCost.Should().Be(141);
             settings.PathSmoothingMethod.Should().Be(PathSmoothingMethod.None);
             settings.GridSnapshotMode.Should().Be(GridSnapshotMode.PerQuery);
-            settings.CellLayout.Should().Be(CellLayout.Auto);
+            settings.CellLayout.Should().Be(CellLayout.ColumnMajor);
             settings.TieBreaking.Should().Be(TieBreaking.None);
         }
         

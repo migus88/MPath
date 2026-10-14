@@ -7,15 +7,13 @@ namespace Migs.MPath.Benchmarks.Suites;
 /// <summary>
 /// A 2-step <see cref="Pathfinder.GetPath(Coordinate, Coordinate, int)"/> and <see cref="Pathfinder.GetReachable(Coordinate, int, int)"/>
 /// near the corner of an open 256x256 grid, with the grid handed over as a <see cref="Cell"/>[,] matrix or as a
-/// <see cref="Cell"/>[] array in column-major, row-major or shuffled order, under default settings. The search touches
+/// <see cref="Cell"/>[] array in column-major or row-major order (declared through <see cref="CellLayout"/>). The search touches
 /// a handful of cells, so what is left is the per-query cost of preparing the grid.
 /// </summary>
 [MemoryDiagnoser]
 public class ArrayLayoutBenchmarkRunner : IDisposable
 {
     private const int GridSize = 256;
-    private const int Seed = 1234;
-
     private Pathfinder _pathfinder;
 
     public enum GridKind
@@ -23,10 +21,9 @@ public class ArrayLayoutBenchmarkRunner : IDisposable
         Matrix,
         ArrayColumnMajor,
         ArrayRowMajor,
-        ArrayShuffled,
     }
 
-    [Params(GridKind.Matrix, GridKind.ArrayColumnMajor, GridKind.ArrayRowMajor, GridKind.ArrayShuffled)]
+    [Params(GridKind.Matrix, GridKind.ArrayColumnMajor, GridKind.ArrayRowMajor)]
     public GridKind Grid { get; set; }
 
     [Params(GridSnapshotMode.PerQuery, GridSnapshotMode.Manual)]
@@ -35,7 +32,11 @@ public class ArrayLayoutBenchmarkRunner : IDisposable
     [GlobalSetup]
     public void Setup()
     {
-        var settings = new PathfinderSettings { GridSnapshotMode = SnapshotMode };
+        var settings = new PathfinderSettings
+        {
+            GridSnapshotMode = SnapshotMode,
+            CellLayout = Grid == GridKind.ArrayRowMajor ? CellLayout.RowMajor : CellLayout.ColumnMajor
+        };
 
         _pathfinder = Grid == GridKind.Matrix
             ? new Pathfinder(CreateMatrix(), settings)
@@ -69,7 +70,7 @@ public class ArrayLayoutBenchmarkRunner : IDisposable
         {
             for (var y = 0; y < GridSize; y++)
             {
-                cells[x, y] = CreateCell(x, y);
+                cells[x, y] = new Cell { IsWalkable = true };
             }
         }
 
@@ -85,26 +86,10 @@ public class ArrayLayoutBenchmarkRunner : IDisposable
             for (var y = 0; y < GridSize; y++)
             {
                 var index = kind == GridKind.ArrayRowMajor ? y * GridSize + x : x * GridSize + y;
-                cells[index] = CreateCell(x, y);
-            }
-        }
-
-        if (kind == GridKind.ArrayShuffled)
-        {
-            var random = new Random(Seed);
-
-            for (var i = cells.Length - 1; i > 0; i--)
-            {
-                var j = random.Next(i + 1);
-                (cells[i], cells[j]) = (cells[j], cells[i]);
+                cells[index] = new Cell { IsWalkable = true };
             }
         }
 
         return cells;
-    }
-
-    private static Cell CreateCell(int x, int y)
-    {
-        return new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true };
     }
 }

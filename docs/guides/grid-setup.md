@@ -4,7 +4,9 @@ The grid is the foundation of your pathfinding system in MPath. This guide expla
 
 ## Grid Representation Options
 
-MPath provides several options for representing your grid, each with different benefits:
+MPath provides several options for representing your grid, each with different benefits. In all of them a cell's
+slot is its position: `[x, y]` in a matrix, the index under [`CellLayout`](../api/CellLayout.md) in an array. A `Cell`
+carries no coordinate of its own.
 
 1. **Cell Array**: Simple, flat array of cells
 2. **Cell Matrix**: 2D array/matrix of cells
@@ -20,7 +22,7 @@ using Migs.MPath.Core.Data;
 using GridCell = Migs.MPath.Core.Data.Cell;
 
 var grid = new GridCell[width, height];
-grid[x, y] = new GridCell { Coordinate = new Coordinate(x, y), IsWalkable = true };
+grid[x, y] = new GridCell { IsWalkable = true };
 ```
 
 Or alias your own type (`using GameCell = MyGame.Board.Cell;`) and keep `Cell` for MPath. A distinct name for MPath's type is planned for the next major version; until then the alias is the supported way.
@@ -43,7 +45,6 @@ for (var y = 0; y < height; y++)
         var index = y * width + x;
         cells[index] = new Cell
         {
-            Coordinate = new Coordinate(x, y),
             IsWalkable = true,
             Weight = 100
         };
@@ -58,12 +59,13 @@ var pathfinder = new Pathfinder(cells, width, height, settings);
 The pathfinder keeps a reference to your array and reads it on every query; it never reorders or writes it. Set
 [`CellLayout`](../api/CellLayout.md) to the order you filled it in:
 
-- `RowMajor`: `cells[y * width + x]` (as above). `ColumnMajor`: `cells[x * height + y]`. Both are searched in place,
-  so a query costs only the cells it searches and your own writes are seen by the next query. A declared layout is
-  checked once, at the first query, and a mismatch throws `InvalidOperationException`.
-- `Unordered`: any order; each cell's `Coordinate` says where it is. The array is copied into a pooled buffer before
-  every query (or once and after `Refresh()` with `GridSnapshotMode.Manual`), like a `Cell[,]`.
-- `Auto` (the default): detects which of the three at the first query, and again after `Refresh()`.
+- `ColumnMajor` (the default): `cells[x * height + y]`, the order of a `Cell[,]` in memory.
+- `RowMajor`: `cells[y * width + x]` (as above).
+
+Either way the array is searched in place, so a query costs only the cells it searches and your own writes are seen by
+the next query. The index is the position: nothing checks or reorders the cells, so an array filled in another order
+than the one declared gives a transposed or scrambled grid. Any other `CellLayout` value throws
+`ArgumentOutOfRangeException` when the pathfinder is created.
 
 Only the first `width * height` elements are read; a shorter array throws `ArgumentException`.
 
@@ -94,7 +96,6 @@ for (var y = 0; y < height; y++)
     {
         cellMatrix[x, y] = new Cell
         {
-            Coordinate = new Coordinate(x, y),
             IsWalkable = true,
             Weight = 100
         };
@@ -139,11 +140,10 @@ public class TerrainTile : MonoBehaviour, ICellHolder
     
     public Cell CellData => _cellData;
     
-    public void Initialize(int x, int y)
+    public void Initialize()
     {
         _cellData = new Cell
         {
-            Coordinate = new Coordinate(x, y),
             IsWalkable = !IsObstacle,
             Weight = MovementCost
         };
@@ -203,14 +203,15 @@ public class GridManager : MonoBehaviour
                 
                 // Get the TerrainTile component and initialize it
                 var tile = tileObject.GetComponent<TerrainTile>();
-                tile.Initialize(x, y);
+                tile.Initialize();
                 
                 _terrain[index] = tile;
             }
         }
         
-        // Create the pathfinder with cell holders
-        _pathfinder = new Pathfinder(_terrain, Width, Height);
+        // Create the pathfinder with cell holders. The array is row-major (y * Width + x): say so.
+        var settings = new PathfinderSettings { CellLayout = CellLayout.RowMajor };
+        _pathfinder = new Pathfinder(_terrain, Width, Height, settings);
     }
 }
 ```
@@ -220,6 +221,9 @@ public class GridManager : MonoBehaviour
 - Allows dynamic updating of pathfinding data based on game state
 - Better separation of concerns
 - Ideal for dynamic environments as cell data updates automatically
+
+A holder's index is its cell's position, under the same [`CellLayout`](../api/CellLayout.md) as a `Cell[]`. A `null`
+holder is a wall, and an array shorter than `Width * Height` throws `ArgumentException`.
 
 **Considerations:**
 - Slightly more overhead than direct cell arrays
@@ -258,7 +262,7 @@ public class GridManager : MonoBehaviour
                 
                 // Get the TerrainTile component and initialize it
                 var tile = tileObject.GetComponent<TerrainTile>();
-                tile.Initialize(x, y);
+                tile.Initialize();
                 
                 _terrainMatrix[x, y] = tile;
             }
@@ -297,7 +301,7 @@ pathfinder.SetWeight(new Coordinate(7, 3), 250); // ints in step-cost units; a n
 using var path = pathfinder.GetPath(start, end);
 ```
 
-The setters find the cell by its coordinate, so they work whatever order your `Cell[]` is in. Writing into the array yourself also works: queries never reorder it, so your own indexing (or `pathfinder.GetIndex(coordinate)`) stays valid. After direct writes, call `pathfinder.Refresh()` if path caching is enabled (it clears the cache) or if the array is unordered under `GridSnapshotMode.Manual`; moving cells to other indexes or changing their coordinates also needs `Refresh()`.
+The setters write the cell at `pathfinder.GetIndex(coordinate)` in your `Cell[]` (or `[x, y]` in your matrix). Writing into the array yourself also works: queries never reorder it, so your own indexing (or `pathfinder.GetIndex(coordinate)`) stays valid. After direct writes, call `pathfinder.Refresh()` if path caching is enabled (it clears the cache) or, for a `Cell[,]`, under `GridSnapshotMode.Manual`.
 
 ### Cell Holder Representation (Options 3 & 4)
 

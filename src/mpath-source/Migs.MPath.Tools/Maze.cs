@@ -175,7 +175,6 @@ namespace Migs.MPath.Tools
 
                     ref var cell = ref _cells[x,y];
                     cell.IsWalkable = IsWalkable(pixel);
-                    cell.Coordinate = new Coordinate(x, y);
 
                     if (IsStart(pixel))
                     {

@@ -77,7 +77,6 @@ namespace Benchmarks.Editor.Helpers
                     // Create a new cell
                     ref var cell = ref Cells[x, Height - 1 - y];
                     cell.IsWalkable = IsWalkable(pixel);
-                    cell.Coordinate = new Coordinate(x, Height - 1 - y);
                     
                     // Set start/destination if this pixel is red/blue
                     if (IsStart(pixel))

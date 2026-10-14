@@ -65,7 +65,6 @@ public class RandomGridBenchmarkRunner : IDisposable
 
                 cells[x, y] = new Cell
                 {
-                    Coordinate = new Coordinate(x, y),
                     IsWalkable = isCorner || random.NextDouble() >= WallRatio,
                 };
             }

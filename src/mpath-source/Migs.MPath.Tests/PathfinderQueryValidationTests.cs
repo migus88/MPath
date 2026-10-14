@@ -132,7 +132,6 @@ namespace Migs.MPath.Tests
                 {
                     cells[x * GridSize + y] = new Cell
                     {
-                        Coordinate = new Coordinate(x, y),
                         IsWalkable = true,
                     };
                 }
