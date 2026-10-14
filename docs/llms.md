@@ -181,7 +181,7 @@ construction has **no effect** — build a new `Pathfinder` to change settings.
 | `IsCellWeightEnabled` | `bool` | `true` | Add per-cell `Weight` to movement cost (terrain cost). |
 | `StraightMovementMultiplier` | `float` | `1f` | Cost of a cardinal step. |
 | `DiagonalMovementMultiplier` | `float` | `1.41f` | Cost of a diagonal step (≈√2). |
-| `PathSmoothingMethod` | `PathSmoothingMethod` | `None` | Post-process the path (`Simple` / `StringPulling`). |
+| `PathSmoothingMethod` | `PathSmoothingMethod` | `None` | Post-process the path (`Simple`: first step + turn points + destination; `StringPulling`: straight shortcuts that keep the agent's footprint and the corner rule). |
 | `InitialBufferSize` | `int?` | `null` | Pre-size the result buffer to avoid growth on large paths. |
 
 > **Weight is additive, not multiplicative.** With `IsCellWeightEnabled`, step cost = movement multiplier

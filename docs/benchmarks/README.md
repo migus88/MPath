@@ -25,16 +25,18 @@ These results highlight MPath's optimization for both speed and memory efficienc
 
 The following benchmark compares different path smoothing options using the same maze and coordinates:
 
-| Method                 | Mean     | Allocated | Path Length |
-|----------------------- |---------:|----------:|-----------:|
-| NoSmoothing            | 5.066 ms | 24.06 KB  | 1078 |
-| SimpleSmoothing        | 5.070 ms | 24.06 KB  | 311 |
-| StringPullingSmoothing | 6.471 ms | 24.06 KB  | 200 |
+| Method                           | Mean      | Allocated | Path Length |
+|--------------------------------- |----------:|----------:|-----------:|
+| NoSmoothing                      |  5.579 ms | 24.07 KB  | 1078 |
+| SimpleSmoothing                  |  5.552 ms | 24.06 KB  | 311 |
+| StringPullingSmoothing           |  7.388 ms | 24.06 KB  | 202 |
+| StringPullingSmoothingLargeAgent | 11.488 ms | 24.07 KB  | 401 |
 
 The results show that:
 - Simple smoothing adds negligible overhead compared to no smoothing
-- String pulling smoothing adds about 28% overhead, but still maintains the same memory efficiency
+- String pulling smoothing adds about 32% overhead, but still maintains the same memory efficiency
 - Path smoothing significantly reduces the number of steps in the path (SimpleSmoothing: 71% reduction, StringPullingSmoothing: 81% reduction)
+- `StringPullingSmoothingLargeAgent` runs the same query with a 2x2 agent: every shortcut checks the agent's footprint at each cell, so both the search and the smoothing cost more
 
 ## Benchmark Environment Specs
 

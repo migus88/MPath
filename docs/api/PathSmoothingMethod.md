@@ -9,8 +9,8 @@ Defines the available methods for smoothing paths after they are calculated by t
 | Value | Description |
 |-------|-------------|
 | `None` | No smoothing is applied. Returns the raw A* path with all waypoints. |
-| `Simple` | Removes redundant waypoints based on direction changes. Very fast with good results for most cases. |
-| `StringPulling` | Creates optimal direct paths using line-of-sight checks. Most computationally expensive. |
+| `Simple` | Keeps the first step, every turn point and the destination (no repeated waypoints). Very fast with good results for most cases. |
+| `StringPulling` | Replaces runs of waypoints with straight shortcuts the agent can walk: every traced cell must fit the agent's `Size x Size` footprint, and diagonal steps obey the corner rule (`IsMovementBetweenCornersEnabled`). Most computationally expensive. |
 
 ## Usage Example
 

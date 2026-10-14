@@ -31,7 +31,7 @@ Both metrics are symmetric (`distance(a, b) == distance(b, a)`), return `0` for 
 
 ## Line of sight
 
-`HasLineOfSight` traces a [Bresenham line](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm) between the two cells and returns `false` as soon as it crosses a blocked cell — the same line-tracing the string-pulling path smoother uses internally. It is an O(distance) walk that allocates nothing.
+`HasLineOfSight` traces a [Bresenham line](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm) between the two cells and returns `false` as soon as it crosses a blocked cell. It is a single-cell ray (agent size and the corner rule are ignored; the string-pulling path smoother uses a stricter, agent-aware walk). It is an O(distance) walk that allocates nothing.
 
 ```csharp
 using var pathfinder = new Pathfinder(cells, width, height);
