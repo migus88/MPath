@@ -109,7 +109,11 @@ Per-query overrides (`QueryOptions`, a public `readonly ref struct`: `OccupancyR
 
 ### Caching — `Source/Caching/` + `Source/Interfaces/IPathCaching.cs`
 
-Opt-in via `EnablePathCaching()`. `GetPath` consults the cache before searching and stores successful results after, both through the private `TryGetCachedPath`/`CachePath` helpers in `Pathfinder.cs` (the single gate for any query that must bypass the cache). Ownership: the cache gets a private `PathResult.Copy()` on store and a hit is returned as a fresh copy, so every result `GetPath` returns is the caller's to dispose and the cache's instances are never handed out. `DefaultPathCaching` is the built-in implementation; callers can supply their own `IPathCaching`. `InvalidateCache()` clears it (the grid changing does **not** auto-invalidate).
+Opt-in via `EnablePathCaching()`. `GetPath` consults the cache before searching and stores successful results after, both through the private `TryGetCachedPath`/`CachePath` helpers in `Pathfinder.cs` (the single gate for any query that must bypass the cache). Ownership: the cache gets a private `PathResult.Copy()` on store and a hit is returned as a fresh copy, so every result `GetPath` returns is the caller's to dispose and the cache's instances are never handed out. `DefaultPathCaching` is the built-in implementation; callers can supply their own `IPathCaching`. `InvalidateCache()` clears it. The cell-update API (`Pathfinder_CellUpdates.cs`: `SetWalkable`/`SetOccupied`/`SetWeight`/`SetCell`, plus `GetCell`/`GetIndex`) clears it on a change cached paths depend on; direct writes to the caller's grid do **not** auto-invalidate.
+
+### Cell updates — `Source/Pathfinder_CellUpdates.cs`
+
+Setters write the caller's `Cell[]` (found at `GetLayoutIndex`, falling back to a linear search when the array isn't in layout yet; never sorts) or `Cell[,]` (at `[X, Y]`, linear fallback), and in matrix mode also the pooled snapshot. Holder modes throw `NotSupportedException` (holders are re-read every query). `GetLayoutIndex` in `Pathfinder.cs` is the single source of the layout (`GetCell(ptr, x, y)` uses it); if the layout changes, the init methods and these setters follow it.
 
 ### Unity integration — `Runtime/Code/`
 

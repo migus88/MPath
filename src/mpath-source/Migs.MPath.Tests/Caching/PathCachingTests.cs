@@ -8,6 +8,7 @@ using Migs.MPath.Core.Caching;
 using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
 using Migs.MPath.Tests.Implementations;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace Migs.MPath.Tests.Caching
@@ -302,6 +303,66 @@ namespace Migs.MPath.Tests.Caching
             computed.Should().NotBeSameAs(customCaching.LastCached);
             hit.Should().NotBeSameAs(customCaching.LastCached);
             hit.Path.Should().Equal(customCaching.LastCached!.Path);
+        }
+
+        [Test]
+        public void GetPath_AfterSetWalkableBlocksACachedPath_RecomputesAroundTheCell()
+        {
+            // Arrange
+            _pathfinder.EnablePathCaching();
+            var from = new Coordinate(0, 0);
+            var to = new Coordinate(5, 0);
+            var blocked = new Coordinate(3, 0);
+
+            using (var cached = _pathfinder.GetPath(_agent, from, to))
+            {
+                cached.Path.Should().Contain(blocked);
+            }
+
+            // Act
+            _pathfinder.SetWalkable(blocked, false);
+            using var result = _pathfinder.GetPath(_agent, from, to);
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            result.Path.Should().NotContain(blocked);
+        }
+
+        [Test]
+        public void SetWalkable_WithTheCurrentValue_KeepsTheCache()
+        {
+            // Arrange
+            var cache = Substitute.For<IPathCaching>();
+            _pathfinder.EnablePathCaching(cache);
+
+            // Act
+            _pathfinder.SetWalkable(new Coordinate(3, 0), true);
+
+            // Assert
+            cache.DidNotReceive().ClearCache();
+        }
+
+        [TestCase(false, false, 0)]
+        [TestCase(true, false, 1)]
+        [TestCase(false, true, 1)]
+        public void SetOccupiedAndSetWeight_ClearTheCacheOnlyForFieldsTheSettingsUse(bool isCalculatingOccupiedCells,
+            bool isCellWeightEnabled, int expectedClears)
+        {
+            // Arrange
+            var settings = new PathfinderSettings
+            {
+                IsCalculatingOccupiedCells = isCalculatingOccupiedCells,
+                IsCellWeightEnabled = isCellWeightEnabled
+            };
+            var cache = Substitute.For<IPathCaching>();
+            using var pathfinder = new Pathfinder(_cells, FieldSize, FieldSize, settings).EnablePathCaching(cache);
+
+            // Act
+            pathfinder.SetOccupied(new Coordinate(3, 0), true);
+            pathfinder.SetWeight(new Coordinate(3, 0), 5f);
+
+            // Assert
+            cache.Received(expectedClears).ClearCache();
         }
 
         private class TestPathCaching : IPathCaching

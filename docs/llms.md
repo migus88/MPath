@@ -135,9 +135,13 @@ cells with your own objects (e.g. Unity `MonoBehaviour`s) via `Cell CellData { g
 | `static GetChebyshevDistance(Coordinate from, Coordinate to)` | `int` | `max(|dx|, |dy|)`. Pure metric, allocation-free. |
 | `BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to)` | `StepwiseSearch` | Educational/visualization driver running the same A* one expansion at a time. **Pins the grid until disposed** — the pathfinder can't serve other queries meanwhile, and a second concurrent session throws. |
 | `BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)` | `StepwiseSearch` | Same, with per-query rules applied on every tick. |
+| `SetWalkable(Coordinate c, bool isWalkable)` · `SetOccupied(Coordinate c, bool isOccupied)` · `SetWeight(Coordinate c, float weight)` | `void` | Update one cell. Writes into your `Cell[]`/`Cell[,]` (any order; O(1), allocation-free once in layout) and clears the path cache when the change can affect cached paths. **Throws `NotSupportedException` in `ICellHolder` modes** (update the holder). `ArgumentException` outside the grid. |
+| `SetCell(Coordinate c, in Cell cell)` | `void` | Same, all three fields at once; `cell.Coordinate` is ignored. |
+| `GetCell(Coordinate c)` | `Cell` | Current cell read from your grid, every mode. |
+| `GetIndex(Coordinate c)` | `int` | Layout index `X * fieldHeight + Y`, for direct writes into a `Cell[]` in layout. |
 | `EnablePathCaching(IPathCaching handler = null)` | `Pathfinder` | Fluent (returns `this`). Opt-in. Pass your own `IPathCaching` or use the built-in `DefaultPathCaching`. |
 | `DisablePathCaching()` | `Pathfinder` | Fluent. |
-| `InvalidateCache()` | `Pathfinder` | Fluent. **Mutating the grid does NOT auto-invalidate** — call this after the grid changes. |
+| `InvalidateCache()` | `Pathfinder` | Fluent. The `Set*` cell updates invalidate for you; **direct writes to your grid or holders do NOT** — call this after them. |
 | `Dispose()` | `void` | Returns the rented cell buffer to the pool, disposes the cache, ends an active `StepwiseSearch`. Idempotent; every instance method throws `ObjectDisposedException` afterwards. |
 
 ### Everything else — type map
@@ -249,8 +253,9 @@ if (search.State == SearchState.Success)
 ```csharp
 pathfinder.EnablePathCaching();                       // fluent; reuses identical (agent, from, to) results
 using var hit = pathfinder.GetPath(agent, from, to);  // a hit is a fresh copy: still yours to dispose
-// ... after you mutate the grid:
-pathfinder.InvalidateCache();                         // NOT automatic
+pathfinder.SetWalkable(wall, false);                  // cell updates clear the cache themselves
+// ... after writing to your grid or holders directly:
+pathfinder.InvalidateCache();                         // NOT automatic for direct writes
 ```
 
 ### Corner-cutting: walls vs units
@@ -289,6 +294,18 @@ An `AlwaysEnterable` cell is treated as unoccupied for that query only (entry, `
 flank for `CornerBlocking`); walls stay walls; the grid is never modified. `OccupancyRule.Block`/`Ignore`
 override `IsCalculatingOccupiedCells` for the query. `HasLineOfSight` takes no options.
 
+### Update cells as the game changes (doors, units moving)
+
+```csharp
+pathfinder.SetOccupied(unit.Position, false);         // O(1), writes into your Cell[] / Cell[,]
+pathfinder.SetOccupied(newPosition, true);            // clears the path cache only if the value changed
+pathfinder.SetWalkable(door, isOpen);
+Cell cell = pathfinder.GetCell(door);                 // reads your grid, every mode
+```
+
+Works for the `Cell[]` (any order) and `Cell[,]` constructors. With `ICellHolder` constructors the holders
+are re-read every query, so change the holder instead (the setters throw `NotSupportedException`).
+
 ### Multi-cell agents & terrain cost
 
 - `Size > 1`: the agent only traverses cells where the whole `Size×Size` block is walkable.
@@ -321,14 +338,15 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
 4. **`Path` excludes the origin.** It is the sequence of steps *after* `from`. Don't expect `from` first.
 5. **No path → failure result, not an exception.** Check `IsSuccess`. Only bad arguments throw
    (`agent == null`; `from` or `to` outside the grid).
-6. **Grid edits aren't seen automatically by the cache.** The pathfinder re-reads your grid each query,
-   but cached results are returned verbatim — call `InvalidateCache()` after changing the grid if caching
-   is on. Cache hits are fresh copies owned by the caller: dispose them like any other result.
+6. **Direct grid edits aren't seen by the cache.** The pathfinder re-reads your grid each query, but
+   cached results are returned verbatim — call `InvalidateCache()` after writing to your grid or holders
+   directly if caching is on. `SetWalkable`/`SetOccupied`/`SetWeight`/`SetCell` invalidate for you. Cache hits are fresh copies owned by the caller: dispose them like any other result.
 7. **Settings are frozen at construction.** Mutating the `PathfinderSettings` object afterward does
    nothing — create a new `Pathfinder`. To vary occupancy per query, pass `QueryOptions` instead of
    flipping `IsOccupied` around the call.
-8. **Indexing is `x * Height + y` (X-major).** Relevant only if you build the flat `Cell[]` form
-   yourself; matrix/holder constructors handle it for you.
+8. **Indexing is `x * Height + y` (X-major).** Relevant only if you write into the flat `Cell[]` form
+   yourself: every query sorts that array into this order, so index it with `GetIndex(c)` (or update
+   through `Set*`, which work in any order); matrix/holder constructors handle it for you.
 9. **`Cell` fields default to zero.** `IsWalkable` defaults to `false` — initialize every cell or the
    whole grid is unwalkable.
 10. **Stepwise search is exclusive.** While a `StepwiseSearch` is alive, the owning pathfinder throws on
@@ -342,7 +360,7 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
   Just visibility/distance → `HasLineOfSight` / `Get*Distance`. A teaching animation → `BeginStepwiseSearch`.
   Different occupancy rules for one query, or a path onto an occupied cell → the same call with `QueryOptions`.
 - **Caching?** Enable it when the same `(agent, from, to)` queries repeat on a static grid; remember to
-  `InvalidateCache()` on grid changes.
+  `InvalidateCache()` after direct grid edits (`Set*` updates invalidate for you).
 
 ---
 

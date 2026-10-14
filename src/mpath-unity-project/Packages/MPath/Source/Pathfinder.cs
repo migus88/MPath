@@ -488,7 +488,17 @@ namespace Migs.MPath.Core
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Cell* GetCell(Cell* cells, int x, int y)
         {
-            return cells + (x * Height + y);
+            return cells + GetLayoutIndex(x, y);
+        }
+
+        /// <summary>
+        /// The flat index of (<paramref name="x"/>, <paramref name="y"/>) in the searched cell buffer. The single
+        /// source of the layout: every grid mode and the cell-update API must place cells by it.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int GetLayoutIndex(int x, int y)
+        {
+            return x * Height + y;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
