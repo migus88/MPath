@@ -18,7 +18,7 @@ namespace Migs.MPath.Core.Internal
         public const int MaxCost = int.MaxValue / 2;
 
         public readonly bool IsDiagonalMovementEnabled;
-        public readonly bool IsCalculatingOccupiedCells;
+        public readonly bool AreOccupiedCellsBlocking;
         public readonly CornerBlocking CornerBlocking;
         public readonly bool IsCellWeightEnabled;
         public readonly PathSmoothingMethod PathSmoothingMethod;
@@ -53,13 +53,13 @@ namespace Migs.MPath.Core.Internal
         /// </summary>
         private readonly int _cornerBlockingTable;
 
-        private FastPathfinderSettings(bool isDiagonalMovementEnabled, bool isCalculatingOccupiedCells,
+        private FastPathfinderSettings(bool isDiagonalMovementEnabled, bool areOccupiedCellsBlocking,
             CornerBlocking cornerBlocking, bool isCellWeightEnabled, PathSmoothingMethod pathSmoothingMethod,
             int straightStepCost, int diagonalStepCost, GridSnapshotMode gridSnapshotMode,
             TieBreaking tieBreaking, CellLayout cellLayout)
         {
             IsDiagonalMovementEnabled = isDiagonalMovementEnabled;
-            IsCalculatingOccupiedCells = isCalculatingOccupiedCells;
+            AreOccupiedCellsBlocking = areOccupiedCellsBlocking;
             CornerBlocking = cornerBlocking;
             IsCellWeightEnabled = isCellWeightEnabled;
             PathSmoothingMethod = pathSmoothingMethod;
@@ -76,7 +76,7 @@ namespace Migs.MPath.Core.Internal
 
         public static FastPathfinderSettings FromSettings(IPathfinderSettings settings)
         {
-            return new FastPathfinderSettings(settings.IsDiagonalMovementEnabled, settings.IsCalculatingOccupiedCells,
+            return new FastPathfinderSettings(settings.IsDiagonalMovementEnabled, settings.AreOccupiedCellsBlocking,
                 settings.CornerBlocking, settings.IsCellWeightEnabled, settings.PathSmoothingMethod,
                 settings.StraightStepCost, settings.DiagonalStepCost, settings.GridSnapshotMode,
                 settings.TieBreaking, settings.CellLayout);

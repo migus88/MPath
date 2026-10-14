@@ -10,17 +10,17 @@ namespace Migs.MPath.Core.Internal
     /// </summary>
     internal readonly unsafe struct QueryRules
     {
-        public readonly bool IsCalculatingOccupiedCells;
+        public readonly bool AreOccupiedCellsBlocking;
 
         private readonly Coordinate* _enterableCells;
         private readonly int _enterableCellCount;
         private readonly bool _isDestinationEnterable;
         private readonly Coordinate _destination;
 
-        private QueryRules(bool isCalculatingOccupiedCells, Coordinate* enterableCells, int enterableCellCount,
+        private QueryRules(bool areOccupiedCellsBlocking, Coordinate* enterableCells, int enterableCellCount,
             bool isDestinationEnterable, Coordinate destination)
         {
-            IsCalculatingOccupiedCells = isCalculatingOccupiedCells;
+            AreOccupiedCellsBlocking = areOccupiedCellsBlocking;
             _enterableCells = enterableCells;
             _enterableCellCount = enterableCellCount;
             _isDestinationEnterable = isDestinationEnterable;
@@ -32,13 +32,13 @@ namespace Migs.MPath.Core.Internal
         /// </summary>
         public bool IsDefault(in FastPathfinderSettings settings)
         {
-            return IsCalculatingOccupiedCells == settings.IsCalculatingOccupiedCells
-                && (!IsCalculatingOccupiedCells || (_enterableCellCount == 0 && !_isDestinationEnterable));
+            return AreOccupiedCellsBlocking == settings.AreOccupiedCellsBlocking
+                && (!AreOccupiedCellsBlocking || (_enterableCellCount == 0 && !_isDestinationEnterable));
         }
 
         public static QueryRules FromSettings(in FastPathfinderSettings settings)
         {
-            return new QueryRules(settings.IsCalculatingOccupiedCells, null, 0, false, default);
+            return new QueryRules(settings.AreOccupiedCellsBlocking, null, 0, false, default);
         }
 
         /// <param name="enterableCells">The pinned <see cref="QueryOptions.AlwaysEnterable"/> cells.</param>
@@ -47,14 +47,14 @@ namespace Migs.MPath.Core.Internal
         public static QueryRules FromOptions(in FastPathfinderSettings settings, OccupancyRule occupancy,
             Coordinate* enterableCells, int enterableCellCount, bool isDestinationEnterable, Coordinate? destination)
         {
-            var isCalculatingOccupiedCells = occupancy switch
+            var areOccupiedCellsBlocking = occupancy switch
             {
                 OccupancyRule.Block => true,
                 OccupancyRule.Ignore => false,
-                _ => settings.IsCalculatingOccupiedCells
+                _ => settings.AreOccupiedCellsBlocking
             };
 
-            return new QueryRules(isCalculatingOccupiedCells, enterableCells, enterableCellCount,
+            return new QueryRules(areOccupiedCellsBlocking, enterableCells, enterableCellCount,
                 isDestinationEnterable && destination.HasValue, destination ?? default);
         }
 

@@ -44,7 +44,7 @@ namespace Migs.MPath.Core
         /// By default a cell blocks line of sight when it is not walkable; pass
         /// <see cref="LineOfSightMode.IgnoreUnwalkableCells"/> to see through obstacles that block movement
         /// but not vision. Independently of the mode, an occupied cell blocks sight when
-        /// <see cref="IPathfinderSettings.IsCalculatingOccupiedCells"/> is enabled.
+        /// <see cref="IPathfinderSettings.AreOccupiedCellsBlocking"/> is enabled.
         /// </summary>
         /// <remarks>
         /// The endpoints themselves are never tested, so a target standing on a blocked or occupied cell can

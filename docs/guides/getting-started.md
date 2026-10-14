@@ -62,7 +62,7 @@ Now, create a pathfinder with your grid:
 IPathfinderSettings settings = new PathfinderSettings
 {
     IsDiagonalMovementEnabled = true,      // Allow diagonal movement
-    IsCalculatingOccupiedCells = true,     // Consider occupied cells as blocked
+    AreOccupiedCellsBlocking = true,     // Consider occupied cells as blocked
     CornerBlocking = CornerBlocking.BetweenBlockedCells // Don't squeeze between two blocked corners
 };
 

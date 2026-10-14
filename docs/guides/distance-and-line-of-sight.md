@@ -49,7 +49,7 @@ else
 
 ### What blocks sight
 
-A cell between the endpoints blocks line of sight when it is **not walkable**, or — when `IsCalculatingOccupiedCells` is enabled (the default) — when it is **occupied**. This mirrors how `GetPath` and `GetReachable` treat the grid, so "can I see it?" and "can I walk there?" stay consistent.
+A cell between the endpoints blocks line of sight when it is **not walkable**, or — when `AreOccupiedCellsBlocking` is enabled (the default) — when it is **occupied**. This mirrors how `GetPath` and `GetReachable` treat the grid, so "can I see it?" and "can I walk there?" stay consistent.
 
 ### Seeing through obstacles (`LineOfSightMode`)
 
@@ -63,12 +63,12 @@ bool blockedByWalls = pathfinder.HasLineOfSight(shooter, target);
 bool ignoringTerrain = pathfinder.HasLineOfSight(shooter, target, LineOfSightMode.IgnoreUnwalkableCells);
 ```
 
-| Mode | Unwalkable cells | Occupied cells (when `IsCalculatingOccupiedCells`) |
+| Mode | Unwalkable cells | Occupied cells (when `AreOccupiedCellsBlocking`) |
 |------|------------------|----------------------------------------------------|
 | `BlockedByUnwalkableCells` *(default)* | block sight | block sight |
 | `IgnoreUnwalkableCells` | transparent | block sight |
 
-The mode only governs walkability; occupancy stays under `IsCalculatingOccupiedCells`. That orthogonality lets you express "ignore terrain, but units still block the shot" by pairing `IgnoreUnwalkableCells` with occupancy enabled.
+The mode only governs walkability; occupancy stays under `AreOccupiedCellsBlocking`. That orthogonality lets you express "ignore terrain, but units still block the shot" by pairing `IgnoreUnwalkableCells` with occupancy enabled.
 
 ### Behavior and edge cases
 

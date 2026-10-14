@@ -114,7 +114,7 @@ namespace Migs.MPath.Core
 
         /// <summary>
         /// Sets whether the cell at <paramref name="coordinate"/> is occupied. Occupancy only affects queries while
-        /// <see cref="IPathfinderSettings.IsCalculatingOccupiedCells"/> (or a per-query <see cref="OccupancyRule"/>)
+        /// <see cref="IPathfinderSettings.AreOccupiedCellsBlocking"/> (or a per-query <see cref="OccupancyRule"/>)
         /// takes it into account.
         /// </summary>
         /// <param name="coordinate">A coordinate inside the grid.</param>
@@ -155,7 +155,7 @@ namespace Migs.MPath.Core
         private void UpdateCell(ref Cell target, Coordinate coordinate, bool isWalkable, bool isOccupied, int weight)
         {
             var isCacheAffected = target.IsWalkable != isWalkable
-                || (_settings.IsCalculatingOccupiedCells && target.IsOccupied != isOccupied)
+                || (_settings.AreOccupiedCellsBlocking && target.IsOccupied != isOccupied)
                 || (_settings.IsCellWeightEnabled && target.Weight != weight);
 
             WriteUserFields(ref target, isWalkable, isOccupied, weight);

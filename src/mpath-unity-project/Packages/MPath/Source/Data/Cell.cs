@@ -19,7 +19,7 @@ namespace Migs.MPath.Core.Data
         
         /// <summary>
         /// Gets or sets a value indicating whether this cell is currently occupied by an agent.
-        /// This is used when <see cref="IPathfinderSettings.IsCalculatingOccupiedCells"/> is enabled.
+        /// This is used when <see cref="IPathfinderSettings.AreOccupiedCellsBlocking"/> is enabled.
         /// </summary>
         public bool IsOccupied { get; set; }
         

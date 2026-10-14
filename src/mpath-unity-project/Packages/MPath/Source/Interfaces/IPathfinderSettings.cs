@@ -10,10 +10,11 @@ namespace Migs.MPath.Core.Interfaces
         bool IsDiagonalMovementEnabled { get; }
 
         /// <summary>
-        /// Determines is the occupied cells (by other agents) considered as blocked or ignored.<br/>
-        /// When multiple agents can occupy one cell, this should be set to 'false'.
+        /// Whether occupied cells (<see cref="Data.Cell.IsOccupied"/>) block: they cannot be entered, count against
+        /// an agent's clearance and the corner rule, and block line of sight. Set it to 'false' when several agents
+        /// can share a cell. A query can override it with <see cref="Data.QueryOptions.Occupancy"/>.
         /// </summary>
-        bool IsCalculatingOccupiedCells { get; }
+        bool AreOccupiedCellsBlocking { get; }
 
         /// <summary>
         /// Decides which cells beside a diagonal step block it (corner-cutting), separately for walls and

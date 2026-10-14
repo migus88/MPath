@@ -141,14 +141,14 @@ namespace Migs.MPath.Tests
             var cells = CreateEmptyGrid(GridSize, GridSize);
             SetOccupied(cells, 2, 0, true); // occupied but still walkable, on the line
 
-            // Default settings calculate occupied cells, so the occupant blocks sight.
+            // Occupied cells block by default, so the occupant blocks sight.
             using (var blocking = new Pathfinder(cells, GridSize, GridSize))
             {
                 blocking.HasLineOfSight(new Coordinate(0, 0), new Coordinate(4, 0)).Should().BeFalse();
             }
 
             // Disabling occupancy lets sight pass through the occupant.
-            var settings = new PathfinderSettings { IsCalculatingOccupiedCells = false };
+            var settings = new PathfinderSettings { AreOccupiedCellsBlocking = false };
             using var ignoring = new Pathfinder(cells, GridSize, GridSize, settings);
             ignoring.HasLineOfSight(new Coordinate(0, 0), new Coordinate(4, 0)).Should().BeTrue();
         }
@@ -192,7 +192,7 @@ namespace Migs.MPath.Tests
             SetWalkable(cells, 2, 0, false);  // wall on the line
             SetOccupied(cells, 3, 0, true);   // occupant on the line
 
-            var settings = new PathfinderSettings { IsCalculatingOccupiedCells = false };
+            var settings = new PathfinderSettings { AreOccupiedCellsBlocking = false };
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
 
             pathfinder.HasLineOfSight(new Coordinate(0, 0), new Coordinate(4, 0),

@@ -31,7 +31,7 @@ namespace Migs.MPath.Core.Data
 
         /// <summary>
         /// Whether occupied cells block the agent in this query. <see cref="OccupancyRule.UseSettings"/> (the
-        /// default) follows <see cref="Interfaces.IPathfinderSettings.IsCalculatingOccupiedCells"/>.
+        /// default) follows <see cref="Interfaces.IPathfinderSettings.AreOccupiedCellsBlocking"/>.
         /// </summary>
         public OccupancyRule Occupancy { get; }
 

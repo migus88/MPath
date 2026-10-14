@@ -263,7 +263,7 @@ namespace Migs.MPath.Tests
             {
                 IsDiagonalMovementEnabled = settings.IsDiagonalMovementEnabled,
                 CornerBlocking = settings.CornerBlocking,
-                IsCalculatingOccupiedCells = settings.IsCalculatingOccupiedCells,
+                AreOccupiedCellsBlocking = settings.AreOccupiedCellsBlocking,
                 PathSmoothingMethod = PathSmoothingMethod.None
             };
 

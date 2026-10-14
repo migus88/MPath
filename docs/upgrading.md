@@ -222,7 +222,19 @@ Pending: filled by #59.
 
 Rename IsCalculatingOccupiedCells to AreOccupiedCellsBlocking.
 
-Pending: filled by #60.
+- **What changed:** `IPathfinderSettings.IsCalculatingOccupiedCells` is renamed to `AreOccupiedCellsBlocking`, on `PathfinderSettings` and `ScriptablePathfinderSettings` too. Same meaning, same default (`true`): occupied cells cannot be entered, count against an agent's clearance and the corner rule, and block line of sight. The new name pairs with the per-query `OccupancyRule.Block`.
+- **Who notices:** code that sets or reads the property, and custom `IPathfinderSettings` implementations.
+- **What to do:** rename the property. `ScriptablePathfinderSettings` assets keep their value (the field carries `FormerlySerializedAs`); re-saving an asset writes the new field name.
+
+```csharp
+// 1.2.1
+new PathfinderSettings { IsCalculatingOccupiedCells = false };
+public bool IsCalculatingOccupiedCells => true; // custom IPathfinderSettings
+
+// 2.0
+new PathfinderSettings { AreOccupiedCellsBlocking = false };
+public bool AreOccupiedCellsBlocking => true;
+```
 
 #### #61 Drop Coordinate from the cell
 
@@ -244,5 +256,7 @@ Pending: filled by #62.
 4. Replace `IsMovementBetweenCornersEnabled` with `CornerBlocking`, including in `ScriptablePathfinderSettings` assets that had it ticked; delete `InitialBufferSize` and `Cell.Reset()` calls; pass step counts to `PathResult.Success`; add the four settings members to a custom `IPathfinderSettings`.
 5. Replace `Coordinate.IsInitialized` and `Coordinate.Reset()` with a `Coordinate?` (or your own sentinel).
 6. Pick a cost resolution and scale every cost to `int`: `StraightStepCost`/`DiagonalStepCost` (renamed from the multipliers), `Cell.Weight`, budgets, and the costs you read back. Re-enter the step costs on `ScriptablePathfinderSettings` assets.
+
+7. Rename `IsCalculatingOccupiedCells` to `AreOccupiedCellsBlocking`, including in custom `IPathfinderSettings` implementations.
 
 Steps for the breaking changes are added as their entries are filled.

@@ -16,7 +16,7 @@ A `readonly ref struct`: it never allocates, and `AlwaysEnterable` takes any spa
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `Occupancy` | [`OccupancyRule`](OccupancyRule.md) | Whether occupied cells block in this query. `UseSettings` (default) follows `IsCalculatingOccupiedCells`; `Block` and `Ignore` override it. |
+| `Occupancy` | [`OccupancyRule`](OccupancyRule.md) | Whether occupied cells block in this query. `UseSettings` (default) follows `AreOccupiedCellsBlocking`; `Block` and `Ignore` override it. |
 | `AlwaysEnterable` | `ReadOnlySpan<Coordinate>` | Cells whose `IsOccupied` flag is ignored in this query, e.g. the mover's own cells and its target. |
 | `IsDestinationAlwaysEnterable` | `bool` | Treats the destination as an `AlwaysEnterable` cell, so a path to an occupied cell (move to attack) can succeed. `GetPath` and `BeginStepwiseSearch` only; `GetReachable` has no destination and ignores it. |
 

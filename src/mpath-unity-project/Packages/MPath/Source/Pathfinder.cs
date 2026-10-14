@@ -299,7 +299,7 @@ namespace Migs.MPath.Core
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         /// <remarks>
         /// A destination the agent cannot enter (not walkable, occupied while
-        /// <see cref="IPathfinderSettings.IsCalculatingOccupiedCells"/> is enabled, or without clearance for the
+        /// <see cref="IPathfinderSettings.AreOccupiedCellsBlocking"/> is enabled, or without clearance for the
         /// agent's size) fails immediately without searching, unless it is the origin itself.
         /// </remarks>
         public PathResult GetPath(IAgent agent, Coordinate from, Coordinate to)
@@ -1078,7 +1078,7 @@ namespace Migs.MPath.Core
         /// Classifies the <paramref name="agentSize"/> x <paramref name="agentSize"/> footprint anchored at
         /// (<paramref name="x"/>, <paramref name="y"/>): <see cref="CellBlocker.Wall"/> when any cell is not
         /// walkable or outside the grid, else <see cref="CellBlocker.Occupied"/> when any cell is occupied (and
-        /// occupancy is calculated), else <see cref="CellBlocker.Open"/>.
+        /// occupied cells block), else <see cref="CellBlocker.Open"/>.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private CellBlocker GetFootprintBlocker(Cell* cells, int x, int y, int agentSize)
@@ -1127,7 +1127,7 @@ namespace Migs.MPath.Core
                 return CellBlocker.Wall;
             }
 
-            if (!_query.IsCalculatingOccupiedCells || !cell->IsOccupied)
+            if (!_query.AreOccupiedCellsBlocking || !cell->IsOccupied)
             {
                 return CellBlocker.Open;
             }

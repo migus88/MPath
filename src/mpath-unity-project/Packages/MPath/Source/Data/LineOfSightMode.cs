@@ -5,7 +5,7 @@ namespace Migs.MPath.Core.Data
     /// </summary>
     /// <remarks>
     /// This only governs the walkability of cells between the endpoints. Occupancy is handled separately:
-    /// when <c>IsCalculatingOccupiedCells</c> is enabled, an occupied cell blocks sight under either mode
+    /// when <c>AreOccupiedCellsBlocking</c> is enabled, an occupied cell blocks sight under either mode
     /// (so "ignore terrain, but units still block" is expressible).
     /// </remarks>
     [System.Serializable]

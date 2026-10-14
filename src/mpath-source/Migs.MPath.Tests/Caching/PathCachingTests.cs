@@ -379,13 +379,13 @@ namespace Migs.MPath.Tests.Caching
         [TestCase(false, false, 0)]
         [TestCase(true, false, 1)]
         [TestCase(false, true, 1)]
-        public void SetOccupiedAndSetWeight_ClearTheCacheOnlyForFieldsTheSettingsUse(bool isCalculatingOccupiedCells,
+        public void SetOccupiedAndSetWeight_ClearTheCacheOnlyForFieldsTheSettingsUse(bool areOccupiedCellsBlocking,
             bool isCellWeightEnabled, int expectedClears)
         {
             // Arrange
             var settings = new PathfinderSettings
             {
-                IsCalculatingOccupiedCells = isCalculatingOccupiedCells,
+                AreOccupiedCellsBlocking = areOccupiedCellsBlocking,
                 IsCellWeightEnabled = isCellWeightEnabled
             };
             var cache = Substitute.For<IPathCaching>();

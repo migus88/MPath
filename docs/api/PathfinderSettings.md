@@ -9,7 +9,7 @@ Default implementation of the `IPathfinderSettings` interface.
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `IsDiagonalMovementEnabled` | `bool` | `true` | Whether agents can move diagonally. |
-| `IsCalculatingOccupiedCells` | `bool` | `true` | Whether occupied cells are considered as blocked. |
+| `AreOccupiedCellsBlocking` | `bool` | `true` | Whether occupied cells block: entry, agent clearance, the corner rule and line of sight. |
 | `CornerBlocking` | [`CornerBlocking`](CornerBlocking.md) | `BetweenBlockedCells` | Which flanking cells (walls, occupied cells) block a diagonal step. |
 | `IsCellWeightEnabled` | `bool` | `true` | Whether cell weight calculation is enabled. |
 | `StraightStepCost` | `int` | `100` | The cost of a horizontal/vertical step, at least 1. Costs are integers in a unit you pick (here hundredths of a step). |
@@ -29,7 +29,7 @@ var defaultSettings = new PathfinderSettings();
 var customSettings = new PathfinderSettings
 {
     IsDiagonalMovementEnabled = true,
-    IsCalculatingOccupiedCells = false,
+    AreOccupiedCellsBlocking = false,
     IsCellWeightEnabled = true,
     DiagonalStepCost = 140,
     PathSmoothingMethod = PathSmoothingMethod.StringPulling

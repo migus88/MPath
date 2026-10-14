@@ -103,7 +103,7 @@ var fastSettings = new PathfinderSettings
 {
     IsDiagonalMovementEnabled = false, // Reduces neighbor checks
     IsCellWeightEnabled = false,       // Skips weight calculations
-    IsCalculatingOccupiedCells = false // Skips occupation checks
+    AreOccupiedCellsBlocking = false // Skips occupation checks
 };
 ```
 

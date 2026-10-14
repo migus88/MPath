@@ -71,7 +71,7 @@ namespace Migs.MPath.Tests
         public void GetPath_WithOccupiedDestinationAndOccupancyIgnored_FindsPath()
         {
             var (cells, agentSize) = CreateBlockedScenario(Blocker.Occupied);
-            var settings = new PathfinderSettings { IsCalculatingOccupiedCells = false };
+            var settings = new PathfinderSettings { AreOccupiedCellsBlocking = false };
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
 
             using var result = pathfinder.GetPath(Origin, Destination, agentSize);
@@ -115,7 +115,7 @@ namespace Migs.MPath.Tests
 
         private static PathfinderSettings OccupiedCellsBlock()
         {
-            return new PathfinderSettings { IsCalculatingOccupiedCells = true };
+            return new PathfinderSettings { AreOccupiedCellsBlocking = true };
         }
 
         private static int Index(Coordinate coordinate)

@@ -9,7 +9,7 @@ Defines the configuration settings for the MPath pathfinding system. This interf
 | Property | Type | Description |
 |----------|------|-------------|
 | `IsDiagonalMovementEnabled` | `bool` | Whether agents can move diagonally. |
-| `IsCalculatingOccupiedCells` | `bool` | Whether occupied cells are considered as blocked. |
+| `AreOccupiedCellsBlocking` | `bool` | Whether occupied cells block: entry, agent clearance, the corner rule and line of sight. |
 | `CornerBlocking` | [`CornerBlocking`](CornerBlocking.md) | Which flanking cells block a diagonal step. Usual default: `BetweenBlockedCells`. |
 | `IsCellWeightEnabled` | `bool` | Whether cell weight calculation is enabled. |
 | `StraightStepCost` | `int` | The cost of a horizontal/vertical step, at least 1. Costs are integers in a unit you pick; weights, budgets and reported costs use the same one. |
@@ -35,7 +35,7 @@ MPath provides two implementations of this interface:
 var settings = new PathfinderSettings
 {
     IsDiagonalMovementEnabled = true,
-    IsCalculatingOccupiedCells = false,
+    AreOccupiedCellsBlocking = false,
     CornerBlocking = CornerBlocking.None,
     IsCellWeightEnabled = true,
     StraightStepCost = 10,
