@@ -12,6 +12,7 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 - Designed for 2D grid-based navigation in games
 - Movement-range queries (`GetReachable`) for "where can this unit move?" mechanics
 - Configurable corner-cutting (`CornerBlocking`): walls and occupied cells can block diagonal steps separately
+- Per-query options (`QueryOptions`): units block or not, and specific occupied cells can be entered for one query, without touching the grid
 - Distance metrics (Manhattan, Chebyshev) and line-of-sight checks for range and visibility logic
 - Stepwise search (`BeginStepwiseSearch`) for visualizing how the algorithm explores the grid
 - First-class support for Unity with dedicated integration components
@@ -161,6 +162,13 @@ foreach (var cell in range.Cells)
 {
     Debug.Log($"{cell.Coordinate} reachable for {cell.Cost}");
 }
+```
+
+Units block movement but not a threat range? Need the mover's own cell or an attack target to be enterable? Pass per-query `QueryOptions` (allocation-free; the grid is left untouched):
+
+```csharp
+using var threat = pathfinder.GetReachable(agent, new Coordinate(4, 4), 5f, new QueryOptions(OccupancyRule.Ignore));
+using var attack = pathfinder.GetPath(agent, from, target, new QueryOptions(isDestinationAlwaysEnterable: true));
 ```
 
 ### Distance and line of sight

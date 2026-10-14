@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
+using Migs.MPath.Core.Internal;
 
 namespace Migs.MPath.Core
 {
@@ -59,6 +60,44 @@ namespace Migs.MPath.Core
                 _openSet.Clear();
 
                 return CalculateReachable(agent, from, budget, ptr);
+            }
+        }
+
+        /// <summary>
+        /// Finds every reachable cell like <see cref="GetReachable(IAgent, Coordinate, float)"/>, with movement rules
+        /// overridden for this query only by <paramref name="options"/>. The grid and the settings are not modified.
+        /// </summary>
+        /// <param name="agent">The agent for which to evaluate reachability. Cannot be null.</param>
+        /// <param name="from">The origin coordinate. Always included in the result (cost 0) when the budget is non-negative.</param>
+        /// <param name="budget">The maximum allowed path cost.</param>
+        /// <param name="options">
+        /// The per-query rules. <c>default</c> behaves exactly like the overload without options.
+        /// <see cref="QueryOptions.IsDestinationAlwaysEnterable"/> is ignored, since the query has no destination.
+        /// </param>
+        /// <returns>
+        /// A <see cref="RangeResult"/> listing every reachable cell with its cheapest path cost.
+        /// The result must be disposed (use <c>using</c>) to return its pooled buffer.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="agent"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when the origin is outside the valid field range.</exception>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
+        public RangeResult GetReachable(IAgent agent, Coordinate from, float budget, QueryOptions options)
+        {
+            var enterableCells = options.AlwaysEnterable;
+
+            fixed (Coordinate* enterable = enterableCells)
+            {
+                _query = QueryRules.FromOptions(_settings, options.Occupancy, enterable, enterableCells.Length,
+                    false, null);
+
+                try
+                {
+                    return GetReachable(agent, from, budget);
+                }
+                finally
+                {
+                    _query = QueryRules.FromSettings(_settings);
+                }
             }
         }
 

@@ -22,6 +22,8 @@ MPath uses a single codebase for both Unity and .NET:
 | [Cell](Cell.md) | Represents a single cell in the pathfinding grid |
 | [Coordinate](Coordinate.md) | Represents a position in the grid |
 | [CornerBlocking](CornerBlocking.md) | Which walls / occupied cells block a diagonal step (corner-cutting) |
+| [QueryOptions](QueryOptions.md) | Per-query overrides: occupancy rule and always-enterable cells |
+| [OccupancyRule](OccupancyRule.md) | Whether occupied cells block in one query (`UseSettings` / `Block` / `Ignore`) |
 | [LineOfSightMode](LineOfSightMode.md) | Controls whether unwalkable cells block `HasLineOfSight` |
 | [IAgent](IAgent.md) | Interface for entities that need pathfinding |
 | [ICellHolder](ICellHolder.md) | Interface for objects that hold cell data |

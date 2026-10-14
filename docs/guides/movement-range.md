@@ -56,6 +56,21 @@ if (range.Contains(new Coordinate(6, 4)))
 
 For repeated lookups, build a `Dictionary<Coordinate, float>` from `range.Cells` once rather than calling `TryGetCost` in a loop.
 
+## Per-query occupancy
+
+The same pathfinder can answer "where can this unit move?" (units block) and "what can this unit threaten?" (units ignored) on one grid. Pass [`QueryOptions`](../api/QueryOptions.md):
+
+```csharp
+using var move   = pathfinder.GetReachable(agent, origin, 5f);
+using var threat = pathfinder.GetReachable(agent, origin, 5f, new QueryOptions(OccupancyRule.Ignore));
+
+// Units block, except the ones listed (e.g. allies this unit may pass through):
+ReadOnlySpan<Coordinate> passable = stackalloc Coordinate[] { ally1, ally2 };
+using var pass = pathfinder.GetReachable(agent, origin, 5f, new QueryOptions(alwaysEnterable: passable));
+```
+
+The options apply to that call only and never modify the grid. `default(QueryOptions)` behaves exactly like the overload without options.
+
 ## Disposal
 
 Like `PathResult`, `RangeResult` rents its backing array from a pool and **must be disposed** — always wrap it in a `using` statement (or call `Dispose()`), and copy out any cells you need to keep before disposing.

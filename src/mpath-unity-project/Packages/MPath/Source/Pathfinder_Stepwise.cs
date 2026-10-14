@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
+using Migs.MPath.Core.Internal;
 
 namespace Migs.MPath.Core
 {
@@ -36,6 +37,33 @@ namespace Migs.MPath.Core
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         public StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to)
         {
+            return BeginStepwiseSearch(agent, from, to, OccupancyRule.UseSettings, Array.Empty<Coordinate>(), false);
+        }
+
+        /// <summary>
+        /// Begins a stepwise search like <see cref="BeginStepwiseSearch(IAgent, Coordinate, Coordinate)"/>, with
+        /// movement rules overridden by <paramref name="options"/> for the whole search. The options are copied when
+        /// the search begins and applied on every tick, so it explores exactly as
+        /// <see cref="GetPath(IAgent, Coordinate, Coordinate, QueryOptions)"/> with the same options would.
+        /// </summary>
+        /// <param name="agent">The agent for which to search. Cannot be null.</param>
+        /// <param name="from">The origin coordinate. Must be inside the grid.</param>
+        /// <param name="to">The destination coordinate. Must be inside the grid.</param>
+        /// <param name="options">The per-query rules. <c>default</c> behaves exactly like the overload without options.</param>
+        /// <returns>A disposable <see cref="StepwiseSearch"/> positioned before the first expansion.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="agent"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="from"/> or <paramref name="to"/> is outside the grid.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when a stepwise search is already active on this instance.</exception>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
+        public StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)
+        {
+            return BeginStepwiseSearch(agent, from, to, options.Occupancy, options.AlwaysEnterable.ToArray(),
+                options.IsDestinationAlwaysEnterable);
+        }
+
+        private StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to,
+            OccupancyRule occupancy, Coordinate[] enterableCells, bool isDestinationEnterable)
+        {
             ThrowIfDisposed();
 
             if (agent == null)
@@ -60,7 +88,8 @@ namespace Migs.MPath.Core
                     "Dispose the previous StepwiseSearch before starting a new one.");
             }
 
-            _activeSearch = new StepwiseSearch(this, agent, from, to);
+            _activeSearch = new StepwiseSearch(this, agent, from, to, occupancy, enterableCells,
+                isDestinationEnterable);
             return _activeSearch;
         }
 
@@ -82,6 +111,11 @@ namespace Migs.MPath.Core
             private readonly Coordinate _to;
             private readonly int _agentSize;
 
+            // The per-query rules, re-applied to the pathfinder around every expansion.
+            private readonly OccupancyRule _occupancy;
+            private readonly Coordinate[] _enterableCells;
+            private readonly bool _isDestinationEnterable;
+
             // The cell buffer is pinned for the whole search because the open set holds raw pointers into it
             // that must stay valid across ticks.
             private GCHandle _handle;
@@ -98,11 +132,15 @@ namespace Migs.MPath.Core
             private SearchStep _lastStep;
             private bool _disposed;
 
-            internal StepwiseSearch(Pathfinder pathfinder, IAgent agent, Coordinate from, Coordinate to)
+            internal StepwiseSearch(Pathfinder pathfinder, IAgent agent, Coordinate from, Coordinate to,
+                OccupancyRule occupancy, Coordinate[] enterableCells, bool isDestinationEnterable)
             {
                 _pathfinder = pathfinder;
                 _to = to;
                 _agentSize = agent.Size;
+                _occupancy = occupancy;
+                _enterableCells = enterableCells;
+                _isDestinationEnterable = isDestinationEnterable;
 
                 // Flatten the caller's grid representation into _cells before we take a pointer to it,
                 // exactly as GetPath does.
@@ -127,7 +165,7 @@ namespace Migs.MPath.Core
                     MarkDiscovered(start);
 
                     // Like GetPath, a destination the agent cannot enter fails before the first expansion.
-                    _state = pathfinder.IsDestinationEnterable(_cells, from, to, _agentSize)
+                    _state = IsDestinationEnterable(from)
                         ? SearchState.InProgress
                         : SearchState.Failure;
                     _current = from;
@@ -184,7 +222,7 @@ namespace Migs.MPath.Core
                 _iteration++;
 
                 var neighbors = stackalloc Cell*[MaxNeighbors];
-                var reachedGoal = _pathfinder.ExpandNext(_cells, _to, _agentSize, neighbors, out var current);
+                var reachedGoal = ExpandNext(neighbors, out var current);
                 _current = current->Coordinate;
 
                 if (reachedGoal)
@@ -221,6 +259,51 @@ namespace Migs.MPath.Core
                 }
 
                 return step;
+            }
+
+            private bool IsDestinationEnterable(Coordinate from)
+            {
+                fixed (Coordinate* enterable = _enterableCells)
+                {
+                    ApplyRules(enterable);
+
+                    try
+                    {
+                        return _pathfinder.IsDestinationEnterable(_cells, from, _to, _agentSize);
+                    }
+                    finally
+                    {
+                        RestoreRules();
+                    }
+                }
+            }
+
+            private bool ExpandNext(Cell** neighbors, out Cell* current)
+            {
+                fixed (Coordinate* enterable = _enterableCells)
+                {
+                    ApplyRules(enterable);
+
+                    try
+                    {
+                        return _pathfinder.ExpandNext(_cells, _to, _agentSize, neighbors, out current);
+                    }
+                    finally
+                    {
+                        RestoreRules();
+                    }
+                }
+            }
+
+            private void ApplyRules(Coordinate* enterable)
+            {
+                _pathfinder._query = QueryRules.FromOptions(_pathfinder._settings, _occupancy, enterable,
+                    _enterableCells.Length, _isDestinationEnterable, _to);
+            }
+
+            private void RestoreRules()
+            {
+                _pathfinder._query = QueryRules.FromSettings(_pathfinder._settings);
             }
 
             private void MarkDiscovered(Cell* cell)
