@@ -63,7 +63,7 @@ IPathfinderSettings settings = new PathfinderSettings
 {
     IsDiagonalMovementEnabled = true,      // Allow diagonal movement
     IsCalculatingOccupiedCells = true,     // Consider occupied cells as blocked
-    IsMovementBetweenCornersEnabled = false // Don't allow cutting corners
+    CornerBlocking = CornerBlocking.BetweenBlockedCells // Don't squeeze between two blocked corners
 };
 
 // Create the pathfinder with your grid and settings

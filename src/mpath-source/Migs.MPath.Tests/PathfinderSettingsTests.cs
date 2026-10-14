@@ -17,13 +17,14 @@ namespace Migs.MPath.Tests
             // Assert
             settings.IsDiagonalMovementEnabled.Should().BeTrue();
             settings.IsCalculatingOccupiedCells.Should().BeTrue();
-            settings.IsMovementBetweenCornersEnabled.Should().BeFalse();
             settings.CornerBlocking.Should().Be(CornerBlocking.BetweenBlockedCells);
             settings.IsCellWeightEnabled.Should().BeTrue();
             settings.StraightMovementMultiplier.Should().Be(1.0f);
             settings.DiagonalMovementMultiplier.Should().Be(1.41f);
             settings.PathSmoothingMethod.Should().Be(PathSmoothingMethod.None);
             settings.GridSnapshotMode.Should().Be(GridSnapshotMode.PerQuery);
+            settings.CellLayout.Should().Be(CellLayout.Auto);
+            settings.TieBreaking.Should().Be(TieBreaking.None);
         }
         
         [Test]
@@ -32,7 +33,7 @@ namespace Migs.MPath.Tests
             // Arrange
             const bool isDiagonalEnabled = false;
             const bool isCalculatingOccupied = false;
-            const bool isCornerMovementEnabled = true;
+            const CornerBlocking cornerBlocking = CornerBlocking.None;
             const bool isCellWeightEnabled = false;
             const float straightMultiplier = 2.0f;
             const float diagonalMultiplier = 3.0f;
@@ -42,7 +43,7 @@ namespace Migs.MPath.Tests
             {
                 IsDiagonalMovementEnabled = isDiagonalEnabled,
                 IsCalculatingOccupiedCells = isCalculatingOccupied,
-                IsMovementBetweenCornersEnabled = isCornerMovementEnabled,
+                CornerBlocking = cornerBlocking,
                 IsCellWeightEnabled = isCellWeightEnabled,
                 StraightMovementMultiplier = straightMultiplier,
                 DiagonalMovementMultiplier = diagonalMultiplier,
@@ -52,41 +53,13 @@ namespace Migs.MPath.Tests
             // Assert
             settings.IsDiagonalMovementEnabled.Should().Be(isDiagonalEnabled);
             settings.IsCalculatingOccupiedCells.Should().Be(isCalculatingOccupied);
-            settings.IsMovementBetweenCornersEnabled.Should().Be(isCornerMovementEnabled);
+            settings.CornerBlocking.Should().Be(cornerBlocking);
             settings.IsCellWeightEnabled.Should().Be(isCellWeightEnabled);
             settings.StraightMovementMultiplier.Should().Be(straightMultiplier);
             settings.DiagonalMovementMultiplier.Should().Be(diagonalMultiplier);
             settings.PathSmoothingMethod.Should().Be(PathSmoothingMethod.StringPulling);
         }
         
-        [TestCase(true, CornerBlocking.None)]
-        [TestCase(false, CornerBlocking.BetweenBlockedCells)]
-        public void IsMovementBetweenCornersEnabled_SetFromDefault_MapsToCornerBlocking(bool value, CornerBlocking expected)
-        {
-            // Arrange
-            var settings = new PathfinderSettings();
-
-            // Act
-            settings.IsMovementBetweenCornersEnabled = value;
-
-            // Assert
-            settings.CornerBlocking.Should().Be(expected);
-        }
-
-        [Test]
-        public void IsMovementBetweenCornersEnabled_SetFalse_KeepsCustomCornerBlocking()
-        {
-            // Arrange
-            var settings = new PathfinderSettings { CornerBlocking = CornerBlocking.BetweenWalls };
-
-            // Act
-            settings.IsMovementBetweenCornersEnabled = false;
-
-            // Assert
-            settings.CornerBlocking.Should().Be(CornerBlocking.BetweenWalls);
-            settings.IsMovementBetweenCornersEnabled.Should().BeFalse();
-        }
-
         [Test]
         public void Settings_ShouldImplementIPathfinderSettings()
         {

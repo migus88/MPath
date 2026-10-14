@@ -57,26 +57,21 @@ namespace Migs.MPath.Tests
             }
         }
 
-        [TestCase(true)]
-        [TestCase(false)]
-        public void DefaultSettings_MatchLegacyCornerFlag(bool isMovementBetweenCornersEnabled)
+        [Test]
+        public void DefaultSettings_BlockDiagonalOnlyBetweenTwoBlockedCells()
         {
             foreach (var east in Flanks)
             {
                 foreach (var south in Flanks)
                 {
                     // Arrange
-                    var legacy = new LegacySettings { IsMovementBetweenCornersEnabled = isMovementBetweenCornersEnabled };
-                    var expected = isMovementBetweenCornersEnabled || east == Flank.Open || south == Flank.Open;
+                    var expected = east == Flank.Open || south == Flank.Open;
 
                     // Act
-                    var legacyTaken = IsDiagonalStepTaken(1, east, south, legacy);
-                    var currentTaken = IsDiagonalStepTaken(1, east, south,
-                        new PathfinderSettings { IsMovementBetweenCornersEnabled = isMovementBetweenCornersEnabled });
+                    var isDiagonalTaken = IsDiagonalStepTaken(1, east, south, new PathfinderSettings());
 
                     // Assert
-                    legacyTaken.Should().Be(expected, $"legacy settings with flanks {east}/{south}");
-                    currentTaken.Should().Be(expected, $"PathfinderSettings with flanks {east}/{south}");
+                    isDiagonalTaken.Should().Be(expected, $"default settings with flanks {east}/{south}");
                 }
             }
         }
@@ -151,15 +146,16 @@ namespace Migs.MPath.Tests
         }
 
         [Test]
-        public void CustomSettings_WithoutCornerBlocking_DeriveItFromLegacyFlag()
+        public void CustomSettings_CornerBlockingNone_AllowsCuttingBetweenTwoWalls()
         {
             // Arrange
-            IPathfinderSettings allowed = new LegacySettings { IsMovementBetweenCornersEnabled = true };
-            IPathfinderSettings forbidden = new LegacySettings { IsMovementBetweenCornersEnabled = false };
+            var settings = new CustomSettings { CornerBlocking = CornerBlocking.None };
 
-            // Act & Assert
-            allowed.CornerBlocking.Should().Be(CornerBlocking.None);
-            forbidden.CornerBlocking.Should().Be(CornerBlocking.BetweenBlockedCells);
+            // Act
+            var isDiagonalTaken = IsDiagonalStepTaken(1, Flank.Wall, Flank.Wall, settings);
+
+            // Assert
+            isDiagonalTaken.Should().BeTrue();
         }
 
         /// <summary>
@@ -219,16 +215,18 @@ namespace Migs.MPath.Tests
             };
         }
 
-        private sealed class LegacySettings : IPathfinderSettings
+        private sealed class CustomSettings : IPathfinderSettings
         {
             public bool IsDiagonalMovementEnabled => true;
             public bool IsCalculatingOccupiedCells => true;
-            public bool IsMovementBetweenCornersEnabled { get; set; }
+            public CornerBlocking CornerBlocking { get; set; }
             public bool IsCellWeightEnabled => true;
             public float StraightMovementMultiplier => 1f;
             public float DiagonalMovementMultiplier => Diagonal;
             public PathSmoothingMethod PathSmoothingMethod => PathSmoothingMethod.None;
-            public int? InitialBufferSize => null;
+            public GridSnapshotMode GridSnapshotMode => GridSnapshotMode.PerQuery;
+            public CellLayout CellLayout => CellLayout.Auto;
+            public TieBreaking TieBreaking => TieBreaking.None;
         }
     }
 }

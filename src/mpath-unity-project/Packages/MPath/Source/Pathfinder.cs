@@ -710,7 +710,7 @@ namespace Migs.MPath.Core
             // Apply path smoothing if enabled
             var result = _settings.PathSmoothingMethod != PathSmoothingMethod.None && steps > 2
                 ? SmoothPath(path, steps, cells, agentSize)
-                : PathResult.Success(path, steps);
+                : PathResult.Create(path, steps);
 
             return result.WithStepCounts(steps, diagonalSteps);
         }

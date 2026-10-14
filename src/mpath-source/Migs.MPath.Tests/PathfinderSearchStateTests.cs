@@ -205,29 +205,6 @@ namespace Migs.MPath.Tests
         }
 
         [Test]
-        public void SettingsWithoutSnapshotMode_DirectEdit_IsSeenByTheNextQuery()
-        {
-            // Arrange
-            var grid = new EditableGrid(SnapshotSource.Matrix);
-            IPathfinderSettings settings = new LegacySettings();
-            using var pathfinder = grid.CreatePathfinder(settings);
-            var from = new Coordinate(0, 0);
-            var to = new Coordinate(Width - 1, Height - 1);
-
-            using (pathfinder.GetPath(from, to))
-            {
-            }
-
-            // Act
-            grid.SetWalkable(to, false);
-
-            // Assert
-            settings.GridSnapshotMode.Should().Be(GridSnapshotMode.PerQuery);
-            using var result = pathfinder.GetPath(from, to);
-            result.IsSuccess.Should().BeFalse();
-        }
-
-        [Test]
         public void Refresh_AfterDispose_Throws()
         {
             // Arrange
@@ -387,16 +364,5 @@ namespace Migs.MPath.Tests
             public Cell CellData { get; set; }
         }
 
-        private sealed class LegacySettings : IPathfinderSettings
-        {
-            public bool IsDiagonalMovementEnabled => true;
-            public bool IsCalculatingOccupiedCells => true;
-            public bool IsMovementBetweenCornersEnabled => false;
-            public bool IsCellWeightEnabled => true;
-            public float StraightMovementMultiplier => 1f;
-            public float DiagonalMovementMultiplier => 1.41f;
-            public PathSmoothingMethod PathSmoothingMethod => PathSmoothingMethod.None;
-            public int? InitialBufferSize => null;
-        }
     }
 }

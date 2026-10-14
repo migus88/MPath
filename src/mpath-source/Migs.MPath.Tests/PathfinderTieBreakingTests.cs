@@ -309,10 +309,7 @@ namespace Migs.MPath.Tests
         [Test]
         public void TieBreaking_ByDefault_IsNone()
         {
-            IPathfinderSettings custom = new SettingsWithoutTieBreaking();
-
             new PathfinderSettings().TieBreaking.Should().Be(TieBreaking.None);
-            custom.TieBreaking.Should().Be(TieBreaking.None);
         }
 
         [Test]
@@ -394,16 +391,5 @@ namespace Migs.MPath.Tests
 
         private static Coordinate C(int x, int y) => new Coordinate(x, y);
 
-        private sealed class SettingsWithoutTieBreaking : IPathfinderSettings
-        {
-            public bool IsDiagonalMovementEnabled => true;
-            public bool IsCalculatingOccupiedCells => true;
-            public bool IsMovementBetweenCornersEnabled => false;
-            public bool IsCellWeightEnabled => true;
-            public float StraightMovementMultiplier => 1f;
-            public float DiagonalMovementMultiplier => 1.41f;
-            public PathSmoothingMethod PathSmoothingMethod => PathSmoothingMethod.None;
-            public int? InitialBufferSize => null;
-        }
     }
 }

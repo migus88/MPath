@@ -40,7 +40,7 @@ pathfinder.Dispose();
 A pathfinder keeps two fixed buffers sized to the grid, rented from the pool once when it is created and returned by
 `Dispose`: the search state (24 bytes per cell: scores, parent, open-set slot, a generation stamp) and the open set
 (the priority queue of cells waiting to be expanded, 8 bytes per cell). Neither grows, so a search allocates nothing
-for them however wide its frontier gets. The old `InitialBufferSize` setting is obsolete and ignored.
+for them however wide its frontier gets.
 
 The search state is reset lazily: each query starts a new generation, and a cell's state counts only once the
 running query has touched it. Starting a query never walks the grid, so a 2-step search costs a 2-step search, not

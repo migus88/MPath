@@ -13,12 +13,6 @@ Represents a single cell in the pathfinding grid: its coordinate and the data a 
 | `IsOccupied` | `bool` | Indicates whether this cell is currently occupied by an agent. |
 | `Weight` | `float` | Extra cost of entering this cell, added to the straight/diagonal movement multiplier of each step into it (when `IsCellWeightEnabled`). Keep it non-negative. |
 
-## Methods
-
-| Method | Description |
-|--------|-------------|
-| `void Reset()` | **Obsolete, does nothing.** The search state no longer lives in `Cell`. Will be removed in the next major version. |
-
 ## Example
 
 ```csharp

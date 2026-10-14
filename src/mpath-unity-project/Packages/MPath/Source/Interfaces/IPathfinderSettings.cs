@@ -1,4 +1,3 @@
-using System;
 using Migs.MPath.Core.Data;
 
 namespace Migs.MPath.Core.Interfaces
@@ -17,28 +16,11 @@ namespace Migs.MPath.Core.Interfaces
         bool IsCalculatingOccupiedCells { get; }
 
         /// <summary>
-        /// Determines is the agent can move between two corners.<br/>
-        /// For example, if set to 'false', this movement is illegal:<br/>
-        /// ◻◎◼◻<br/>
-        /// ◻◼◎◻<br/>
-        /// * Circle is the movement path, blank squares - walkable cells and black squares - walls.
-        /// </summary>
-        /// <remarks>
-        /// This is the all-or-nothing shorthand for <see cref="CornerBlocking"/>: <c>true</c> means
-        /// <see cref="Data.CornerBlocking.None"/>, <c>false</c> means <see cref="Data.CornerBlocking.BetweenBlockedCells"/>.
-        /// The pathfinder reads only <see cref="CornerBlocking"/>.
-        /// </remarks>
-        bool IsMovementBetweenCornersEnabled { get; }
-
-        /// <summary>
         /// Decides which cells beside a diagonal step block it (corner-cutting), separately for walls and
-        /// occupied cells. See <see cref="Data.CornerBlocking"/> for the flags and presets.<br/>
-        /// Implementations that don't override it derive it from <see cref="IsMovementBetweenCornersEnabled"/>,
-        /// which reproduces the behaviour of versions before this setting existed.
+        /// occupied cells. See <see cref="Data.CornerBlocking"/> for the flags and presets;
+        /// <see cref="Data.CornerBlocking.BetweenBlockedCells"/> is the usual default.
         /// </summary>
-        CornerBlocking CornerBlocking => IsMovementBetweenCornersEnabled
-            ? CornerBlocking.None
-            : CornerBlocking.BetweenBlockedCells;
+        CornerBlocking CornerBlocking { get; }
 
         /// <summary>
         /// Is additional cell weight calculation enabled.
@@ -65,34 +47,24 @@ namespace Migs.MPath.Core.Interfaces
         /// When a pathfinder built over a <see cref="Cell"/>[,] matrix, over cell holders or over an unordered
         /// <see cref="Cell"/>[] array copies the caller's grid into its internal snapshot: before every query
         /// (<see cref="Data.GridSnapshotMode.PerQuery"/>), or once and then only after <see cref="Pathfinder.Refresh"/>
-        /// (<see cref="Data.GridSnapshotMode.Manual"/>). Has no effect on a row- or column-major <see cref="Cell"/>[].<br/>
-        /// Implementations that don't override it use <see cref="Data.GridSnapshotMode.PerQuery"/>, the behaviour of
-        /// versions before this setting existed.
+        /// (<see cref="Data.GridSnapshotMode.Manual"/>). Has no effect on a row- or column-major <see cref="Cell"/>[].
+        /// <see cref="Data.GridSnapshotMode.PerQuery"/> is the usual default.
         /// </summary>
-        GridSnapshotMode GridSnapshotMode => GridSnapshotMode.PerQuery;
+        GridSnapshotMode GridSnapshotMode { get; }
 
         /// <summary>
         /// Where a pathfinder built over a <see cref="Cell"/>[] array finds the cell at (X, Y): column-major
         /// (<c>X * fieldHeight + Y</c>), row-major (<c>Y * fieldWidth + X</c>), unordered (each cell's coordinate
         /// says where it is), or detected at the first query (<see cref="Data.CellLayout.Auto"/>). Queries never
-        /// reorder the array. Has no effect on the <see cref="Cell"/>[,] and cell holder constructors.<br/>
-        /// Implementations that don't override it use <see cref="Data.CellLayout.Auto"/>, which accepts an array in
-        /// any order like versions before this setting existed.
+        /// reorder the array. Has no effect on the <see cref="Cell"/>[,] and cell holder constructors.
+        /// <see cref="Data.CellLayout.Auto"/> is the usual default.
         /// </summary>
-        CellLayout CellLayout => CellLayout.Auto;
+        CellLayout CellLayout { get; }
 
         /// <summary>
-        /// Formerly the initial size of the open set buffer. Ignored: the open set is sized to the grid once, when the
-        /// pathfinder is created, so it never grows and searches never allocate for it.
+        /// Which route to return when several cost the same. See <see cref="Data.TieBreaking"/>;
+        /// <see cref="Data.TieBreaking.None"/> is the usual default.
         /// </summary>
-        [Obsolete("Ignored: the open set is sized to the grid when the pathfinder is created and never grows. This member will be removed in the next major version.")]
-        int? InitialBufferSize { get; }
-
-        /// <summary>
-        /// Which route to return when several cost the same. See <see cref="Data.TieBreaking"/>.<br/>
-        /// Implementations that don't override it get <see cref="Data.TieBreaking.None"/>, the behaviour of versions
-        /// before this setting existed.
-        /// </summary>
-        TieBreaking TieBreaking => TieBreaking.None;
+        TieBreaking TieBreaking { get; }
     }
 }

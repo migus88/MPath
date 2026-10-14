@@ -19,8 +19,7 @@ Represents the result of a pathfinding operation. Implements `IDisposable`.
 
 | Method | Description |
 |--------|-------------|
-| `static PathResult Success(Coordinate[] path, int length)` | Creates a successful path result (`Steps = length`, `DiagonalSteps = 0`). |
-| `static PathResult Success(Coordinate[] path, int length, int steps, int diagonalSteps)` | Creates a successful path result with the step counts of the route it came from. Throws `ArgumentOutOfRangeException` for negative counts or `diagonalSteps > steps`. |
+| `static PathResult Success(Coordinate[] path, int length, int steps, int diagonalSteps)` | Creates a successful path result with the step counts of the route it came from (useful for custom caches and test doubles). Throws `ArgumentNullException` for a null path, `ArgumentOutOfRangeException` for a `length` outside the array, negative counts or `diagonalSteps > steps`. |
 | `static PathResult Failure()` | Creates a failed path result. |
 | `Coordinate Get(int index)` | Gets the coordinate at the specified index. |
 | `ReadOnlySpan<Coordinate> AsSpan()` | The path as a span over the pooled array (no copy); empty for a failure. Valid until the result is disposed. |

@@ -21,7 +21,7 @@ namespace Migs.MPath.Tests
             };
             
             // Act
-            var result = PathResult.Success(path, path.Length);
+            var result = PathResult.Success(path, path.Length, path.Length, 0);
             
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -35,7 +35,7 @@ namespace Migs.MPath.Tests
         public void Success_WithNullPath_ShouldThrowArgumentNullException()
         {
             // Act & Assert
-            var action = () => PathResult.Success(null!, 0);
+            var action = () => PathResult.Success(null!, 0, 0, 0);
             action.Should().Throw<ArgumentNullException>()
                   .WithParameterName("path");
         }
@@ -47,7 +47,7 @@ namespace Migs.MPath.Tests
             var path = new[] { new Coordinate(0, 0) };
             
             // Act & Assert
-            var action = () => PathResult.Success(path, -1);
+            var action = () => PathResult.Success(path, -1, 0, 0);
             action.Should().Throw<ArgumentOutOfRangeException>()
                   .WithParameterName("length");
         }
@@ -59,7 +59,7 @@ namespace Migs.MPath.Tests
             var path = new[] { new Coordinate(0, 0) };
             
             // Act & Assert
-            var action = () => PathResult.Success(path, path.Length + 1);
+            var action = () => PathResult.Success(path, path.Length + 1, path.Length + 1, 0);
             action.Should().Throw<ArgumentOutOfRangeException>()
                   .WithParameterName("length");
         }
@@ -86,7 +86,7 @@ namespace Migs.MPath.Tests
                 expectedCoordinate,
                 new Coordinate(2, 2)
             };
-            var result = PathResult.Success(path, path.Length);
+            var result = PathResult.Success(path, path.Length, path.Length, 0);
             
             // Act
             var coordinate = result.Get(1);
@@ -108,7 +108,7 @@ namespace Migs.MPath.Tests
                 new Coordinate(1, 1),
                 new Coordinate(2, 2)
             };
-            var result = PathResult.Success(path, path.Length);
+            var result = PathResult.Success(path, path.Length, path.Length, 0);
             
             // Act & Assert
             var action = () => result.Get(path.Length);
@@ -129,7 +129,7 @@ namespace Migs.MPath.Tests
                 new Coordinate(1, 1),
                 new Coordinate(2, 2)
             };
-            var result = PathResult.Success(path, path.Length);
+            var result = PathResult.Success(path, path.Length, path.Length, 0);
             
             // Act & Assert
             var action = () => result.Get(-1);
@@ -162,7 +162,7 @@ namespace Migs.MPath.Tests
                 new Coordinate(1, 1),
                 new Coordinate(2, 2)
             };
-            var result = PathResult.Success(expectedPath, expectedPath.Length);
+            var result = PathResult.Success(expectedPath, expectedPath.Length, expectedPath.Length, 0);
             
             // Act
             var path = result.Path.ToArray();
