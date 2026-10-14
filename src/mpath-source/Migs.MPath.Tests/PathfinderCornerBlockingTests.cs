@@ -101,7 +101,7 @@ namespace Migs.MPath.Tests
             var settings = new PathfinderSettings
             {
                 CornerBlocking = CornerBlocking.All,
-                IsCalculatingOccupiedCells = false
+                AreOccupiedCellsBlocking = false
             };
 
             // Act
@@ -218,7 +218,7 @@ namespace Migs.MPath.Tests
         private sealed class CustomSettings : IPathfinderSettings
         {
             public bool IsDiagonalMovementEnabled => true;
-            public bool IsCalculatingOccupiedCells => true;
+            public bool AreOccupiedCellsBlocking => true;
             public CornerBlocking CornerBlocking { get; set; }
             public bool IsCellWeightEnabled => true;
             public int StraightStepCost => 100;

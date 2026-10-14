@@ -1,6 +1,7 @@
 using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Migs.MPath.Settings
 {
@@ -10,7 +11,8 @@ namespace Migs.MPath.Settings
         /// <inheritdoc/>
         [field: SerializeField] public bool IsDiagonalMovementEnabled { get; set; } = true;
         /// <inheritdoc/>
-        [field: SerializeField] public bool IsCalculatingOccupiedCells { get; set; } = true;
+        [field: SerializeField, FormerlySerializedAs("<IsCalculatingOccupiedCells>k__BackingField")]
+        public bool AreOccupiedCellsBlocking { get; set; } = true;
         /// <inheritdoc/>
         [field: SerializeField] public CornerBlocking CornerBlocking { get; set; } = CornerBlocking.BetweenBlockedCells;
         /// <inheritdoc/>

@@ -16,7 +16,7 @@ namespace Migs.MPath.Tests
             
             // Assert
             settings.IsDiagonalMovementEnabled.Should().BeTrue();
-            settings.IsCalculatingOccupiedCells.Should().BeTrue();
+            settings.AreOccupiedCellsBlocking.Should().BeTrue();
             settings.CornerBlocking.Should().Be(CornerBlocking.BetweenBlockedCells);
             settings.IsCellWeightEnabled.Should().BeTrue();
             settings.StraightStepCost.Should().Be(100);
@@ -32,7 +32,7 @@ namespace Migs.MPath.Tests
         {
             // Arrange
             const bool isDiagonalEnabled = false;
-            const bool isCalculatingOccupied = false;
+            const bool areOccupiedCellsBlocking = false;
             const CornerBlocking cornerBlocking = CornerBlocking.None;
             const bool isCellWeightEnabled = false;
             const int straightStepCost = 2;
@@ -42,7 +42,7 @@ namespace Migs.MPath.Tests
             var settings = new PathfinderSettings
             {
                 IsDiagonalMovementEnabled = isDiagonalEnabled,
-                IsCalculatingOccupiedCells = isCalculatingOccupied,
+                AreOccupiedCellsBlocking = areOccupiedCellsBlocking,
                 CornerBlocking = cornerBlocking,
                 IsCellWeightEnabled = isCellWeightEnabled,
                 StraightStepCost = straightStepCost,
@@ -52,7 +52,7 @@ namespace Migs.MPath.Tests
             
             // Assert
             settings.IsDiagonalMovementEnabled.Should().Be(isDiagonalEnabled);
-            settings.IsCalculatingOccupiedCells.Should().Be(isCalculatingOccupied);
+            settings.AreOccupiedCellsBlocking.Should().Be(areOccupiedCellsBlocking);
             settings.CornerBlocking.Should().Be(cornerBlocking);
             settings.IsCellWeightEnabled.Should().Be(isCellWeightEnabled);
             settings.StraightStepCost.Should().Be(straightStepCost);

@@ -8,7 +8,7 @@ A diagonal step from `(x, y)` to `(x + dx, y + dy)` passes between two **flankin
 
 - **open**: the agent could enter it;
 - **wall**: not walkable, or outside the grid;
-- **occupied**: walkable but `IsOccupied`, while `IsCalculatingOccupiedCells` is enabled (otherwise an occupied cell counts as open).
+- **occupied**: walkable but `IsOccupied`, while `AreOccupiedCellsBlocking` is enabled (otherwise an occupied cell counts as open).
 
 Each flag names one combination of the two flanking cells. If the flag for the actual combination is set, the diagonal step is not allowed. The order of the two cells does not matter.
 
@@ -38,7 +38,7 @@ Each flag names one combination of the two flanking cells. If the flag for the a
 // Walls block squeezing between them; units can't be entered but never block a diagonal.
 var settings = new PathfinderSettings
 {
-    IsCalculatingOccupiedCells = true,
+    AreOccupiedCellsBlocking = true,
     CornerBlocking = CornerBlocking.BetweenWalls
 };
 
@@ -48,7 +48,7 @@ settings.CornerBlocking = CornerBlocking.AnyWall | CornerBlocking.OccupiedAndOcc
 
 ## Remarks
 
-- The rule only gates **diagonal steps**. Whether a cell can be entered is decided separately: walls never, occupied cells not while `IsCalculatingOccupiedCells` is enabled.
+- The rule only gates **diagonal steps**. Whether a cell can be entered is decided separately: walls never, occupied cells not while `AreOccupiedCellsBlocking` is enabled.
 - It applies the same way to `GetPath`, `GetReachable`, the stepwise search and `StringPulling` path smoothing (a pulled shortcut never takes a diagonal step the rule forbids).
 - **Larger agents** (`IAgent.Size > 1`): a flanking "cell" is the agent's whole `Size×Size` footprint at the flanking position. It counts as a wall when any of its cells is a wall or outside the grid, otherwise as occupied when any of its cells is occupied, otherwise as open.
 - The rule is read once when the `Pathfinder` is constructed, into a 9-bit lookup table, so it adds no per-query cost.

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: BetweenCornersPathfinderSettings
   m_EditorClassIdentifier: 
   <IsDiagonalMovementEnabled>k__BackingField: 1
-  <IsCalculatingOccupiedCells>k__BackingField: 1
+  <AreOccupiedCellsBlocking>k__BackingField: 1
   <CornerBlocking>k__BackingField: 0
   <IsCellWeightEnabled>k__BackingField: 1
   <StraightStepCost>k__BackingField: 100

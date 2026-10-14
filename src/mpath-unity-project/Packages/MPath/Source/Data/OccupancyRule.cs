@@ -7,7 +7,7 @@ namespace Migs.MPath.Core.Data
     public enum OccupancyRule
     {
         /// <summary>
-        /// Follow <see cref="Interfaces.IPathfinderSettings.IsCalculatingOccupiedCells"/>, as the queries without
+        /// Follow <see cref="Interfaces.IPathfinderSettings.AreOccupiedCellsBlocking"/>, as the queries without
         /// options do.
         /// </summary>
         UseSettings = 0,

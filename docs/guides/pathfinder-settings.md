@@ -21,7 +21,7 @@ var settings = new PathfinderSettings();
 var customSettings = new PathfinderSettings
 {
     IsDiagonalMovementEnabled = true,
-    IsCalculatingOccupiedCells = true,
+    AreOccupiedCellsBlocking = true,
     CornerBlocking = CornerBlocking.BetweenBlockedCells,
     IsCellWeightEnabled = true,
     StraightStepCost = 100,
@@ -60,7 +60,7 @@ With the default (BetweenBlockedCells), this movement is illegal; with None it i
 ◻◼◎◻
 (◎ is the movement path, ◻ is walkable, ◼ is a wall)
 ```
- A diagonal step passes between two flanking cells; each is **open**, a **wall** (not walkable or off-grid) or **occupied** (when `IsCalculatingOccupiedCells` is on). Each [`CornerBlocking`](../api/CornerBlocking.md) flag blocks one combination:
+ A diagonal step passes between two flanking cells; each is **open**, a **wall** (not walkable or off-grid) or **occupied** (when `AreOccupiedCellsBlocking` is on). Each [`CornerBlocking`](../api/CornerBlocking.md) flag blocks one combination:
 
 ```csharp
 // Default: blocked only between two blocked cells
@@ -105,7 +105,7 @@ Available options:
 
 **Guarantees**:
 - **Simple** returns the first step, every turn point and the destination, with no repeated waypoints.
-- **StringPulling** only takes a shortcut the search itself could walk: the segment is traced cell by cell and every step must fit the agent's full `Size x Size` footprint (walls and, with `IsCalculatingOccupiedCells`, occupied cells block) and obey the corner rule. With the default `CornerBlocking` (or diagonal movement disabled) a shortcut never passes diagonally between two obstacles that touch at a corner.
+- **StringPulling** only takes a shortcut the search itself could walk: the segment is traced cell by cell and every step must fit the agent's full `Size x Size` footprint (walls and, with `AreOccupiedCellsBlocking`, occupied cells block) and obey the corner rule. With the default `CornerBlocking` (or diagonal movement disabled) a shortcut never passes diagonally between two obstacles that touch at a corner.
 
 **Limitations**:
 - **StringPulling** is the most expensive method, and larger agents make it costlier (`Size x Size` checks per traced cell).
@@ -180,12 +180,12 @@ No effect on the `Cell[,]` and `ICellHolder` constructors. See [CellLayout](../a
 
 ### Cell Handling Settings
 
-#### IsCalculatingOccupiedCells
+#### AreOccupiedCellsBlocking
 
 Determines whether occupied cells are treated as blocked or passable.
 
 ```csharp
-settings.IsCalculatingOccupiedCells = true; // Consider occupied cells as blocked (default)
+settings.AreOccupiedCellsBlocking = true; // Consider occupied cells as blocked (default)
 ```
 
 - **True**: Cells marked as `IsOccupied = true` are considered unwalkable
@@ -242,7 +242,7 @@ settings.DiagonalStepCost = 141; // Default value (1.41 straight steps, approxim
 var settings = new PathfinderSettings
 {
     IsDiagonalMovementEnabled = true,
-    IsCalculatingOccupiedCells = true,
+    AreOccupiedCellsBlocking = true,
     CornerBlocking = CornerBlocking.BetweenBlockedCells,
     IsCellWeightEnabled = true,
     StraightStepCost = 100,
@@ -256,7 +256,7 @@ var settings = new PathfinderSettings
 var settings = new PathfinderSettings
 {
     IsDiagonalMovementEnabled = false,
-    IsCalculatingOccupiedCells = true,
+    AreOccupiedCellsBlocking = true,
     IsCellWeightEnabled = false
 };
 ```
@@ -267,7 +267,7 @@ var settings = new PathfinderSettings
 var settings = new PathfinderSettings
 {
     IsDiagonalMovementEnabled = true,
-    IsCalculatingOccupiedCells = false, // Allow units to stack
+    AreOccupiedCellsBlocking = false, // Allow units to stack
     IsCellWeightEnabled = true // Consider terrain costs
 };
 ```
@@ -309,7 +309,7 @@ public class GamePathfinderSettings : MonoBehaviour, IPathfinderSettings
     
     // IPathfinderSettings implementation
     public bool IsDiagonalMovementEnabled => AllowDiagonalMovement && !_gameState.IsInPuzzleMode;
-    public bool IsCalculatingOccupiedCells => RespectOccupiedCells;
+    public bool AreOccupiedCellsBlocking => RespectOccupiedCells;
     public CornerBlocking CornerBlocking => AllowCornerMovement ? CornerBlocking.None : CornerBlocking.BetweenBlockedCells;
     public bool IsCellWeightEnabled => UseCellWeights;
     public int StraightStepCost => StraightCost;

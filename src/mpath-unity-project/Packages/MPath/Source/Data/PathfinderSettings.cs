@@ -8,7 +8,7 @@ namespace Migs.MPath.Core.Data
         public bool IsDiagonalMovementEnabled { get; set; } = true;
 
         /// <inheritdoc/>
-        public bool IsCalculatingOccupiedCells { get; set; } = true;
+        public bool AreOccupiedCellsBlocking { get; set; } = true;
 
         /// <inheritdoc/>
         public CornerBlocking CornerBlocking { get; set; } = CornerBlocking.BetweenBlockedCells;

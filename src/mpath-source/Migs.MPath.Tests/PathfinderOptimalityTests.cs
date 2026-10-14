@@ -397,7 +397,7 @@ namespace Migs.MPath.Tests
                 {
                     IsDiagonalMovementEnabled = scenario.IsDiagonalMovementEnabled,
                     CornerBlocking = scenario.CornerBlocking,
-                    IsCalculatingOccupiedCells = true,
+                    AreOccupiedCellsBlocking = true,
                     IsCellWeightEnabled = scenario.IsCellWeightEnabled,
                     StraightStepCost = straight,
                     DiagonalStepCost = diagonal,
@@ -724,7 +724,7 @@ namespace Migs.MPath.Tests
                             return Blocker.Wall;
                         }
 
-                        if (Occupied[x, y] && Settings.IsCalculatingOccupiedCells)
+                        if (Occupied[x, y] && Settings.AreOccupiedCellsBlocking)
                         {
                             result = Blocker.Occupied;
                         }

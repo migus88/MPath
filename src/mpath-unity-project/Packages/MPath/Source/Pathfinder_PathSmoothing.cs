@@ -239,7 +239,7 @@ namespace Migs.MPath.Core
         /// Determines whether the cell at (<paramref name="x"/>, <paramref name="y"/>) interrupts line of
         /// sight. Under <see cref="LineOfSightMode.BlockedByUnwalkableCells"/> a non-walkable cell blocks;
         /// under <see cref="LineOfSightMode.IgnoreUnwalkableCells"/> walkability is ignored. In both modes an
-        /// occupied cell blocks when <see cref="IPathfinderSettings.IsCalculatingOccupiedCells"/> is enabled.
+        /// occupied cell blocks when <see cref="IPathfinderSettings.AreOccupiedCellsBlocking"/> is enabled.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool IsLineOfSightBlocked(Cell* cells, int x, int y, LineOfSightMode mode)
@@ -251,7 +251,7 @@ namespace Migs.MPath.Core
                 return true;
             }
 
-            return _settings.IsCalculatingOccupiedCells && cell->IsOccupied;
+            return _settings.AreOccupiedCellsBlocking && cell->IsOccupied;
         }
     }
 }

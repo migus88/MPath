@@ -12,7 +12,7 @@ namespace Migs.MPath.Core.Data
     /// <item><description><b>open</b> - the agent could enter it;</description></item>
     /// <item><description><b>wall</b> - not walkable, or outside the grid;</description></item>
     /// <item><description><b>occupied</b> - walkable but occupied, while
-    /// <see cref="Interfaces.IPathfinderSettings.IsCalculatingOccupiedCells"/> is enabled (otherwise an
+    /// <see cref="Interfaces.IPathfinderSettings.AreOccupiedCellsBlocking"/> is enabled (otherwise an
     /// occupied cell counts as open).</description></item>
     /// </list>
     /// Each flag names one combination of the two flanking cells; when the actual combination's flag is
@@ -21,7 +21,7 @@ namespace Migs.MPath.Core.Data
     /// whole footprint at the flanking position: it is a wall when any cell of the footprint is a wall or
     /// outside the grid, otherwise occupied when any cell of the footprint is occupied, otherwise open.<br/>
     /// The rule only gates diagonal steps. Entering a cell is decided separately (walls never, occupied
-    /// cells not while <see cref="Interfaces.IPathfinderSettings.IsCalculatingOccupiedCells"/> is enabled).
+    /// cells not while <see cref="Interfaces.IPathfinderSettings.AreOccupiedCellsBlocking"/> is enabled).
     /// </remarks>
     [Flags]
     [Serializable]

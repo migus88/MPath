@@ -8,7 +8,7 @@ Decides, for a single query, whether occupied cells (`Cell.IsOccupied`) block th
 
 | Value | Description |
 |-------|-------------|
-| `UseSettings` | **(default, `0`)** Follow `IPathfinderSettings.IsCalculatingOccupiedCells`, like the queries without options. |
+| `UseSettings` | **(default, `0`)** Follow `IPathfinderSettings.AreOccupiedCellsBlocking`, like the queries without options. |
 | `Block` | Occupied cells block entry and clearance and count as occupied for the corner rule, even when the settings ignore them. |
 | `Ignore` | Occupied cells are treated as free, even when the settings block them (e.g. a threat range that sees through units). |
 

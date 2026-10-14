@@ -34,12 +34,12 @@ namespace Migs.MPath.Tests
         [TestCase(Query.Reachable, false, OccupancyRule.Block, false)]
         [TestCase(Query.Stepwise, true, OccupancyRule.Ignore, true)]
         [TestCase(Query.Stepwise, false, OccupancyRule.Block, false)]
-        public void Occupancy_OverridesSettingsForTheQuery(Query query, bool isCalculatingOccupiedCells,
+        public void Occupancy_OverridesSettingsForTheQuery(Query query, bool areOccupiedCellsBlocking,
             OccupancyRule occupancy, bool expectedReach)
         {
             // Arrange
             var cells = CreateCorridor(6, new Coordinate(2, 0));
-            var settings = new PathfinderSettings { IsCalculatingOccupiedCells = isCalculatingOccupiedCells };
+            var settings = new PathfinderSettings { AreOccupiedCellsBlocking = areOccupiedCellsBlocking };
             using var pathfinder = new Pathfinder(cells, settings);
 
             // Act

@@ -140,7 +140,7 @@ a leading `IAgent agent` (reads `agent.Size`). Both find the same results and sh
 | `GetReachable(Coordinate from, int budget, QueryOptions options, int agentSize = 1)` | `RangeResult` | Same, with per-query rules. |
 | `BeginStepwiseSearch(Coordinate from, Coordinate to, int agentSize = 1)` | `StepwiseSearch` | Stepwise search without an `IAgent`. `agentSize < 1` throws. |
 | `BeginStepwiseSearch(Coordinate from, Coordinate to, QueryOptions options, int agentSize = 1)` | `StepwiseSearch` | Same, with per-query rules. |
-| `GetPath(IAgent agent, Coordinate from, Coordinate to)` | `PathResult` | Core A* query; returns a cheapest route. Throws `ArgumentNullException` if `agent` is null, `ArgumentException` if `from` or `to` is outside the grid. Returns a **failure** result (not an exception) when no path exists; a destination the agent can't enter (unwalkable, occupied while `IsCalculatingOccupiedCells`, or no clearance for its size) fails immediately without searching, unless `from == to`. |
+| `GetPath(IAgent agent, Coordinate from, Coordinate to)` | `PathResult` | Core A* query; returns a cheapest route. Throws `ArgumentNullException` if `agent` is null, `ArgumentException` if `from` or `to` is outside the grid. Returns a **failure** result (not an exception) when no path exists; a destination the agent can't enter (unwalkable, occupied while `AreOccupiedCellsBlocking`, or no clearance for its size) fails immediately without searching, unless `from == to`. |
 | `GetPath(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)` | `PathResult` | Same, with per-query rules (see [Per-query options](#per-query-options-units-block-or-not-enter-specific-occupied-cells)). Options that change the rules bypass the path cache. |
 | `GetReachable(IAgent agent, Coordinate from, int budget)` | `RangeResult` | Every cell reachable for total cost `<= budget` ("where can this unit move?"). Uniform-cost flood fill. |
 | `GetReachable(IAgent agent, Coordinate from, int budget, QueryOptions options)` | `RangeResult` | Same, with per-query rules (`IsDestinationAlwaysEnterable` is ignored: no destination). |
@@ -207,7 +207,7 @@ ones it doesn't care about.
 | Property | Type | Default | Meaning |
 |----------|------|---------|---------|
 | `IsDiagonalMovementEnabled` | `bool` | `true` | Allow 8-direction movement. |
-| `IsCalculatingOccupiedCells` | `bool` | `true` | Treat `IsOccupied` cells as blocked (for paths *and* line of sight). |
+| `AreOccupiedCellsBlocking` | `bool` | `true` | Treat `IsOccupied` cells as blocked (for paths *and* line of sight). |
 | `CornerBlocking` | `CornerBlocking` (`[Flags]`) | `BetweenBlockedCells` | Which flanking cells block a diagonal step: walls and occupied cells separately. See below. |
 | `IsCellWeightEnabled` | `bool` | `true` | Add per-cell `Weight` to movement cost (terrain cost). |
 | `StraightStepCost` | `int` | `100` | Cost of a cardinal step, at least 1. All costs are `int` in a unit you pick (default: hundredths of a step); weights, budgets and reported costs use it. |
@@ -286,7 +286,7 @@ bool clearShot = pathfinder.HasLineOfSight(shooter, target);
 bool visible = pathfinder.HasLineOfSight(shooter, target, LineOfSightMode.IgnoreUnwalkableCells);
 ```
 
-Occupancy is orthogonal to the mode: with `IsCalculatingOccupiedCells`, an occupied cell blocks sight in
+Occupancy is orthogonal to the mode: with `AreOccupiedCellsBlocking`, an occupied cell blocks sight in
 *both* modes (so "ignore terrain, but units still block" is expressible).
 
 ### Visualize the search (teaching/demos only — use `GetPath` in production)
@@ -315,12 +315,12 @@ pathfinder.InvalidateCache();                         // NOT automatic for direc
 ### Corner-cutting: walls vs units
 
 A diagonal step passes between two flanking cells, each open, a wall (unwalkable/off-grid) or occupied
-(`IsOccupied` with `IsCalculatingOccupiedCells`). `CornerBlocking` flags pick which pairs block the step:
+(`IsOccupied` with `AreOccupiedCellsBlocking`). `CornerBlocking` flags pick which pairs block the step:
 
 ```csharp
 var settings = new PathfinderSettings
 {
-    IsCalculatingOccupiedCells = true,           // units can't be entered...
+    AreOccupiedCellsBlocking = true,           // units can't be entered...
     CornerBlocking = CornerBlocking.BetweenWalls // ...but only two walls block a diagonal
 };
 ```
@@ -346,7 +346,7 @@ using var path = pathfinder.GetPath(unitCell, target,
 
 An `AlwaysEnterable` cell is treated as unoccupied for that query only (entry, `Size > 1` clearance, open
 flank for `CornerBlocking`); walls stay walls; the grid is never modified. `OccupancyRule.Block`/`Ignore`
-override `IsCalculatingOccupiedCells` for the query. `HasLineOfSight` takes no options.
+override `AreOccupiedCellsBlocking` for the query. `HasLineOfSight` takes no options.
 
 ### Update cells as the game changes (doors, units moving)
 

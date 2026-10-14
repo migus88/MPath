@@ -107,10 +107,10 @@ namespace Migs.MPath.Tests
 
         [TestCase(true, false)]
         [TestCase(false, true)]
-        public void SetOccupied_BlocksOnlyWhenOccupancyIsCalculated(bool isCalculatingOccupiedCells, bool expectedReach)
+        public void SetOccupied_BlocksOnlyWhenOccupiedCellsBlock(bool areOccupiedCellsBlocking, bool expectedReach)
         {
             // Arrange
-            var settings = new PathfinderSettings { IsCalculatingOccupiedCells = isCalculatingOccupiedCells };
+            var settings = new PathfinderSettings { AreOccupiedCellsBlocking = areOccupiedCellsBlocking };
             using var pathfinder = new Pathfinder(CreateRowMajorArray(), Width, Height, settings);
 
             // Act

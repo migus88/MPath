@@ -24,7 +24,7 @@ bool ignoringTerrain = pathfinder.HasLineOfSight(shooter, target, LineOfSightMod
 ## Remarks
 
 - The mode **only** governs walkability. Occupancy is handled separately: when
-  `IsCalculatingOccupiedCells` is enabled, an occupied cell blocks sight under **either** mode. This makes
+  `AreOccupiedCellsBlocking` is enabled, an occupied cell blocks sight under **either** mode. This makes
   "ignore terrain, but units still block" expressible by combining `IgnoreUnwalkableCells` with occupancy.
 - The endpoints themselves are never tested, so a target standing on a blocked or occupied cell can still be
   seen regardless of mode.

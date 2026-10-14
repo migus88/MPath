@@ -17,7 +17,7 @@ namespace Migs.MPath.Tests
             var settings = new PathfinderSettings
             {
                 IsDiagonalMovementEnabled = false,
-                IsCalculatingOccupiedCells = true,
+                AreOccupiedCellsBlocking = true,
                 CornerBlocking = CornerBlocking.BetweenBlockedCells,
                 IsCellWeightEnabled = false
             };
@@ -83,7 +83,7 @@ namespace Migs.MPath.Tests
             
             var settings = new PathfinderSettings
             {
-                IsCalculatingOccupiedCells = true // Consider occupied cells as blocked
+                AreOccupiedCellsBlocking = true // Consider occupied cells as blocked
             };
             
             var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
@@ -112,7 +112,7 @@ namespace Migs.MPath.Tests
             
             var settings = new PathfinderSettings
             {
-                IsCalculatingOccupiedCells = false // Ignore occupied cells
+                AreOccupiedCellsBlocking = false // Ignore occupied cells
             };
             
             var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
@@ -199,7 +199,7 @@ namespace Migs.MPath.Tests
             var settings = new PathfinderSettings
             {
                 IsDiagonalMovementEnabled = true,
-                IsCalculatingOccupiedCells = true,
+                AreOccupiedCellsBlocking = true,
                 CornerBlocking = CornerBlocking.None,
                 IsCellWeightEnabled = true // Enable cell weights
             };
