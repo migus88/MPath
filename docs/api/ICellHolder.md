@@ -25,7 +25,7 @@ public class GridTile : ICellHolder
     private Cell _cell;
     public Cell CellData => _cell;
     
-    public GridTile(int x, int y, bool isWalkable, float weight = 1.0f)
+    public GridTile(int x, int y, bool isWalkable, int weight = 0)
     {
         _cell = new Cell
         {
@@ -41,7 +41,7 @@ public class GridCell : MonoBehaviour, ICellHolder
 {
     [SerializeField] private bool _isWalkable = true;
     [SerializeField] private Vector2Int _position;
-    [SerializeField] private float _weight = 1.0f;
+    [SerializeField] private int _weight = 0;
     
     private Cell _cellData;
     public Cell CellData => _cellData;

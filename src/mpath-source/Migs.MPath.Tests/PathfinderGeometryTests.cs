@@ -283,7 +283,7 @@ namespace Migs.MPath.Tests
                         Coordinate = new Coordinate(x, y),
                         IsWalkable = true,
                         IsOccupied = false,
-                        Weight = 1.0f
+                        Weight = 100
                     };
                 }
             }

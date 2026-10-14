@@ -19,10 +19,12 @@ namespace Migs.MPath.Core
         /// <param name="agent">The agent for which to evaluate reachability. Cannot be null.</param>
         /// <param name="from">The origin coordinate. Always included in the result (cost 0) when the budget is non-negative.</param>
         /// <param name="budget">
-        /// The maximum allowed path cost. Each straight step costs <see cref="IPathfinderSettings.StraightMovementMultiplier"/>
-        /// and each diagonal step costs <see cref="IPathfinderSettings.DiagonalMovementMultiplier"/>; when
-        /// <see cref="IPathfinderSettings.IsCellWeightEnabled"/> is set, the destination cell's
-        /// <see cref="Cell.Weight"/> is added to the step cost.
+        /// The maximum allowed path cost, inclusive: a cell whose cheapest route costs exactly the budget is reached.
+        /// Each straight step costs <see cref="IPathfinderSettings.StraightStepCost"/> and each diagonal step costs
+        /// <see cref="IPathfinderSettings.DiagonalStepCost"/>; when <see cref="IPathfinderSettings.IsCellWeightEnabled"/>
+        /// is set, the destination cell's <see cref="Cell.Weight"/> is added to the step cost. A negative budget
+        /// reaches nothing; routes costing more than 1,073,741,823 (<c>int.MaxValue / 2</c>) are never reached, so
+        /// <c>int.MaxValue</c> is an unbounded budget.
         /// </param>
         /// <returns>
         /// A <see cref="RangeResult"/> listing every reachable cell with its cheapest path cost.
@@ -31,7 +33,7 @@ namespace Migs.MPath.Core
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="agent"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when the origin is outside the valid field range.</exception>
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
-        public RangeResult GetReachable(IAgent agent, Coordinate from, float budget)
+        public RangeResult GetReachable(IAgent agent, Coordinate from, int budget)
         {
             ThrowIfDisposed();
 
@@ -44,7 +46,7 @@ namespace Migs.MPath.Core
         }
 
         /// <summary>
-        /// Finds every reachable cell like <see cref="GetReachable(IAgent, Coordinate, float)"/> for an agent that
+        /// Finds every reachable cell like <see cref="GetReachable(IAgent, Coordinate, int)"/> for an agent that
         /// occupies an <paramref name="agentSize"/> x <paramref name="agentSize"/> square of cells, without an
         /// <see cref="IAgent"/>.
         /// </summary>
@@ -58,7 +60,7 @@ namespace Migs.MPath.Core
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="agentSize"/> is less than 1.</exception>
         /// <exception cref="ArgumentException">Thrown when the origin is outside the valid field range.</exception>
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
-        public RangeResult GetReachable(Coordinate from, float budget, int agentSize = SingleCellAgentSize)
+        public RangeResult GetReachable(Coordinate from, int budget, int agentSize = SingleCellAgentSize)
         {
             ThrowIfDisposed();
             ThrowIfInvalidAgentSize(agentSize);
@@ -69,7 +71,7 @@ namespace Migs.MPath.Core
         /// <summary>
         /// The shared body of the <c>GetReachable</c> overloads.
         /// </summary>
-        private RangeResult FindReachable(int agentSize, Coordinate from, float budget)
+        private RangeResult FindReachable(int agentSize, Coordinate from, int budget)
         {
             if (!IsPositionValid(from.X, from.Y))
             {
@@ -101,7 +103,7 @@ namespace Migs.MPath.Core
         }
 
         /// <summary>
-        /// Finds every reachable cell like <see cref="GetReachable(IAgent, Coordinate, float)"/>, with movement rules
+        /// Finds every reachable cell like <see cref="GetReachable(IAgent, Coordinate, int)"/>, with movement rules
         /// overridden for this query only by <paramref name="options"/>. The grid and the settings are not modified.
         /// </summary>
         /// <param name="agent">The agent for which to evaluate reachability. Cannot be null.</param>
@@ -118,7 +120,7 @@ namespace Migs.MPath.Core
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="agent"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when the origin is outside the valid field range.</exception>
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
-        public RangeResult GetReachable(IAgent agent, Coordinate from, float budget, QueryOptions options)
+        public RangeResult GetReachable(IAgent agent, Coordinate from, int budget, QueryOptions options)
         {
             ThrowIfDisposed();
 
@@ -131,7 +133,7 @@ namespace Migs.MPath.Core
         }
 
         /// <summary>
-        /// Finds every reachable cell like <see cref="GetReachable(Coordinate, float, int)"/>, with movement rules
+        /// Finds every reachable cell like <see cref="GetReachable(Coordinate, int, int)"/>, with movement rules
         /// overridden for this query only by <paramref name="options"/>. The grid and the settings are not modified.
         /// </summary>
         /// <param name="from">The origin coordinate. Always included in the result (cost 0) when the budget is non-negative.</param>
@@ -148,7 +150,7 @@ namespace Migs.MPath.Core
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="agentSize"/> is less than 1.</exception>
         /// <exception cref="ArgumentException">Thrown when the origin is outside the valid field range.</exception>
         /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
-        public RangeResult GetReachable(Coordinate from, float budget, QueryOptions options,
+        public RangeResult GetReachable(Coordinate from, int budget, QueryOptions options,
             int agentSize = SingleCellAgentSize)
         {
             ThrowIfDisposed();
@@ -157,7 +159,7 @@ namespace Migs.MPath.Core
             return FindReachable(agentSize, from, budget, options);
         }
 
-        private RangeResult FindReachable(int agentSize, Coordinate from, float budget, QueryOptions options)
+        private RangeResult FindReachable(int agentSize, Coordinate from, int budget, QueryOptions options)
         {
             var enterableCells = options.AlwaysEnterable;
 
@@ -180,14 +182,15 @@ namespace Migs.MPath.Core
         /// <summary>
         /// Runs the bounded uniform-cost search that backs <see cref="GetReachable"/>.
         /// </summary>
-        private RangeResult CalculateReachable(int agentSize, Coordinate from, float budget, Cell* cells,
+        private RangeResult CalculateReachable(int agentSize, Coordinate from, int budget, Cell* cells,
             PathNode* nodes)
         {
             // The reachable set can never exceed the number of cells in the grid.
             var reachable = ArrayPool<ReachableCell>.Shared.Rent(Size);
             var count = 0;
+            var maxCost = Math.Min(budget, FastPathfinderSettings.MaxCost);
 
-            OpenNode(nodes, GetLayoutIndex(from.X, from.Y), PathNode.NoParent, 0, 0f, 0f);
+            OpenNode(nodes, GetLayoutIndex(from.X, from.Y), PathNode.NoParent, 0, 0, 0);
 
             var neighbors = stackalloc Cell*[MaxNeighbors];
             var generation = _generation;
@@ -204,6 +207,9 @@ namespace Migs.MPath.Core
                     currentNode->Depth, currentNode->DiagonalSteps);
 
                 PopulateNeighbors(cells, currentCell, agentSize, neighbors);
+
+                // Cells that cannot be entered within the budget (and the overflow headroom) are pruned.
+                var headroom = maxCost - currentNode->ScoreG;
 
                 for (var n = 0; n < MaxNeighbors; n++)
                 {
@@ -223,13 +229,14 @@ namespace Migs.MPath.Core
                         continue;
                     }
 
-                    var tentativeG = currentNode->ScoreG + GetStepCost(currentCell, neighbor);
+                    var stepCost = GetStepCost(n, neighbor);
 
-                    // Cells that cannot be entered within the budget are pruned from the search.
-                    if (tentativeG > budget)
+                    if (stepCost > headroom)
                     {
                         continue;
                     }
+
+                    var tentativeG = currentNode->ScoreG + stepCost;
 
                     if (!isTouched)
                     {
@@ -263,7 +270,7 @@ namespace Migs.MPath.Core
         /// <paramref name="current"/> plus a step in <paramref name="direction"/>.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void SetRoute(PathNode* current, PathNode* node, int direction, float scoreG)
+        private static void SetRoute(PathNode* current, PathNode* node, int direction, int scoreG)
         {
             node->ScoreG = scoreG;
             node->Depth = current->Depth + 1;

@@ -13,20 +13,22 @@ A high-performance A* pathfinding implementation for grid-based environments.
 | `Pathfinder(Cell[,] cellsMatrix, IPathfinderSettings settings = null)` | Initializes with a cell matrix. |
 | `Pathfinder(ICellHolder[,] cellHoldersMatrix, IPathfinderSettings settings = null)` | Initializes with a cell holder matrix. |
 
+Every constructor throws `ArgumentOutOfRangeException` when `StraightStepCost` or `DiagonalStepCost` is below 1, or when `(width + height)` times the larger step cost in use (the diagonal one only with diagonal movement) exceeds 1,073,741,823 (`int.MaxValue / 2`), the headroom that keeps integer route costs from overflowing.
+
 ## Methods
 
 | Method | Description |
 |--------|-------------|
 | `PathResult GetPath(Coordinate from, Coordinate to, int agentSize = 1)` | Calculates a path for an `agentSize` x `agentSize` agent (single cell by default), without an `IAgent`. See [agent size](#agent-size). |
 | `PathResult GetPath(Coordinate from, Coordinate to, QueryOptions options, int agentSize = 1)` | `GetPath` with per-query [`QueryOptions`](QueryOptions.md), without an `IAgent`. |
-| `RangeResult GetReachable(Coordinate from, float budget, int agentSize = 1)` | `GetReachable` without an `IAgent`. |
-| `RangeResult GetReachable(Coordinate from, float budget, QueryOptions options, int agentSize = 1)` | `GetReachable` with per-query [`QueryOptions`](QueryOptions.md), without an `IAgent`. |
+| `RangeResult GetReachable(Coordinate from, int budget, int agentSize = 1)` | `GetReachable` without an `IAgent`. |
+| `RangeResult GetReachable(Coordinate from, int budget, QueryOptions options, int agentSize = 1)` | `GetReachable` with per-query [`QueryOptions`](QueryOptions.md), without an `IAgent`. |
 | `StepwiseSearch BeginStepwiseSearch(Coordinate from, Coordinate to, int agentSize = 1)` | `BeginStepwiseSearch` without an `IAgent`. |
 | `StepwiseSearch BeginStepwiseSearch(Coordinate from, Coordinate to, QueryOptions options, int agentSize = 1)` | `BeginStepwiseSearch` with per-query [`QueryOptions`](QueryOptions.md), without an `IAgent`. |
 | `PathResult GetPath(IAgent agent, Coordinate from, Coordinate to)` | Calculates a path from starting position to destination. |
 | `PathResult GetPath(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)` | `GetPath` with per-query [`QueryOptions`](QueryOptions.md) (occupancy override, always-enterable cells). |
-| `RangeResult GetReachable(IAgent agent, Coordinate from, float budget)` | Finds every cell whose cheapest path cost from the origin is within the budget. |
-| `RangeResult GetReachable(IAgent agent, Coordinate from, float budget, QueryOptions options)` | `GetReachable` with per-query [`QueryOptions`](QueryOptions.md). |
+| `RangeResult GetReachable(IAgent agent, Coordinate from, int budget)` | Finds every cell whose cheapest path cost from the origin is within the budget. |
+| `RangeResult GetReachable(IAgent agent, Coordinate from, int budget, QueryOptions options)` | `GetReachable` with per-query [`QueryOptions`](QueryOptions.md). |
 | `StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to)` | Begins a tick-by-tick A* search for visualizing the algorithm's progress. |
 | `StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)` | `BeginStepwiseSearch` with per-query [`QueryOptions`](QueryOptions.md), applied on every tick. |
 | `bool HasLineOfSight(Coordinate from, Coordinate to, LineOfSightMode mode = BlockedByUnwalkableCells)` | Returns whether an unobstructed straight line connects two cells. |
@@ -35,7 +37,7 @@ A high-performance A* pathfinding implementation for grid-based environments.
 | `Cell GetCell(Coordinate coordinate)` | Returns the current cell at a coordinate, read from your grid (array, matrix or holder). |
 | `void SetWalkable(Coordinate coordinate, bool isWalkable)` | Updates one cell's walkability in your `Cell[]`/`Cell[,]`. See [cell updates](#cell-updates). |
 | `void SetOccupied(Coordinate coordinate, bool isOccupied)` | Updates one cell's occupancy. See [cell updates](#cell-updates). |
-| `void SetWeight(Coordinate coordinate, float weight)` | Updates one cell's weight. See [cell updates](#cell-updates). |
+| `void SetWeight(Coordinate coordinate, int weight)` | Updates one cell's weight. See [cell updates](#cell-updates). |
 | `void SetCell(Coordinate coordinate, in Cell cell)` | Updates walkability, occupancy and weight at once; `cell.Coordinate` is ignored. |
 | `int GetIndex(Coordinate coordinate)` | `Cell[]`: the cell's index in your array by its [`CellLayout`](CellLayout.md) (`X * fieldHeight + Y`, `Y * fieldWidth + X`, or wherever an unordered array holds it; `Auto` reports column-major until the first query detects the layout). Other modes: `X * fieldHeight + Y` in the snapshot. |
 | `Pathfinder EnablePathCaching(IPathCaching pathCachingHandler = null)` | Enables path caching with optional custom implementation. |
@@ -70,7 +72,7 @@ Every query takes the agent either as a trailing `int agentSize = 1` or as a lea
 ```csharp
 using var path  = pathfinder.GetPath(from, to);                // single-cell agent
 using var large = pathfinder.GetPath(from, to, agentSize: 2);  // 2x2 agent
-using var range = pathfinder.GetReachable(from, 5f, new QueryOptions(OccupancyRule.Ignore), agentSize: 2);
+using var range = pathfinder.GetReachable(from, 500, new QueryOptions(OccupancyRule.Ignore), agentSize: 2);
 ```
 
 ## Cell updates
@@ -81,7 +83,7 @@ using var range = pathfinder.GetReachable(from, 5f, new QueryOptions(OccupancyRu
 - **`Cell[,]` constructor and unordered `Cell[]`:** the setters also write the pathfinder's snapshot, so the change is seen at once under [`GridSnapshotMode.Manual`](GridSnapshotMode.md) too (no `Refresh()` needed).
 - **`ICellHolder[]` and `ICellHolder[,]` constructors:** the setters throw `NotSupportedException`. The holders are the source of truth the pathfinder reads, so update the holder itself (and call `Refresh()` with `GridSnapshotMode.Manual`, and `InvalidateCache()` when caching is on). `GetCell` and `GetIndex` work in every mode.
 - **Path cache:** a setter that changes a value cached paths depend on clears the cache (walkability always; occupancy only with `IsCalculatingOccupiedCells`; weight only with `IsCellWeightEnabled`). Setting the current value again leaves the cache alone. Direct writes to your grid still need `InvalidateCache()`.
-- Out-of-grid coordinates throw `ArgumentException`; a grid with no cell carrying the coordinate throws `InvalidOperationException`.
+- Out-of-grid coordinates throw `ArgumentException`; a grid with no cell carrying the coordinate throws `InvalidOperationException`. `SetWeight` and `SetCell` throw `ArgumentOutOfRangeException` for a negative weight.
 
 ```csharp
 pathfinder.SetOccupied(unit.Position, false);
@@ -117,13 +119,13 @@ pathfinder.DisablePathCaching();
 
 `GetReachable` returns every cell an agent can reach from an origin without exceeding a movement budget — useful for tactics/strategy games that highlight where a unit can move. It is a uniform-cost (Dijkstra) flood fill that honours the same movement rules as `GetPath` (diagonal movement, corner-cutting, occupied cells and agent clearance).
 
-Per-step cost is `StraightMovementMultiplier` for cardinal moves and `DiagonalMovementMultiplier` for diagonal moves; when `IsCellWeightEnabled` is set, the destination cell's `Weight` is added to the step cost. The origin is always included with cost `0`.
+Per-step cost is `StraightStepCost` for cardinal moves and `DiagonalStepCost` for diagonal moves; when `IsCellWeightEnabled` is set, the destination cell's `Weight` is added to the step cost. Costs are integers: a cell whose cheapest route costs exactly the budget is included, one costing more is not. The origin is always included with cost `0`. Routes costing more than 1,073,741,823 (`int.MaxValue / 2`) are never reached, so `int.MaxValue` is an unbounded budget.
 
 ```csharp
 using var pathfinder = new Pathfinder(cells, 10, 10);
 
 // Every tile reachable within 4 movement points
-using var range = pathfinder.GetReachable(new Coordinate(4, 4), 4f);
+using var range = pathfinder.GetReachable(new Coordinate(4, 4), 400);
 
 foreach (var cell in range.Cells)
 {

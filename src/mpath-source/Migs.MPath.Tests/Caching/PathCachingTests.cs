@@ -393,7 +393,7 @@ namespace Migs.MPath.Tests.Caching
 
             // Act
             pathfinder.SetOccupied(new Coordinate(3, 0), true);
-            pathfinder.SetWeight(new Coordinate(3, 0), 5f);
+            pathfinder.SetWeight(new Coordinate(3, 0), 500);
 
             // Assert
             cache.Received(expectedClears).ClearCache();

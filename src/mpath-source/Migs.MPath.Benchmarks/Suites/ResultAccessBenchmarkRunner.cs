@@ -15,13 +15,13 @@ namespace Migs.MPath.Benchmarks.Suites;
 [MemoryDiagnoser]
 public class ResultAccessBenchmarkRunner : IDisposable
 {
-    private const float RangeBudget = 100f;
+    private const int RangeBudget = 10000;
 
     private Pathfinder _pathfinder;
     private PathResult _path;
     private RangeResult _range;
     private Coordinate[] _reached;
-    private float[] _costs;
+    private int[] _costs;
 
     [GlobalSetup]
     public void Setup()
@@ -31,7 +31,7 @@ public class ResultAccessBenchmarkRunner : IDisposable
         _path = _pathfinder.GetPath(BenchmarkScenario.Start, BenchmarkScenario.Destination);
         _range = _pathfinder.GetReachable(BenchmarkScenario.Start, RangeBudget);
         _reached = new Coordinate[_range.Length];
-        _costs = new float[maze.Cells.Length];
+        _costs = new int[maze.Cells.Length];
 
         for (var i = 0; i < _range.Length; i++)
         {
@@ -92,9 +92,9 @@ public class ResultAccessBenchmarkRunner : IDisposable
     }
 
     [Benchmark]
-    public float Range_ForeachCellsProperty()
+    public long Range_ForeachCellsProperty()
     {
-        var sum = 0f;
+        var sum = 0L;
 
         foreach (var cell in _range.Cells)
         {
@@ -105,9 +105,9 @@ public class ResultAccessBenchmarkRunner : IDisposable
     }
 
     [Benchmark]
-    public float Range_Foreach()
+    public long Range_Foreach()
     {
-        var sum = 0f;
+        var sum = 0L;
 
         foreach (var cell in _range)
         {
@@ -118,15 +118,15 @@ public class ResultAccessBenchmarkRunner : IDisposable
     }
 
     [Benchmark]
-    public float Range_CopyCostsTo()
+    public int Range_CopyCostsTo()
     {
         return _range.CopyCostsTo(_costs);
     }
 
     [Benchmark]
-    public float Range_TryGetCost_EveryReachedCell()
+    public long Range_TryGetCost_EveryReachedCell()
     {
-        var sum = 0f;
+        var sum = 0L;
 
         for (var i = 0; i < _reached.Length; i++)
         {

@@ -197,7 +197,7 @@ namespace Migs.MPath.Core.Data
         /// <param name="cost">When this method returns, contains the cheapest path cost if reachable; otherwise, zero.</param>
         /// <returns><c>true</c> if the coordinate is reachable; otherwise, <c>false</c>.</returns>
         /// <exception cref="ObjectDisposedException">Thrown when the result has been disposed.</exception>
-        public bool TryGetCost(Coordinate coordinate, out float cost)
+        public bool TryGetCost(Coordinate coordinate, out int cost)
         {
             var isReachable = TryGetCell(coordinate, out var cell);
             cost = cell.Cost;
@@ -309,7 +309,7 @@ namespace Migs.MPath.Core.Data
         /// grid.</exception>
         /// <exception cref="InvalidOperationException">Thrown for a non-empty result made with
         /// <see cref="Create"/>, which does not know a grid layout.</exception>
-        public int CopyCostsTo(Span<float> costByCellIndex, float unreached = -1f)
+        public int CopyCostsTo(Span<int> costByCellIndex, int unreached = -1)
         {
             ThrowIfDisposed();
 

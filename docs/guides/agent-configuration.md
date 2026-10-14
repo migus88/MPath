@@ -13,7 +13,7 @@ Every query takes a trailing `int agentSize` that defaults to `1`, so single-cel
 ```csharp
 using var path  = pathfinder.GetPath(start, end);                  // 1x1 agent
 using var truck = pathfinder.GetPath(start, end, agentSize: 2);    // 2x2 agent
-using var range = pathfinder.GetReachable(start, 5f, agentSize: 2);
+using var range = pathfinder.GetReachable(start, 500, agentSize: 2);
 using var search = pathfinder.BeginStepwiseSearch(start, end, agentSize: 2);
 
 // With per-query options, the size comes last

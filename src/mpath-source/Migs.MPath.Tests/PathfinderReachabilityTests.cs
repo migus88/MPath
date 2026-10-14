@@ -17,12 +17,12 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize);
             var origin = new Coordinate(5, 5);
 
-            using var result = pathfinder.GetReachable(origin, 0f);
+            using var result = pathfinder.GetReachable(origin, 0);
 
             result.IsSuccess.Should().BeTrue();
             result.Length.Should().Be(1);
             result.Get(0).Coordinate.Should().Be(origin);
-            result.Get(0).Cost.Should().Be(0f);
+            result.Get(0).Cost.Should().Be(0);
         }
 
         [Test]
@@ -31,7 +31,7 @@ namespace Migs.MPath.Tests
             var cells = CreateEmptyGrid(GridSize, GridSize);
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize);
 
-            using var result = pathfinder.GetReachable(new Coordinate(5, 5), -1f);
+            using var result = pathfinder.GetReachable(new Coordinate(5, 5), -1);
 
             result.IsSuccess.Should().BeFalse();
             result.Length.Should().Be(0);
@@ -50,7 +50,7 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
             var origin = new Coordinate(5, 5);
 
-            using var result = pathfinder.GetReachable(origin, 2f);
+            using var result = pathfinder.GetReachable(origin, 200);
 
             // All cells with Manhattan distance <= 2: 1 + 4 + 8 = 13
             result.Length.Should().Be(13);
@@ -61,8 +61,8 @@ namespace Migs.MPath.Tests
             {
                 var manhattan = Math.Abs(cell.Coordinate.X - origin.X) +
                                 Math.Abs(cell.Coordinate.Y - origin.Y);
-                cell.Cost.Should().BeApproximately(manhattan, 0.0001f);
-                cell.Cost.Should().BeLessThanOrEqualTo(2f);
+                cell.Cost.Should().Be(manhattan * 100);
+                cell.Cost.Should().BeLessThanOrEqualTo(200);
             }
         }
 
@@ -74,20 +74,20 @@ namespace Migs.MPath.Tests
             {
                 IsDiagonalMovementEnabled = true,
                 IsCellWeightEnabled = false,
-                DiagonalMovementMultiplier = 1.41f,
-                StraightMovementMultiplier = 1f
+                DiagonalStepCost = 141,
+                StraightStepCost = 100
             };
 
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
             var origin = new Coordinate(5, 5);
 
-            // Budget covers the 4 cardinal (1.0) and 4 diagonal (1.41) neighbours, but not two steps (>= 2.0).
-            using var result = pathfinder.GetReachable(origin, 1.45f);
+            // Budget covers the 4 cardinal (100) and 4 diagonal (141) neighbours, but not two steps (>= 200).
+            using var result = pathfinder.GetReachable(origin, 145);
 
             result.Length.Should().Be(9);
             result.Contains(new Coordinate(6, 6)).Should().BeTrue();
             result.TryGetCost(new Coordinate(6, 6), out var diagonalCost).Should().BeTrue();
-            diagonalCost.Should().BeApproximately(1.41f, 0.0001f);
+            diagonalCost.Should().Be(141);
         }
 
         [Test]
@@ -105,16 +105,16 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
             var origin = new Coordinate(2, 1);
 
-            using var result = pathfinder.GetReachable(origin, 3f);
+            using var result = pathfinder.GetReachable(origin, 300);
 
             result.TryGetCost(new Coordinate(5, 1), out var eastCost).Should().BeTrue();
-            eastCost.Should().BeApproximately(3f, 0.0001f);
+            eastCost.Should().Be(300);
 
             result.TryGetCost(new Coordinate(2, 4), out var southCost).Should().BeTrue();
-            southCost.Should().BeApproximately(3f, 0.0001f);
+            southCost.Should().Be(300);
 
             result.TryGetCost(new Coordinate(4, 2), out var lCost).Should().BeTrue();
-            lCost.Should().BeApproximately(3f, 0.0001f);
+            lCost.Should().Be(300);
 
             // (6,1) is Manhattan distance 4 from (2,1) - outside the budget.
             result.Contains(new Coordinate(6, 1)).Should().BeFalse();
@@ -126,7 +126,7 @@ namespace Migs.MPath.Tests
             var cells = CreateEmptyGrid(GridSize, GridSize);
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize);
 
-            const float budget = 5f;
+            const int budget = 500;
             using var result = pathfinder.GetReachable(new Coordinate(5, 5), budget);
 
             result.Length.Should().BeGreaterThan(1);
@@ -154,7 +154,7 @@ namespace Migs.MPath.Tests
 
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
 
-            using var result = pathfinder.GetReachable(new Coordinate(5, 5), 10f);
+            using var result = pathfinder.GetReachable(new Coordinate(5, 5), 1000);
 
             // Only the origin itself is reachable.
             result.Length.Should().Be(1);
@@ -172,19 +172,19 @@ namespace Migs.MPath.Tests
             };
 
             // Make the cell directly east of the origin expensive to enter.
-            cells[6 * GridSize + 5].Weight = 5f;
+            cells[6 * GridSize + 5].Weight = 500;
 
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
 
-            using var result = pathfinder.GetReachable(new Coordinate(5, 5), 2f);
+            using var result = pathfinder.GetReachable(new Coordinate(5, 5), 200);
 
-            // Weight is additive: entering (6,5) costs travel(1) + weight(5) = 6 (> budget), and (7,5)
+            // Weight is additive: entering (6,5) costs travel(100) + weight(500) = 600 (> budget), and (7,5)
             // is only reachable through it within budget.
             result.Contains(new Coordinate(6, 5)).Should().BeFalse();
             result.Contains(new Coordinate(7, 5)).Should().BeFalse();
-            // A normal neighbour still costs travel(1) + weight(1) = 2 and is reachable.
+            // A normal neighbour still costs travel(100) + weight(100) = 200 and is reachable.
             result.TryGetCost(new Coordinate(4, 5), out var westCost).Should().BeTrue();
-            westCost.Should().BeApproximately(2f, 0.0001f);
+            westCost.Should().Be(200);
         }
 
         [Test]
@@ -213,9 +213,9 @@ namespace Migs.MPath.Tests
 
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
 
-            using var result = pathfinder.GetReachable(new Coordinate(5, 5), 2f);
+            using var result = pathfinder.GetReachable(new Coordinate(5, 5), 200);
 
-            // Step cost is travel(1) + weight(0) = 1, so budget 2 yields the Manhattan diamond (13 cells),
+            // Step cost is travel(100) + weight(0) = 100, so budget 200 yields the Manhattan diamond (13 cells),
             // NOT the whole 100-cell board.
             result.Length.Should().Be(13);
             result.Length.Should().BeLessThan(GridSize * GridSize);
@@ -228,8 +228,8 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize);
             var origin = new Coordinate(0, 0);
 
-            using var smallResult = pathfinder.GetReachable(origin, 1000f);
-            using var largeResult = pathfinder.GetReachable(origin, 1000f, 2);
+            using var smallResult = pathfinder.GetReachable(origin, 100000);
+            using var largeResult = pathfinder.GetReachable(origin, 100000, 2);
 
             // A 1x1 agent can stand on every cell of the open grid.
             smallResult.Length.Should().Be(GridSize * GridSize);
@@ -245,7 +245,7 @@ namespace Migs.MPath.Tests
             var cells = CreateEmptyGrid(GridSize, GridSize);
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize);
 
-            var action = () => pathfinder.GetReachable(new Coordinate(GridSize + 5, GridSize + 5), 5f);
+            var action = () => pathfinder.GetReachable(new Coordinate(GridSize + 5, GridSize + 5), 500);
 
             action.Should().Throw<ArgumentException>()
                   .WithParameterName("from");
@@ -257,7 +257,7 @@ namespace Migs.MPath.Tests
             var cells = CreateEmptyGrid(GridSize, GridSize);
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize);
 
-            var action = () => pathfinder.GetReachable(null!, new Coordinate(0, 0), 5f);
+            var action = () => pathfinder.GetReachable(null!, new Coordinate(0, 0), 500);
 
             action.Should().Throw<ArgumentNullException>()
                   .WithParameterName("agent");
@@ -269,7 +269,7 @@ namespace Migs.MPath.Tests
             var cells = CreateEmptyGrid(GridSize, GridSize);
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize);
 
-            var result = pathfinder.GetReachable(new Coordinate(5, 5), 3f);
+            var result = pathfinder.GetReachable(new Coordinate(5, 5), 300);
             result.Dispose();
 
             var action = () => result.Get(0);
@@ -283,12 +283,12 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize);
             var origin = new Coordinate(5, 5);
 
-            using (var first = pathfinder.GetReachable(origin, 3f))
+            using (var first = pathfinder.GetReachable(origin, 300))
             {
                 first.Length.Should().BeGreaterThan(1);
             }
 
-            using var second = pathfinder.GetReachable(origin, 3f);
+            using var second = pathfinder.GetReachable(origin, 300);
             second.Length.Should().BeGreaterThan(1);
             second.Contains(origin).Should().BeTrue();
         }
@@ -311,7 +311,7 @@ namespace Migs.MPath.Tests
                         Coordinate = new Coordinate(x, y),
                         IsWalkable = true,
                         IsOccupied = false,
-                        Weight = 1.0f
+                        Weight = 100
                     };
                 }
             }

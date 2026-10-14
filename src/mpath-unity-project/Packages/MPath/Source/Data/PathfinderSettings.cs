@@ -17,10 +17,12 @@ namespace Migs.MPath.Core.Data
         public bool IsCellWeightEnabled { get; set; } = true;
 
         /// <inheritdoc/>
-        public float StraightMovementMultiplier { get; set; } = 1f;
+        /// <remarks>Defaults to 100.</remarks>
+        public int StraightStepCost { get; set; } = 100;
 
         /// <inheritdoc/>
-        public float DiagonalMovementMultiplier { get; set; } = 1.41f;
+        /// <remarks>Defaults to 141, so a diagonal costs 1.41 straight steps.</remarks>
+        public int DiagonalStepCost { get; set; } = 141;
 
         /// <inheritdoc/>
         public PathSmoothingMethod PathSmoothingMethod { get; set; } = PathSmoothingMethod.None;

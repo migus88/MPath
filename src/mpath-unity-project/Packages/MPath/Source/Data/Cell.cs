@@ -24,11 +24,18 @@ namespace Migs.MPath.Core.Data
         public bool IsOccupied { get; set; }
         
         /// <summary>
-        /// Gets or sets the extra cost of entering this cell: it is added to the straight or diagonal movement
-        /// multiplier of every step into the cell. Higher values make the cell more costly to traverse; keep it
-        /// non-negative (a negative weight voids the cheapest-path guarantee).
+        /// Gets or sets the extra cost of entering this cell, in the same units as
+        /// <see cref="IPathfinderSettings.StraightStepCost"/> and <see cref="IPathfinderSettings.DiagonalStepCost"/>:
+        /// it is added to the step cost of every step into the cell. Higher values make the cell more costly to
+        /// traverse; 0 (the default) adds nothing.
         /// This is used when <see cref="IPathfinderSettings.IsCellWeightEnabled"/> is enabled.
         /// </summary>
-        public float Weight { get; set; }
+        /// <remarks>
+        /// <see cref="Pathfinder.SetWeight"/> and <see cref="Pathfinder.SetCell"/> reject a negative weight; a negative
+        /// weight written straight into the grid counts as 0. A weight above 1,073,741,823 (<c>int.MaxValue / 2</c>)
+        /// counts as that, and a route whose cost would pass it is never taken, so a huge weight makes the cells
+        /// behind it unreachable rather than wrapping around.
+        /// </remarks>
+        public int Weight { get; set; }
     }
 }

@@ -25,8 +25,8 @@ namespace Migs.MPath.Tests
             var random = new Random(seed);
             var nodes = new PathNode[CellCount];
             using var queue = new UnsafePriorityQueue(CellCount);
-            var reference = new SortedSet<(float Priority, int Index)>();
-            var priorities = new Dictionary<int, float>();
+            var reference = new SortedSet<(int Priority, int Index)>();
+            var priorities = new Dictionary<int, int>();
 
             fixed (PathNode* ptr = nodes)
             {

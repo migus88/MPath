@@ -21,7 +21,7 @@ The grid represents your navigable space. In MPath, a grid consists of `Cell` ob
 - **Coordinates**: Position within the grid
 - **Walkability**: Whether agents can traverse this cell
 - **Occupation**: Whether the cell is currently occupied by an agent
-- **Weight**: Extra cost added to every step that enters this cell
+- **Weight**: Extra cost added to every step that enters this cell (an `int` in the same units as the step costs; 0 by default)
 
 MPath is flexible in how you represent your grid:
 - As a flat array of `Cell` objects
@@ -52,7 +52,7 @@ The `Pathfinder` class is the core component that performs the actual pathfindin
 - **Occupied Cell Handling**: Whether to treat occupied cells as blocked
 - **Corner Movement**: Whether agents can move between corners
 - **Cell Weight**: Whether to consider additional cell weight in path calculations
-- **Movement Cost Multipliers**: Cost factors for straight and diagonal movements
+- **Step Costs**: Integer costs of one straight and one diagonal step (`StraightStepCost` = 100, `DiagonalStepCost` = 141 by default); weights, budgets and every reported cost use the same unit
 
 ### 5. Path Result
 

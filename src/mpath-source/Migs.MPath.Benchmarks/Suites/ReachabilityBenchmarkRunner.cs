@@ -10,8 +10,8 @@ namespace Migs.MPath.Benchmarks.Suites;
 /// Benchmarks <see cref="Pathfinder.GetReachable"/> (the movement-range / Dijkstra flood fill).
 /// The work scales with the size of the reachable set, which is governed by the budget, so each
 /// benchmark uses a different budget: a small disc, a mid-range area, and a budget large enough to
-/// flood the entire connected region (worst case). With the default movement multipliers
-/// (straight 1.0, diagonal 1.41) a budget value is roughly the travel distance in tiles.
+/// flood the entire connected region (worst case). With the default step costs
+/// (straight 100, diagonal 141) a budget of 100 is roughly one tile of travel distance.
 /// </summary>
 [MemoryDiagnoser]
 public class ReachabilityBenchmarkRunner : IDisposable
@@ -29,19 +29,19 @@ public class ReachabilityBenchmarkRunner : IDisposable
     [Benchmark]
     public void GetReachable_SmallBudget()
     {
-        using var result = _pathfinder.GetReachable(_origin, 25f);
+        using var result = _pathfinder.GetReachable(_origin, 2500);
     }
 
     [Benchmark]
     public void GetReachable_MediumBudget()
     {
-        using var result = _pathfinder.GetReachable(_origin, 100f);
+        using var result = _pathfinder.GetReachable(_origin, 10000);
     }
 
     [Benchmark]
     public void GetReachable_LargeBudget()
     {
-        using var result = _pathfinder.GetReachable(_origin, 1000f);
+        using var result = _pathfinder.GetReachable(_origin, 100000);
     }
 
     public void Dispose()

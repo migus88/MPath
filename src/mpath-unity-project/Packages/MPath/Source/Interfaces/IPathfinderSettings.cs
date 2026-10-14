@@ -28,14 +28,23 @@ namespace Migs.MPath.Core.Interfaces
         bool IsCellWeightEnabled { get; }
 
         /// <summary>
-        /// The cost of the movement in a horizontal or vertical line
+        /// The cost of one horizontal or vertical step, at least 1. Costs are integers in a unit the caller picks:
+        /// cell weights, budgets and every reported cost use the same one (with the defaults 100 and 141, a step
+        /// costs 100 and costs read as hundredths of a step).
         /// </summary>
-        float StraightMovementMultiplier { get; }
+        /// <remarks>
+        /// The pathfinder constructor throws <see cref="ArgumentOutOfRangeException"/> when a step cost is below 1,
+        /// or when <c>(width + height)</c> times the larger step cost in use exceeds 1,073,741,823
+        /// (<c>int.MaxValue / 2</c>), the headroom that keeps route costs from overflowing.
+        /// </remarks>
+        int StraightStepCost { get; }
 
         /// <summary>
-        /// The cost of the movement in a diagonal line
+        /// The cost of one diagonal step, at least 1, in the same unit as <see cref="StraightStepCost"/>. Only used
+        /// when <see cref="IsDiagonalMovementEnabled"/> is set (it is still validated otherwise).
         /// </summary>
-        float DiagonalMovementMultiplier { get; }
+        /// <remarks><inheritdoc cref="StraightStepCost" path="/remarks"/></remarks>
+        int DiagonalStepCost { get; }
 
         /// <summary>
         /// Specifies the path smoothing method to apply to the calculated path.<br/>

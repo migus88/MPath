@@ -23,14 +23,14 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(CreateOpenGrid(), Settings(tieBreaking));
             var center = new Coordinate(GridSize / 2, GridSize / 2);
 
-            using (pathfinder.GetReachable(center, 1f))
+            using (pathfinder.GetReachable(center, 100))
             {
             }
 
             // Act
             var before = GC.GetAllocatedBytesForCurrentThread();
 
-            using (pathfinder.GetReachable(center, float.MaxValue))
+            using (pathfinder.GetReachable(center, int.MaxValue))
             {
             }
 

@@ -10,15 +10,15 @@ A readonly value type capturing a single cell that has been touched by a stepwis
 |----------|------|-------------|
 | `Coordinate` | `Coordinate` | The coordinate of the cell. |
 | `State` | `SearchNodeState` | Whether the cell is on the `Open` frontier or has been expanded into the `Closed` set. |
-| `ScoreG` | `float` | The cost of the cheapest path discovered so far from the origin (A* `g`). |
-| `ScoreH` | `float` | The heuristic estimate to the destination (A* `h`): the cheapest cost over an empty grid with the configured multipliers (octile distance with diagonals, Manhattan without). |
-| `ScoreF` | `float` | The priority by which the open set is ordered: `g + h` (A* `f`). |
+| `ScoreG` | `int` | The cost of the cheapest path discovered so far from the origin (A* `g`). |
+| `ScoreH` | `int` | The heuristic estimate to the destination (A* `h`): the cheapest cost over an empty grid with the configured step costs (octile distance with diagonals, Manhattan without). |
+| `ScoreF` | `int` | The priority by which the open set is ordered: `g + h` (A* `f`). |
 
 ## Constructors
 
 | Constructor | Description |
 |-------------|-------------|
-| `SearchNode(Coordinate coordinate, SearchNodeState state, float scoreG, float scoreH, float scoreF)` | Initializes a new searched-cell snapshot. |
+| `SearchNode(Coordinate coordinate, SearchNodeState state, int scoreG, int scoreH, int scoreF)` | Initializes a new searched-cell snapshot. |
 
 ## SearchNodeState enum
 
@@ -33,7 +33,7 @@ The role a node currently plays in the search — the distinction most useful wh
 
 - This is a `readonly struct`; enumerate it via [`SearchStep.Searched`](SearchStep.md).
 - Visualizers typically colour `Open` and `Closed` cells differently and may label each with its `ScoreG`/`ScoreF` to show how A* prioritizes the frontier.
-- With a [`TieBreaking`](TieBreaking.md) the search runs on exact costs (four decimal places); the scores are those costs converted back to `float`.
+- Scores are exact integer costs in both search modes, so `ScoreF == ScoreG + ScoreH` always.
 
 ## See also
 

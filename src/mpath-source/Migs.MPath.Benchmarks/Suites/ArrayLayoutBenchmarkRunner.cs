@@ -5,7 +5,7 @@ using Migs.MPath.Core.Data;
 namespace Migs.MPath.Benchmarks.Suites;
 
 /// <summary>
-/// A 2-step <see cref="Pathfinder.GetPath(Coordinate, Coordinate, int)"/> and <see cref="Pathfinder.GetReachable(Coordinate, float, int)"/>
+/// A 2-step <see cref="Pathfinder.GetPath(Coordinate, Coordinate, int)"/> and <see cref="Pathfinder.GetReachable(Coordinate, int, int)"/>
 /// near the corner of an open 256x256 grid, with the grid handed over as a <see cref="Cell"/>[,] matrix or as a
 /// <see cref="Cell"/>[] array in column-major, row-major or shuffled order, under default settings. The search touches
 /// a handful of cells, so what is left is the per-query cost of preparing the grid.
@@ -51,7 +51,7 @@ public class ArrayLayoutBenchmarkRunner : IDisposable
     [Benchmark]
     public void GetReachable_2Steps()
     {
-        using var result = _pathfinder.GetReachable(new Coordinate(1, 1), 2f);
+        using var result = _pathfinder.GetReachable(new Coordinate(1, 1), 200);
     }
 
     [GlobalCleanup]

@@ -84,7 +84,7 @@ using Migs.MPath.Core.Data;
 var grid = new Cell[10, 10];
 for (int x = 0; x < 10; x++)
 for (int y = 0; y < 10; y++)
-    grid[x, y] = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true, Weight = 1f };
+    grid[x, y] = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true, Weight = 0 };
 
 grid[3, 3].IsWalkable = false; // a wall
 
@@ -136,20 +136,20 @@ a leading `IAgent agent` (reads `agent.Size`). Both find the same results and sh
 |-----------|---------|-------|
 | `GetPath(Coordinate from, Coordinate to, int agentSize = 1)` | `PathResult` | Core A* query (returns a cheapest route) for an `agentSize`×`agentSize` agent. Throws `ArgumentOutOfRangeException` if `agentSize < 1`; otherwise behaves like the `IAgent` overload below. |
 | `GetPath(Coordinate from, Coordinate to, QueryOptions options, int agentSize = 1)` | `PathResult` | Same, with per-query rules. |
-| `GetReachable(Coordinate from, float budget, int agentSize = 1)` | `RangeResult` | Movement range without an `IAgent`. `agentSize < 1` throws. |
-| `GetReachable(Coordinate from, float budget, QueryOptions options, int agentSize = 1)` | `RangeResult` | Same, with per-query rules. |
+| `GetReachable(Coordinate from, int budget, int agentSize = 1)` | `RangeResult` | Movement range without an `IAgent`. `agentSize < 1` throws. |
+| `GetReachable(Coordinate from, int budget, QueryOptions options, int agentSize = 1)` | `RangeResult` | Same, with per-query rules. |
 | `BeginStepwiseSearch(Coordinate from, Coordinate to, int agentSize = 1)` | `StepwiseSearch` | Stepwise search without an `IAgent`. `agentSize < 1` throws. |
 | `BeginStepwiseSearch(Coordinate from, Coordinate to, QueryOptions options, int agentSize = 1)` | `StepwiseSearch` | Same, with per-query rules. |
 | `GetPath(IAgent agent, Coordinate from, Coordinate to)` | `PathResult` | Core A* query; returns a cheapest route. Throws `ArgumentNullException` if `agent` is null, `ArgumentException` if `from` or `to` is outside the grid. Returns a **failure** result (not an exception) when no path exists; a destination the agent can't enter (unwalkable, occupied while `IsCalculatingOccupiedCells`, or no clearance for its size) fails immediately without searching, unless `from == to`. |
 | `GetPath(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)` | `PathResult` | Same, with per-query rules (see [Per-query options](#per-query-options-units-block-or-not-enter-specific-occupied-cells)). Options that change the rules bypass the path cache. |
-| `GetReachable(IAgent agent, Coordinate from, float budget)` | `RangeResult` | Every cell reachable for total cost `<= budget` ("where can this unit move?"). Uniform-cost flood fill. |
-| `GetReachable(IAgent agent, Coordinate from, float budget, QueryOptions options)` | `RangeResult` | Same, with per-query rules (`IsDestinationAlwaysEnterable` is ignored: no destination). |
+| `GetReachable(IAgent agent, Coordinate from, int budget)` | `RangeResult` | Every cell reachable for total cost `<= budget` ("where can this unit move?"). Uniform-cost flood fill. |
+| `GetReachable(IAgent agent, Coordinate from, int budget, QueryOptions options)` | `RangeResult` | Same, with per-query rules (`IsDestinationAlwaysEnterable` is ignored: no destination). |
 | `HasLineOfSight(Coordinate from, Coordinate to, LineOfSightMode mode = BlockedByUnwalkableCells)` | `bool` | Single-cell Bresenham ray. Endpoints not tested; agent size ignored. |
 | `static GetManhattanDistance(Coordinate from, Coordinate to)` | `int` | `|dx| + |dy|`. Pure metric, allocation-free. |
 | `static GetChebyshevDistance(Coordinate from, Coordinate to)` | `int` | `max(|dx|, |dy|)`. Pure metric, allocation-free. |
 | `BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to)` | `StepwiseSearch` | Educational/visualization driver running the same A* one expansion at a time. **Pins the grid until disposed** — the pathfinder can't serve other queries meanwhile, and a second concurrent session throws. |
 | `BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)` | `StepwiseSearch` | Same, with per-query rules applied on every tick. |
-| `SetWalkable(Coordinate c, bool isWalkable)` · `SetOccupied(Coordinate c, bool isOccupied)` · `SetWeight(Coordinate c, float weight)` | `void` | Update one cell. Writes into your `Cell[]`/`Cell[,]` (any order; O(1), allocation-free once in layout) and clears the path cache when the change can affect cached paths. **Throws `NotSupportedException` in `ICellHolder` modes** (update the holder). `ArgumentException` outside the grid. |
+| `SetWalkable(Coordinate c, bool isWalkable)` · `SetOccupied(Coordinate c, bool isOccupied)` · `SetWeight(Coordinate c, int weight)` | `void` | Update one cell (`SetWeight`/`SetCell` throw `ArgumentOutOfRangeException` for a negative weight). Writes into your `Cell[]`/`Cell[,]` (any order; O(1), allocation-free once in layout) and clears the path cache when the change can affect cached paths. **Throws `NotSupportedException` in `ICellHolder` modes** (update the holder). `ArgumentException` outside the grid. |
 | `SetCell(Coordinate c, in Cell cell)` | `void` | Same, all three fields at once; `cell.Coordinate` is ignored. |
 | `GetCell(Coordinate c)` | `Cell` | Current cell read from your grid, every mode. |
 | `GetIndex(Coordinate c)` | `int` | `Cell[]`: the cell's index in your array by its `CellLayout` (`X * fieldHeight + Y`, `Y * fieldWidth + X`, or where an unordered cell is). `Auto` reports column-major until the first query detects the layout. Other modes: `X * fieldHeight + Y` in the snapshot. |
@@ -167,7 +167,7 @@ One row per type; click through for full members. The load-bearing facts are rep
 | Type | Kind | Gist | Details |
 |------|------|------|---------|
 | `PathResult` | result, `IDisposable` | `IsSuccess`, `Length`, `foreach` / `AsSpan()` / `this[i]` (steps, **origin excluded**; allocation-free), `Path` (allocating iterator), `Get(i)`, `Steps` / `DiagonalSteps` (ints, of the route before smoothing) | [api](api/PathResult.md) |
-| `RangeResult` | result, `IDisposable` | `IsSuccess`, `Length`, `foreach` / `AsSpan()` / `this[i]` (allocation-free), `Cells` (allocating iterator), `Contains(c)` / `TryGetCost(c, out cost)` / `TryGetCell(c, out cell)` (O(1)), `CopyCostsTo(Span<float>, unreached = -1)`, `Get(i)` | [api](api/RangeResult.md) |
+| `RangeResult` | result, `IDisposable` | `IsSuccess`, `Length`, `foreach` / `AsSpan()` / `this[i]` (allocation-free), `Cells` (allocating iterator), `Contains(c)` / `TryGetCost(c, out cost)` / `TryGetCell(c, out cell)` (O(1)), `CopyCostsTo(Span<int>, unreached = -1)`, `Get(i)` | [api](api/RangeResult.md) |
 | `ReachableCell` | `readonly struct` | `Coordinate` + `Cost` + `Steps` + `DiagonalSteps` (ints) | [api](api/ReachableCell.md) |
 | `StepwiseSearch` | session, `IDisposable` | `Tick()`, `RunToCompletion()`, `State`, `IsComplete` | [api](api/StepwiseSearch.md) |
 | `SearchStep` | immutable class | Per-tick snapshot: `Searched`, `Open/ClosedCount`, `Current`, `Iteration`, `Path` | [api](api/SearchStep.md) |
@@ -210,21 +210,26 @@ ones it doesn't care about.
 | `IsCalculatingOccupiedCells` | `bool` | `true` | Treat `IsOccupied` cells as blocked (for paths *and* line of sight). |
 | `CornerBlocking` | `CornerBlocking` (`[Flags]`) | `BetweenBlockedCells` | Which flanking cells block a diagonal step: walls and occupied cells separately. See below. |
 | `IsCellWeightEnabled` | `bool` | `true` | Add per-cell `Weight` to movement cost (terrain cost). |
-| `StraightMovementMultiplier` | `float` | `1f` | Cost of a cardinal step. |
-| `DiagonalMovementMultiplier` | `float` | `1.41f` | Cost of a diagonal step (≈√2). |
+| `StraightStepCost` | `int` | `100` | Cost of a cardinal step, at least 1. All costs are `int` in a unit you pick (default: hundredths of a step); weights, budgets and reported costs use it. |
+| `DiagonalStepCost` | `int` | `141` | Cost of a diagonal step (1.41 straight steps), at least 1. |
 | `PathSmoothingMethod` | `PathSmoothingMethod` | `None` | Post-process the path (`Simple`: first step + turn points + destination; `StringPulling`: straight shortcuts that keep the agent's footprint and the corner rule). |
 | `GridSnapshotMode` | `GridSnapshotMode` | `PerQuery` | `Cell[,]`/`ICellHolder` grids and unordered `Cell[]` arrays: copy the grid before every query (`PerQuery`, O(grid) per query) or once and after `Refresh()` (`Manual`, O(cells searched)). `Set*` updates are seen at once in both. |
 | `CellLayout` | `CellLayout` | `Auto` | `Cell[]` only: where cell (X, Y) is — `ColumnMajor` (`X * fieldHeight + Y`), `RowMajor` (`Y * fieldWidth + X`), `Unordered` (copied like a matrix), or `Auto` (detected at the first query and after `Refresh()`). A declared row/column-major layout is checked once and throws `InvalidOperationException` on a mismatch. Never reordered. |
-| `TieBreaking` | `TieBreaking` | `None` | Which route wins among equal-cost routes: `FewerDiagonals` (then fewer steps) or `FewerTurns`, with exact integer costs (4 decimal places) and a fixed final rule. `None` = earlier versions' behaviour. |
+| `TieBreaking` | `TieBreaking` | `None` | Which route wins among equal-cost routes: `FewerDiagonals` (then fewer steps) or `FewerTurns`, with a fixed final rule. `None` = the fastest search; ties resolve by search order. |
 
-> **Weight is additive, not multiplicative.** With `IsCellWeightEnabled`, step cost = movement multiplier
-> **+** destination cell `Weight`. Because `Weight` defaults to `0`, a flat default grid behaves like
+> **Weight is additive, not multiplicative.** With `IsCellWeightEnabled`, step cost = straight/diagonal step cost
+> **+** destination cell `Weight` (an `int` in the same unit). Because `Weight` defaults to `0`, a flat default grid behaves like
 > uniform cost. Set higher `Weight` for slow terrain (mud, hills).
 >
 > **`GetPath` returns a cheapest route.** Its cost (sum of step costs above) equals the `GetReachable` cost of
-> the destination. Holds for any non-negative multipliers and weights. With `TieBreaking.None`, ties between
+> the destination. Costs are exact integers. With `TieBreaking.None`, ties between
 > equal-cost routes resolve by search order (can zig-zag, can change with unrelated grid edits); set
 > `TieBreaking` to pick a deterministic winner.
+>
+> **Costs are `int` and validated.** The constructor throws `ArgumentOutOfRangeException` when a step cost is
+> below 1 or `(width + height) * the larger step cost` exceeds 1,073,741,823 (`int.MaxValue / 2`). A negative
+> `Weight` written into your grid counts as 0. A route whose cost would pass 1,073,741,823 is never taken (cells
+> behind huge weights are unreachable; nothing wraps). A budget equal to a route's cost admits it.
 
 ---
 
@@ -242,16 +247,16 @@ if (result.IsSuccess)
 ### Movement range ("where can this unit move?", tactics games)
 
 ```csharp
-using var range = pathfinder.GetReachable(origin, budget: 5f);
+using var range = pathfinder.GetReachable(origin, budget: 500);
 foreach (var c in range)                              // struct enumerator: no allocation
-    Highlight(c.Coordinate, c.Cost);                  // every cell with cheapest cost <= 5
+    Highlight(c.Coordinate, c.Cost);                  // every cell with cheapest cost <= 500 (5 straight steps)
 if (range.TryGetCost(target, out var cost)) { /* reachable for `cost` */ }   // O(1), no allocation
 
-var costs = new float[width * height];                // reuse it across queries
+var costs = new int[width * height];                  // reuse it across queries
 range.CopyCostsTo(costs);                             // costs[pathfinder.GetIndex(c)], -1 where unreached
 ```
 
-Per-step cost mirrors the main A*: straight/diagonal multiplier **+** cell `Weight` (when weighting is on).
+Per-step cost mirrors the main A*: straight/diagonal step cost **+** cell `Weight` (when weighting is on).
 Each `ReachableCell` also carries integer `Steps` / `DiagonalSteps` of its cheapest route.
 
 ### Straight lines and step counts (deterministic ties)
@@ -259,19 +264,18 @@ Each `ReachableCell` also carries integer `Steps` / `DiagonalSteps` of its cheap
 ```csharp
 var settings = new PathfinderSettings
 {
-    StraightMovementMultiplier = 1f, DiagonalMovementMultiplier = 1f,  // king moves: a diagonal costs 1
+    StraightStepCost = 1, DiagonalStepCost = 1,                        // king moves: a diagonal costs 1
     IsCellWeightEnabled = false,
     TieBreaking = TieBreaking.FewerDiagonals                           // straight lines win ties
 };
 using var pathfinder = new Pathfinder(cells, settings);
 using var path = pathfinder.GetPath(from, to);   // path.Steps, path.DiagonalSteps: exact ints
-using var range = pathfinder.GetReachable(from, budget: 3f);
+using var range = pathfinder.GetReachable(from, budget: 3);
 if (range.TryGetCell(target, out var cell)) { /* cell.Steps, cell.DiagonalSteps */ }
 ```
 
 `TieBreaking.FewerTurns` instead returns the cheapest route with the fewest direction changes. With any
-tie-break, costs are exact (multipliers, weights and budgets rounded to 4 decimal places), so a budget of
-`3 * 1.41f` admits three 1.41 steps; the route is a function of the grid, not of search order.
+tie-break, the route is a function of the grid, not of search order.
 
 ### Distance & line of sight (range checks, visibility — no path computed)
 
@@ -331,8 +335,8 @@ Settings are frozen, but each `GetPath` / `GetReachable` / `BeginStepwiseSearch`
 
 ```csharp
 // Movement range with units blocking, threat range ignoring them - same pathfinder, same grid.
-using var move   = pathfinder.GetReachable(unitCell, 5f);
-using var threat = pathfinder.GetReachable(unitCell, 5f, new QueryOptions(OccupancyRule.Ignore));
+using var move   = pathfinder.GetReachable(unitCell, 500);
+using var threat = pathfinder.GetReachable(unitCell, 500, new QueryOptions(OccupancyRule.Ignore));
 
 // Move to attack an occupied cell; the mover's own (occupied) cells don't block it either.
 ReadOnlySpan<Coordinate> own = stackalloc Coordinate[] { unitCell };
@@ -430,8 +434,8 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
 11. **Write `default(QueryOptions)`, not bare `default`, in the third argument.** `GetPath(from, to, default)`
     binds to the `int agentSize` overload (size 0) and throws `ArgumentOutOfRangeException`. Better still,
     omit the options.
-12. **Don't encode tie-breaks in the costs.** Scaling multipliers (e.g. 1024 / 1025) to prefer straight lines and
-    dividing costs back into steps is fragile (float precision). Use `TieBreaking` and read `Steps` /
+12. **Don't encode tie-breaks in the costs.** Skewing step costs (e.g. 1024 / 1025) to prefer straight lines and
+    dividing costs back into steps is fragile and changes which routes are cheapest. Use `TieBreaking` and read `Steps` /
     `DiagonalSteps` instead.
 13. **`Cell` may clash with your own `Cell` type.** Alias MPath's: `using GridCell = Migs.MPath.Core.Data.Cell;`
     (or alias yours). A distinct name is planned for the next major version.

@@ -127,9 +127,9 @@ namespace Migs.MPath.Tests
             var first = search.Tick();
 
             var originNode = first.Searched.Single(n => n.Coordinate == from);
-            originNode.ScoreG.Should().Be(0f);
+            originNode.ScoreG.Should().Be(0);
             // f = g + h is the priority by which the open set is ordered.
-            originNode.ScoreF.Should().BeApproximately(originNode.ScoreG + originNode.ScoreH, 0.0001f);
+            originNode.ScoreF.Should().Be(originNode.ScoreG + originNode.ScoreH);
         }
 
         [Test]
@@ -323,7 +323,7 @@ namespace Migs.MPath.Tests
                         Coordinate = new Coordinate(x, y),
                         IsWalkable = true,
                         IsOccupied = false,
-                        Weight = 1.0f
+                        Weight = 100
                     };
                 }
             }

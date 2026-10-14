@@ -9,13 +9,13 @@ namespace Migs.MPath.Tests
     /// <summary>
     /// Pins the per-query <see cref="QueryOptions"/>: the occupancy override and the always-enterable cells apply to
     /// <see cref="Pathfinder.GetPath(Coordinate, Coordinate, int)"/>,
-    /// <see cref="Pathfinder.GetReachable(Coordinate, float, int)"/> and the stepwise
+    /// <see cref="Pathfinder.GetReachable(Coordinate, int, int)"/> and the stepwise
     /// search alike, for that query only, and default options reproduce the queries without options.
     /// </summary>
     [TestFixture]
     public class PathfinderQueryOptionsTests
     {
-        private const float Budget = 100f;
+        private const int Budget = 10000;
 
         private static readonly Coordinate CorridorStart = new Coordinate(0, 0);
 
@@ -218,9 +218,9 @@ namespace Migs.MPath.Tests
             using var plainPath = pathfinder.GetPath(CorridorStart, destination);
             var expectedPath = plainPath.Path.ToArray();
             using var optionsPath = pathfinder.GetPath(CorridorStart, destination, default(QueryOptions));
-            using var plainRange = pathfinder.GetReachable(CorridorStart, 12f);
+            using var plainRange = pathfinder.GetReachable(CorridorStart, 1200);
             var expectedRange = plainRange.Cells.ToArray();
-            using var optionsRange = pathfinder.GetReachable(CorridorStart, 12f, default(QueryOptions));
+            using var optionsRange = pathfinder.GetReachable(CorridorStart, 1200, default(QueryOptions));
 
             // Assert
             plainPath.IsSuccess.Should().BeTrue();
@@ -329,7 +329,7 @@ namespace Migs.MPath.Tests
                     var pattern = (x * 7 + y * 13) % 11;
                     cells[x, y].IsWalkable = pattern != 0;
                     cells[x, y].IsOccupied = pattern == 5;
-                    cells[x, y].Weight = pattern % 3;
+                    cells[x, y].Weight = pattern % 3 * 100;
                 }
             }
 

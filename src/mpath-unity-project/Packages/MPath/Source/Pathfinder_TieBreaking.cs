@@ -8,8 +8,8 @@ using static Migs.MPath.Core.Internal.DirectionIndexes;
 namespace Migs.MPath.Core
 {
     /// <summary>
-    /// The keyed search used with a <see cref="TieBreaking"/>: costs are exact fixed-point integers
-    /// (<see cref="PathNode.CostKey"/>), every node keeps a lexicographic label (cost, tie key[, steps]) and the set of
+    /// The keyed search used with a <see cref="TieBreaking"/>: costs are the same integers as the plain search
+    /// (<see cref="PathNode.ScoreG"/>), every node keeps a lexicographic label (cost, tie key[, steps]) and the set of
     /// directions it can be entered from on a route with that label (<see cref="_arrivals"/>), and the route is read
     /// back from those sets by a fixed rule instead of from parent indexes.
     /// </summary>
@@ -49,13 +49,13 @@ namespace Migs.MPath.Core
         /// Touches the origin for the keyed search and queues it.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void OpenOriginKeyed(PathNode* nodes, Coordinate from, long heuristicKey)
+        private void OpenOriginKeyed(PathNode* nodes, Coordinate from, int heuristic)
         {
             var index = GetLayoutIndex(from.X, from.Y);
             nodes[index].Generation = _generation;
-            SetLabel(nodes + index, 0L, 0, 0);
+            SetLabel(nodes + index, 0, 0, 0);
             _arrivalsPointer[index] = AllDirections;
-            _keyedOpenSet.Enqueue(index, heuristicKey, 0, 0L);
+            _keyedOpenSet.Enqueue(index, heuristic, 0, 0);
         }
 
         /// <summary>
@@ -64,7 +64,7 @@ namespace Migs.MPath.Core
         private PathResult CalculatePathKeyed(int agentSize, Coordinate from, Coordinate to, Cell* cells,
             PathNode* nodes)
         {
-            OpenOriginKeyed(nodes, from, GetHKey(from.X, from.Y, to.X, to.Y));
+            OpenOriginKeyed(nodes, from, GetH(from.X, from.Y, to.X, to.Y));
 
             var neighbors = stackalloc Cell*[MaxNeighbors];
 
@@ -104,12 +104,13 @@ namespace Migs.MPath.Core
 
         /// <summary>
         /// Relaxes the neighbours of <paramref name="current"/> in the keyed search: the tie-break counterpart of
-        /// <see cref="ProcessNeighbors"/>.
+        /// <see cref="ProcessNeighbors"/>, with the same <see cref="FastPathfinderSettings.MaxCost"/> headroom.
         /// </summary>
         private void ProcessNeighborsKeyed(Cell* cells, PathNode* nodes, int current, Cell** neighbors, Coordinate to)
         {
             var isCountingTurns = _settings.TieBreaking == TieBreaking.FewerTurns;
             var currentNode = nodes + current;
+            var headroom = FastPathfinderSettings.MaxCost - currentNode->ScoreG;
             var currentArrivals = _arrivalsPointer[current];
             var depth = currentNode->Depth + 1;
             var generation = _generation;
@@ -131,7 +132,14 @@ namespace Migs.MPath.Core
                     continue;
                 }
 
-                var costKey = currentNode->CostKey + GetStepCostKey(n, neighbor);
+                var stepCost = GetStepCost(n, neighbor);
+
+                if (stepCost > headroom)
+                {
+                    continue;
+                }
+
+                var cost = currentNode->ScoreG + stepCost;
                 var tieKey = isCountingTurns
                     ? currentNode->TieKey + (((currentArrivals >> n) & 1) ^ 1)
                     : currentNode->TieKey + (n >= DiagonalStart ? 1 : 0);
@@ -140,25 +148,25 @@ namespace Migs.MPath.Core
                 if (!isTouched)
                 {
                     node->Generation = generation;
-                    SetLabel(node, costKey, tieKey, depth);
+                    SetLabel(node, cost, tieKey, depth);
                     _arrivalsPointer[index] = direction;
 
                     var neighborCoord = neighbor->Coordinate;
-                    _keyedOpenSet.Enqueue(index, costKey + GetHKey(neighborCoord.X, neighborCoord.Y, to.X, to.Y),
-                        tieKey, costKey);
+                    _keyedOpenSet.Enqueue(index, cost + GetH(neighborCoord.X, neighborCoord.Y, to.X, to.Y),
+                        tieKey, cost);
                     continue;
                 }
 
-                var comparison = CompareLabel(node, costKey, tieKey, isCountingTurns ? node->Depth : depth);
+                var comparison = CompareLabel(node, cost, tieKey, isCountingTurns ? node->Depth : depth);
 
                 if (comparison < 0)
                 {
-                    SetLabel(node, costKey, tieKey, depth);
+                    SetLabel(node, cost, tieKey, depth);
                     _arrivalsPointer[index] = direction;
 
                     var neighborCoord = neighbor->Coordinate;
                     _keyedOpenSet.UpdatePriority(index,
-                        costKey + GetHKey(neighborCoord.X, neighborCoord.Y, to.X, to.Y), tieKey, costKey);
+                        cost + GetH(neighborCoord.X, neighborCoord.Y, to.X, to.Y), tieKey, cost);
                 }
                 else if (comparison == 0)
                 {
@@ -227,18 +235,18 @@ namespace Migs.MPath.Core
         /// ranks equal-cost routes here by (fewer diagonals, fewer steps), so the counts are exact and match the route
         /// <see cref="TieBreaking.FewerDiagonals"/> returns.
         /// </summary>
-        private RangeResult CalculateReachableKeyed(int agentSize, Coordinate from, float budget, Cell* cells,
+        private RangeResult CalculateReachableKeyed(int agentSize, Coordinate from, int budget, Cell* cells,
             PathNode* nodes)
         {
             var reachable = ArrayPool<ReachableCell>.Shared.Rent(Size);
             var count = 0;
-            var budgetKey = FastPathfinderSettings.ToBudgetKey(budget);
+            var maxCost = Math.Min(budget, FastPathfinderSettings.MaxCost);
             var generation = _generation;
 
             var start = GetLayoutIndex(from.X, from.Y);
             nodes[start].Generation = generation;
-            SetLabel(nodes + start, 0L, 0, 0);
-            _keyedOpenSet.Enqueue(start, 0L, 0, 0L);
+            SetLabel(nodes + start, 0, 0, 0);
+            _keyedOpenSet.Enqueue(start, 0, 0, 0);
 
             var neighbors = stackalloc Cell*[MaxNeighbors];
 
@@ -249,12 +257,13 @@ namespace Migs.MPath.Core
                 var currentNode = nodes + current;
 
                 currentNode->QueueIndex = PathNode.ClosedQueueIndex;
-                reachable[count++] = new ReachableCell(currentCell->Coordinate,
-                    FastPathfinderSettings.ToCost(currentNode->CostKey), currentNode->Depth, currentNode->TieKey);
+                reachable[count++] = new ReachableCell(currentCell->Coordinate, currentNode->ScoreG,
+                    currentNode->Depth, currentNode->TieKey);
 
                 PopulateNeighbors(cells, currentCell, agentSize, neighbors);
 
                 var depth = currentNode->Depth + 1;
+                var headroom = maxCost - currentNode->ScoreG;
 
                 for (var n = 0; n < MaxNeighbors; n++)
                 {
@@ -273,25 +282,26 @@ namespace Migs.MPath.Core
                         continue;
                     }
 
-                    var costKey = currentNode->CostKey + GetStepCostKey(n, neighbor);
+                    var stepCost = GetStepCost(n, neighbor);
 
-                    if (costKey > budgetKey)
+                    if (stepCost > headroom)
                     {
                         continue;
                     }
 
+                    var cost = currentNode->ScoreG + stepCost;
                     var tieKey = currentNode->TieKey + (n >= DiagonalStart ? 1 : 0);
 
                     if (!isTouched)
                     {
                         node->Generation = generation;
-                        SetLabel(node, costKey, tieKey, depth);
-                        _keyedOpenSet.Enqueue(index, costKey, tieKey, costKey);
+                        SetLabel(node, cost, tieKey, depth);
+                        _keyedOpenSet.Enqueue(index, cost, tieKey, cost);
                     }
-                    else if (CompareLabel(node, costKey, tieKey, depth) < 0)
+                    else if (CompareLabel(node, cost, tieKey, depth) < 0)
                     {
-                        SetLabel(node, costKey, tieKey, depth);
-                        _keyedOpenSet.UpdatePriority(index, costKey, tieKey, costKey);
+                        SetLabel(node, cost, tieKey, depth);
+                        _keyedOpenSet.UpdatePriority(index, cost, tieKey, cost);
                     }
                 }
             }
@@ -300,44 +310,35 @@ namespace Migs.MPath.Core
         }
 
         /// <summary>
-        /// The search scores of a node as floats, in either cost mode (for <see cref="SearchNode"/>).
+        /// The search scores of a node in either search (for <see cref="SearchNode"/>): f is g + h, the node's
+        /// open-set priority.
         /// </summary>
-        private void GetScores(PathNode* node, Coordinate coordinate, Coordinate to, out float scoreG,
-            out float scoreH, out float scoreF)
+        private void GetScores(PathNode* node, Coordinate coordinate, Coordinate to, out int scoreG,
+            out int scoreH, out int scoreF)
         {
-            if (!_settings.IsTieBreaking)
-            {
-                // f is the node's open-set priority, g + h, recomputed with the same float arithmetic.
-                scoreG = node->ScoreG;
-                scoreH = node->ScoreH;
-                scoreF = node->ScoreG + node->ScoreH;
-                return;
-            }
-
-            var heuristicKey = GetHKey(coordinate.X, coordinate.Y, to.X, to.Y);
-            scoreG = FastPathfinderSettings.ToCost(node->CostKey);
-            scoreH = FastPathfinderSettings.ToCost(heuristicKey);
-            scoreF = FastPathfinderSettings.ToCost(node->CostKey + heuristicKey);
+            scoreG = node->ScoreG;
+            scoreH = _settings.IsTieBreaking ? GetH(coordinate.X, coordinate.Y, to.X, to.Y) : node->ScoreH;
+            scoreF = scoreG + scoreH;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void SetLabel(PathNode* node, long costKey, int tieKey, int depth)
+        private static void SetLabel(PathNode* node, int cost, int tieKey, int depth)
         {
-            node->CostKey = costKey;
+            node->ScoreG = cost;
             node->TieKey = tieKey;
             node->Depth = depth;
         }
 
         /// <summary>
-        /// Compares the label (<paramref name="costKey"/>, <paramref name="tieKey"/>, <paramref name="depth"/>) with
+        /// Compares the label (<paramref name="cost"/>, <paramref name="tieKey"/>, <paramref name="depth"/>) with
         /// the one <paramref name="node"/> holds: negative when it is better.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int CompareLabel(PathNode* node, long costKey, int tieKey, int depth)
+        private static int CompareLabel(PathNode* node, int cost, int tieKey, int depth)
         {
-            if (costKey != node->CostKey)
+            if (cost != node->ScoreG)
             {
-                return costKey < node->CostKey ? -1 : 1;
+                return cost < node->ScoreG ? -1 : 1;
             }
 
             if (tieKey != node->TieKey)
@@ -346,34 +347,6 @@ namespace Migs.MPath.Core
             }
 
             return depth.CompareTo(node->Depth);
-        }
-
-        /// <summary>
-        /// The cost key of a step in <paramref name="direction"/> into <paramref name="neighbor"/>: the keyed
-        /// counterpart of <see cref="GetStepCost"/> (travel key plus the entered cell's weight key).
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private long GetStepCostKey(int direction, Cell* neighbor)
-        {
-            var travel = direction >= DiagonalStart ? _settings.DiagonalCostKey : _settings.StraightCostKey;
-
-            return _settings.IsCellWeightEnabled
-                ? travel + FastPathfinderSettings.ToCostKey(neighbor->Weight)
-                : travel;
-        }
-
-        /// <summary>
-        /// The keyed counterpart of <see cref="GetH"/>.
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private long GetHKey(int startX, int startY, int destX, int destY)
-        {
-            long dx = Math.Abs(destX - startX);
-            long dy = Math.Abs(destY - startY);
-
-            return dx > dy
-                ? _settings.HeuristicMajorAxisKey * dx + _settings.HeuristicMinorAxisKey * dy
-                : _settings.HeuristicMajorAxisKey * dy + _settings.HeuristicMinorAxisKey * dx;
         }
     }
 }

@@ -11,7 +11,7 @@ Represents a single cell in the pathfinding grid: its coordinate and the data a 
 | `Coordinate` | `Coordinate` | The position of this cell in the grid. |
 | `IsWalkable` | `bool` | Indicates whether an agent can traverse this cell. |
 | `IsOccupied` | `bool` | Indicates whether this cell is currently occupied by an agent. |
-| `Weight` | `float` | Extra cost of entering this cell, added to the straight/diagonal movement multiplier of each step into it (when `IsCellWeightEnabled`). Keep it non-negative. |
+| `Weight` | `int` | Extra cost of entering this cell, in the step costs' unit, added to the straight/diagonal step cost of each step into it (when `IsCellWeightEnabled`). `SetWeight`/`SetCell` reject a negative weight; one written straight into the grid counts as 0. Weights above 1,073,741,823 (`int.MaxValue / 2`) count as that, and a route whose cost would pass it is never taken. |
 
 ## Example
 
@@ -21,7 +21,7 @@ var cell = new Cell
 {
     Coordinate = new Coordinate(5, 10),
     IsWalkable = true,
-    Weight = 1.0f
+    Weight = 100
 };
 ```
 

@@ -21,17 +21,17 @@ namespace Migs.MPath.Core.Data
         /// <summary>
         /// Gets the cost of the cheapest path discovered so far from the origin to this cell (the A* <c>g</c> score).
         /// </summary>
-        public float ScoreG { get; }
+        public int ScoreG { get; }
 
         /// <summary>
-        /// Gets the heuristic estimate from this cell to the destination (the A* <c>h</c> score, Manhattan distance).
+        /// Gets the heuristic estimate from this cell to the destination (the A* <c>h</c> score: the cheapest cost over an empty grid with the configured step costs).
         /// </summary>
-        public float ScoreH { get; }
+        public int ScoreH { get; }
 
         /// <summary>
         /// Gets the priority by which the cell is ordered in the open set: <c>g + h</c> (the A* <c>f</c> score).
         /// </summary>
-        public float ScoreF { get; }
+        public int ScoreF { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SearchNode"/> struct.
@@ -41,7 +41,7 @@ namespace Migs.MPath.Core.Data
         /// <param name="scoreG">The cheapest cost from the origin discovered so far.</param>
         /// <param name="scoreH">The heuristic estimate to the destination.</param>
         /// <param name="scoreF">The combined priority (<c>g + h</c>).</param>
-        public SearchNode(Coordinate coordinate, SearchNodeState state, float scoreG, float scoreH, float scoreF)
+        public SearchNode(Coordinate coordinate, SearchNodeState state, int scoreG, int scoreH, int scoreF)
         {
             Coordinate = coordinate;
             State = state;

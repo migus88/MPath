@@ -47,7 +47,7 @@ namespace Migs.MPath.Tests
             using var shared = new Pathfinder(grid);
 
             // Stamp nodes with generation 1, the first one used again after the wrap.
-            using (shared.GetReachable(new Coordinate(Width / 2, Height / 2), float.MaxValue))
+            using (shared.GetReachable(new Coordinate(Width / 2, Height / 2), int.MaxValue))
             {
             }
 
@@ -86,7 +86,7 @@ namespace Migs.MPath.Tests
             {
             }
 
-            using (pathfinder.GetReachable(new Coordinate(Width / 2, Height / 2), 10f))
+            using (pathfinder.GetReachable(new Coordinate(Width / 2, Height / 2), 1000))
             {
             }
 
@@ -270,7 +270,7 @@ namespace Migs.MPath.Tests
             }
         }
 
-        private static Dictionary<Coordinate, float> ToDictionary(RangeResult result)
+        private static Dictionary<Coordinate, int> ToDictionary(RangeResult result)
         {
             return result.Cells.ToDictionary(cell => cell.Coordinate, cell => cell.Cost);
         }
@@ -293,7 +293,7 @@ namespace Migs.MPath.Tests
                         Coordinate = new Coordinate(x, y),
                         IsWalkable = random.NextDouble() >= 0.25,
                         IsOccupied = random.NextDouble() < 0.05,
-                        Weight = random.Next(3)
+                        Weight = random.Next(3) * 100
                     };
                 }
             }

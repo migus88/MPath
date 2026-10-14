@@ -11,79 +11,40 @@ namespace Migs.MPath.Core.Internal
         private const int BlockerKinds = 3;
 
         /// <summary>
-        /// Fixed-point cost keys count cost in units of 1 / <see cref="CostKeyScale"/>: four decimal places, so the
-        /// values people write (1.41, 0.25, 2.5) are exact and a budget of three 1.41 steps is exactly 4.23.
-        /// A float holds about 7 significant digits, so that is exact for values below 1000.
+        /// The overflow headroom of a route's cost: a step whose route would cost more is never taken, so the
+        /// cheapest cost <c>g</c> and the heuristic <c>h</c> each stay at or below it and <c>g + h</c> fits an
+        /// <see cref="int"/>. Larger cell weights count as this value.
         /// </summary>
-        public const double CostKeyScale = 10000.0;
-
-        /// <summary>
-        /// The largest cost of one step: larger multipliers and weights are clamped to it, so a route of up to 2^25
-        /// steps can never overflow a <see cref="long"/>.
-        /// </summary>
-        public const float MaxStepCost = 16777216f;
-
-        /// <summary>
-        /// The relative precision of a float (2^-23): a budget admits the routes within it, since the budget itself
-        /// was rounded to a float.
-        /// </summary>
-        private const double FloatPrecision = 1.0 / (1 << 23);
-
-        private const long MaxStepCostKey = (long)(MaxStepCost * CostKeyScale);
-
-        /// <summary>
-        /// The largest budget key: any larger budget is effectively unbounded.
-        /// </summary>
-        private const long MaxBudgetKey = 1L << 62;
+        public const int MaxCost = int.MaxValue / 2;
 
         public readonly bool IsDiagonalMovementEnabled;
         public readonly bool IsCalculatingOccupiedCells;
         public readonly CornerBlocking CornerBlocking;
         public readonly bool IsCellWeightEnabled;
         public readonly PathSmoothingMethod PathSmoothingMethod;
-        public readonly float StraightMovementMultiplier;
-        public readonly float DiagonalMovementMultiplier;
+        public readonly int StraightStepCost;
+        public readonly int DiagonalStepCost;
         public readonly GridSnapshotMode GridSnapshotMode;
         public readonly TieBreaking TieBreaking;
 
         /// <summary>
-        /// Whether costs are compared as exact integer keys with a secondary tie-break key
-        /// (any <see cref="TieBreaking"/> but <see cref="Data.TieBreaking.None"/>).
+        /// Whether the search keeps a secondary tie-break key (any <see cref="TieBreaking"/> but
+        /// <see cref="Data.TieBreaking.None"/>).
         /// </summary>
         public readonly bool IsTieBreaking;
-
-        /// <summary>
-        /// <see cref="StraightMovementMultiplier"/> as a cost key (see <see cref="ToCostKey"/>).
-        /// </summary>
-        public readonly long StraightCostKey;
-
-        /// <summary>
-        /// <see cref="DiagonalMovementMultiplier"/> as a cost key (see <see cref="ToCostKey"/>).
-        /// </summary>
-        public readonly long DiagonalCostKey;
-
-        /// <summary>
-        /// <see cref="HeuristicMajorAxisCost"/> for cost keys, derived from the rounded step keys so it stays exact.
-        /// </summary>
-        public readonly long HeuristicMajorAxisKey;
-
-        /// <summary>
-        /// <see cref="HeuristicMinorAxisCost"/> for cost keys, derived from the rounded step keys so it stays exact.
-        /// </summary>
-        public readonly long HeuristicMinorAxisKey;
         public readonly CellLayout CellLayout;
 
         /// <summary>
         /// Heuristic cost per unit of the larger axis distance to the destination
         /// (see <see cref="Pathfinder"/>'s <c>GetH</c>).
         /// </summary>
-        public readonly float HeuristicMajorAxisCost;
+        public readonly int HeuristicMajorAxisCost;
 
         /// <summary>
         /// Heuristic cost per unit of the smaller axis distance to the destination
         /// (see <see cref="Pathfinder"/>'s <c>GetH</c>).
         /// </summary>
-        public readonly float HeuristicMinorAxisCost;
+        public readonly int HeuristicMinorAxisCost;
 
         /// <summary>
         /// <see cref="CornerBlocking"/> unrolled into a symmetric 3x3 bit table: bit
@@ -94,7 +55,7 @@ namespace Migs.MPath.Core.Internal
 
         private FastPathfinderSettings(bool isDiagonalMovementEnabled, bool isCalculatingOccupiedCells,
             CornerBlocking cornerBlocking, bool isCellWeightEnabled, PathSmoothingMethod pathSmoothingMethod,
-            float straightMovementMultiplier, float diagonalMovementMultiplier, GridSnapshotMode gridSnapshotMode,
+            int straightStepCost, int diagonalStepCost, GridSnapshotMode gridSnapshotMode,
             TieBreaking tieBreaking, CellLayout cellLayout)
         {
             IsDiagonalMovementEnabled = isDiagonalMovementEnabled;
@@ -102,72 +63,56 @@ namespace Migs.MPath.Core.Internal
             CornerBlocking = cornerBlocking;
             IsCellWeightEnabled = isCellWeightEnabled;
             PathSmoothingMethod = pathSmoothingMethod;
-            StraightMovementMultiplier = straightMovementMultiplier;
-            DiagonalMovementMultiplier = diagonalMovementMultiplier;
+            StraightStepCost = straightStepCost;
+            DiagonalStepCost = diagonalStepCost;
             GridSnapshotMode = gridSnapshotMode;
             CellLayout = cellLayout;
             (HeuristicMajorAxisCost, HeuristicMinorAxisCost) = GetHeuristicAxisCosts(isDiagonalMovementEnabled,
-                straightMovementMultiplier, diagonalMovementMultiplier);
+                straightStepCost, diagonalStepCost);
             _cornerBlockingTable = BuildCornerBlockingTable(cornerBlocking);
             TieBreaking = tieBreaking;
             IsTieBreaking = tieBreaking != TieBreaking.None;
-            StraightCostKey = ToCostKey(straightMovementMultiplier);
-            DiagonalCostKey = ToCostKey(diagonalMovementMultiplier);
-            (HeuristicMajorAxisKey, HeuristicMinorAxisKey) = GetHeuristicAxisKeys(isDiagonalMovementEnabled,
-                StraightCostKey, DiagonalCostKey);
         }
 
         public static FastPathfinderSettings FromSettings(IPathfinderSettings settings)
         {
             return new FastPathfinderSettings(settings.IsDiagonalMovementEnabled, settings.IsCalculatingOccupiedCells,
                 settings.CornerBlocking, settings.IsCellWeightEnabled, settings.PathSmoothingMethod,
-                settings.StraightMovementMultiplier, settings.DiagonalMovementMultiplier, settings.GridSnapshotMode,
+                settings.StraightStepCost, settings.DiagonalStepCost, settings.GridSnapshotMode,
                 settings.TieBreaking, settings.CellLayout);
         }
 
         /// <summary>
-        /// Converts a step cost (a multiplier or a cell weight) to an exact fixed-point key: the nearest multiple of
-        /// 1 / <see cref="CostKeyScale"/>, clamped to +-<see cref="MaxStepCost"/> (NaN counts as the maximum). Keys
-        /// add without rounding, so equal-cost routes tie whatever order their steps are summed in.
+        /// Checks the step costs for a <paramref name="width"/> x <paramref name="height"/> grid: each must be at
+        /// least 1 (the searches need every step to cost something), and crossing the grid at the dearer one in use
+        /// (the diagonal cost counts only with diagonal movement) must stay within <see cref="MaxCost"/>, which
+        /// bounds the heuristic so <c>g + h</c> cannot overflow.
         /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static long ToCostKey(float cost)
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when a step cost is out of range.</exception>
+        public void Validate(int width, int height)
         {
-            var scaled = Math.Round(cost * CostKeyScale);
-
-            if (!(scaled < MaxStepCostKey))
+            if (StraightStepCost < 1)
             {
-                return MaxStepCostKey;
+                throw new ArgumentOutOfRangeException(nameof(IPathfinderSettings.StraightStepCost), StraightStepCost,
+                    "The straight step cost must be at least 1.");
             }
 
-            return scaled > -MaxStepCostKey ? (long)scaled : -MaxStepCostKey;
-        }
-
-        /// <summary>
-        /// Converts a movement budget to a key, rounded like <see cref="ToCostKey"/> and widened by the float's own
-        /// precision, so a budget equal to a route's cost admits that route even when the budget's float is a hair
-        /// below the decimal it was written as.
-        /// </summary>
-        public static long ToBudgetKey(float budget)
-        {
-            var scaled = budget * CostKeyScale;
-            scaled = Math.Round(scaled + Math.Abs(scaled) * FloatPrecision);
-
-            if (!(scaled < MaxBudgetKey))
+            if (DiagonalStepCost < 1)
             {
-                return MaxBudgetKey;
+                throw new ArgumentOutOfRangeException(nameof(IPathfinderSettings.DiagonalStepCost), DiagonalStepCost,
+                    "The diagonal step cost must be at least 1.");
             }
 
-            return scaled > 0 ? (long)scaled : 0;
-        }
+            var largest = IsDiagonalMovementEnabled ? Math.Max(StraightStepCost, DiagonalStepCost) : StraightStepCost;
 
-        /// <summary>
-        /// Converts a cost key back to a cost.
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float ToCost(long costKey)
-        {
-            return (float)(costKey / CostKeyScale);
+            if (((long)width + height) * largest > MaxCost)
+            {
+                throw new ArgumentOutOfRangeException(
+                    largest == StraightStepCost
+                        ? nameof(IPathfinderSettings.StraightStepCost)
+                        : nameof(IPathfinderSettings.DiagonalStepCost), largest,
+                    $"(width + height) * the larger step cost must not exceed {MaxCost} on a {width}x{height} grid.");
+            }
         }
 
         /// <summary>
@@ -184,57 +129,34 @@ namespace Migs.MPath.Core.Internal
         /// Picks the two coefficients of the heuristic <c>major * max(dx, dy) + minor * min(dx, dy)</c> so it is
         /// the cheapest cost of crossing an empty grid with the configured step costs. That never exceeds the
         /// real cost (cell weights only add to a step) and drops by at most one step's cost per step, so A* stays
-        /// optimal while closing each cell once.
+        /// optimal while closing each cell once. Integer costs make it exact.
         /// </summary>
         /// <remarks>
         /// Without diagonals it is the Manhattan distance times the straight cost. With diagonals it is the octile
         /// distance: <c>min(dx, dy)</c> diagonal steps plus the rest straight. A diagonal dearer than two straight
         /// steps is never worth taking, so its cost is capped at two straight steps; one cheaper than a straight
         /// step makes zigzagging diagonals the cheapest way to cover any distance, so every unit of the larger
-        /// axis costs one diagonal. Negative multipliers count as 0 (the heuristic must not go negative).
+        /// axis costs one diagonal. Both coefficients are at most the larger step cost, so the heuristic stays within
+        /// <see cref="MaxCost"/> on a grid that passed <see cref="Validate"/>.
         /// </remarks>
-        private static (float major, float minor) GetHeuristicAxisCosts(bool isDiagonalMovementEnabled,
-            float straightMovementMultiplier, float diagonalMovementMultiplier)
+        private static (int major, int minor) GetHeuristicAxisCosts(bool isDiagonalMovementEnabled,
+            int straightStepCost, int diagonalStepCost)
         {
-            var straight = Math.Max(straightMovementMultiplier, 0f);
+            var straight = Math.Max(straightStepCost, 0);
 
             if (!isDiagonalMovementEnabled)
             {
                 return (straight, straight);
             }
 
-            var diagonal = Math.Max(diagonalMovementMultiplier, 0f);
+            var diagonal = Math.Max(diagonalStepCost, 0);
 
             if (diagonal < straight)
             {
-                return (diagonal, 0f);
+                return (diagonal, 0);
             }
 
-            return (straight, Math.Min(diagonal, 2f * straight) - straight);
-        }
-
-        /// <summary>
-        /// <see cref="GetHeuristicAxisCosts"/> over integer step keys, so the heuristic is exact and admissible for
-        /// the keys the search adds up.
-        /// </summary>
-        private static (long major, long minor) GetHeuristicAxisKeys(bool isDiagonalMovementEnabled,
-            long straightKey, long diagonalKey)
-        {
-            var straight = Math.Max(straightKey, 0L);
-
-            if (!isDiagonalMovementEnabled)
-            {
-                return (straight, straight);
-            }
-
-            var diagonal = Math.Max(diagonalKey, 0L);
-
-            if (diagonal < straight)
-            {
-                return (diagonal, 0L);
-            }
-
-            return (straight, Math.Min(diagonal, 2L * straight) - straight);
+            return (straight, (int)Math.Min(diagonal, 2L * straight) - straight);
         }
 
         private static int BuildCornerBlockingTable(CornerBlocking cornerBlocking)

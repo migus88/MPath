@@ -14,6 +14,9 @@ namespace Migs.Mpath.Examples
         [SerializeField] private bool _isWalkable;
         [SerializeField] private Vector2Int _position;
         [SerializeField, Range(1,10)] private float _weight = 1;
+
+        // Costs are integers at the resolution of the step costs (100 per straight step by default).
+        private const int CostScale = 100;
         
         [Header("Display")]
         [SerializeField] private Renderer _renderer;
@@ -26,7 +29,7 @@ namespace Migs.Mpath.Examples
             {
                 Coordinate = new Coordinate(_position.x, _position.y),
                 IsWalkable = _isWalkable,
-                Weight = _weight
+                Weight = Mathf.RoundToInt(_weight * CostScale)
             };
             
             VisualizeWeight();

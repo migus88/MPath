@@ -59,7 +59,7 @@ namespace Migs.MPath.Tests
         {
             // Arrange
             using var pathfinder = new Pathfinder(CreateGrid(seed: 3, wallChance: 0.2));
-            using var result = pathfinder.GetReachable(new Coordinate(5, 5), 6f);
+            using var result = pathfinder.GetReachable(new Coordinate(5, 5), 600);
             var expected = new List<ReachableCell>();
 
             for (var i = 0; i < result.Length; i++)
@@ -123,7 +123,7 @@ namespace Migs.MPath.Tests
             // Arrange
             using var pathfinder = new Pathfinder(CreateGrid(seed: 0, wallChance: 0));
             using var path = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(3, 0));
-            using var range = pathfinder.GetReachable(new Coordinate(0, 0), 1f);
+            using var range = pathfinder.GetReachable(new Coordinate(0, 0), 100);
             var pathIndex = offsetFromEnd < 0 ? -1 : path.Length;
             var rangeIndex = offsetFromEnd < 0 ? -1 : range.Length;
 
@@ -155,10 +155,10 @@ namespace Migs.MPath.Tests
         {
             // Arrange
             using var pathfinder = new Pathfinder(CreateGrid(seed: 0, wallChance: 0));
-            var result = pathfinder.GetReachable(new Coordinate(3, 3), 2f);
+            var result = pathfinder.GetReachable(new Coordinate(3, 3), 200);
             result.Contains(new Coordinate(3, 3)).Should().BeTrue();
             result.Dispose();
-            var costs = new float[Width * Height];
+            var costs = new int[Width * Height];
 
             // Act & Assert
             ((Action)(() => result.AsSpan())).Should().Throw<ObjectDisposedException>();
@@ -174,7 +174,7 @@ namespace Migs.MPath.Tests
             // Arrange
             using var pathfinder = new Pathfinder(CreateGrid(seed: 0, wallChance: 0));
             using var path = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(Width - 1, Height - 1));
-            using var range = pathfinder.GetReachable(new Coordinate(5, 5), 4f);
+            using var range = pathfinder.GetReachable(new Coordinate(5, 5), 400);
             var sum = SumBoth(path, range);
 
             // Act
@@ -193,12 +193,12 @@ namespace Migs.MPath.Tests
             // Arrange
             using var pathfinder = new Pathfinder(CreateGrid(seed: 0, wallChance: 0));
 
-            using (var warmUp = pathfinder.GetReachable(new Coordinate(5, 5), 4f))
+            using (var warmUp = pathfinder.GetReachable(new Coordinate(5, 5), 400))
             {
                 warmUp.Contains(new Coordinate(5, 5));
             }
 
-            using var range = pathfinder.GetReachable(new Coordinate(5, 5), 4f);
+            using var range = pathfinder.GetReachable(new Coordinate(5, 5), 400);
             range.Contains(new Coordinate(5, 5)).Should().BeTrue();
             var hits = 0;
 
@@ -234,7 +234,7 @@ namespace Migs.MPath.Tests
             var random = new Random(seed);
             var origin = new Coordinate(random.Next(Width), random.Next(Height));
             pathfinder.SetWalkable(origin, true);
-            using var range = pathfinder.GetReachable(origin, 9f);
+            using var range = pathfinder.GetReachable(origin, 900);
             var expected = new Dictionary<Coordinate, ReachableCell>();
 
             for (var i = 0; i < range.Length; i++)
@@ -272,9 +272,9 @@ namespace Migs.MPath.Tests
             // Arrange
             var cells = new[]
             {
-                new ReachableCell(new Coordinate(-5, 3), 1f),
-                new ReachableCell(new Coordinate(1000, -7), 2f),
-                new ReachableCell(new Coordinate(4, 4), 3f)
+                new ReachableCell(new Coordinate(-5, 3), 100, 1, 0),
+                new ReachableCell(new Coordinate(1000, -7), 200, 2, 0),
+                new ReachableCell(new Coordinate(4, 4), 300, 3, 0)
             };
 
             // Not disposed: the array is not from the pool.
@@ -282,7 +282,7 @@ namespace Migs.MPath.Tests
 
             // Act & Assert
             range.TryGetCost(new Coordinate(1000, -7), out var cost).Should().BeTrue();
-            cost.Should().Be(2f);
+            cost.Should().Be(200);
             range.Contains(new Coordinate(-5, 3)).Should().BeTrue();
             range.Contains(new Coordinate(4, 4)).Should().BeFalse();
         }
@@ -292,9 +292,9 @@ namespace Migs.MPath.Tests
         {
             // Arrange
             var pathfinder = new Pathfinder(CreateGrid(seed: 0, wallChance: 0));
-            using var range = pathfinder.GetReachable(new Coordinate(2, 2), 2f);
+            using var range = pathfinder.GetReachable(new Coordinate(2, 2), 200);
 
-            using (pathfinder.GetReachable(new Coordinate(15, 10), 3f))
+            using (pathfinder.GetReachable(new Coordinate(15, 10), 300))
             {
             }
 
@@ -307,10 +307,10 @@ namespace Migs.MPath.Tests
 
             // Assert
             isOriginReached.Should().BeTrue();
-            originCost.Should().Be(0f);
+            originCost.Should().Be(0);
             isFarCellReached.Should().BeFalse();
             isNeighborReached.Should().BeTrue();
-            neighborCost.Should().BeApproximately(1f, 1e-5f);
+            neighborCost.Should().Be(100);
         }
 
         [Test]
@@ -320,9 +320,9 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(CreateGrid(seed, wallChance: 0.2));
             var origin = new Coordinate(Width / 2, Height / 2);
             pathfinder.SetWalkable(origin, true);
-            using var range = pathfinder.GetReachable(origin, 5f);
-            var costs = new float[Width * Height + 3];
-            const float unreached = -7f;
+            using var range = pathfinder.GetReachable(origin, 500);
+            var costs = new int[Width * Height + 3];
+            const int unreached = -7;
 
             // Act
             var written = range.CopyCostsTo(costs, unreached);
@@ -349,15 +349,15 @@ namespace Migs.MPath.Tests
         {
             // Arrange
             using var pathfinder = new Pathfinder(CreateGrid(seed: 0, wallChance: 0));
-            using var range = pathfinder.GetReachable(new Coordinate(0, 0), 0f);
-            var costs = new float[Width * Height];
+            using var range = pathfinder.GetReachable(new Coordinate(0, 0), 0);
+            var costs = new int[Width * Height];
 
             // Act
             range.CopyCostsTo(costs);
 
             // Assert
-            costs[pathfinder.GetIndex(new Coordinate(0, 0))].Should().Be(0f);
-            costs[pathfinder.GetIndex(new Coordinate(1, 0))].Should().Be(-1f);
+            costs[pathfinder.GetIndex(new Coordinate(0, 0))].Should().Be(0);
+            costs[pathfinder.GetIndex(new Coordinate(1, 0))].Should().Be(-1);
         }
 
         [Test]
@@ -365,8 +365,8 @@ namespace Migs.MPath.Tests
         {
             // Arrange
             using var pathfinder = new Pathfinder(CreateGrid(seed: 0, wallChance: 0));
-            using var range = pathfinder.GetReachable(new Coordinate(0, 0), 1f);
-            var costs = new float[Width * Height - 1];
+            using var range = pathfinder.GetReachable(new Coordinate(0, 0), 100);
+            var costs = new int[Width * Height - 1];
 
             // Act
             var copy = () => range.CopyCostsTo(costs);
@@ -380,15 +380,15 @@ namespace Migs.MPath.Tests
         {
             // Arrange
             using var pathfinder = new Pathfinder(CreateGrid(seed: 0, wallChance: 0));
-            using var range = pathfinder.GetReachable(new Coordinate(0, 0), -1f);
-            var costs = new float[4];
+            using var range = pathfinder.GetReachable(new Coordinate(0, 0), -1);
+            var costs = new int[4];
 
             // Act
-            var written = range.CopyCostsTo(costs, 9f);
+            var written = range.CopyCostsTo(costs, 9);
 
             // Assert
             written.Should().Be(0);
-            costs.Should().AllBeEquivalentTo(9f);
+            costs.Should().AllBeEquivalentTo(9);
         }
 
         [Test]
@@ -396,8 +396,8 @@ namespace Migs.MPath.Tests
         {
             // Arrange
             // Not disposed: the array is not from the pool.
-            var range = RangeResult.Create(new[] { new ReachableCell(new Coordinate(0, 0), 0f) }, 1);
-            var costs = new float[16];
+            var range = RangeResult.Create(new[] { new ReachableCell(new Coordinate(0, 0), 0, 0, 0) }, 1);
+            var costs = new int[16];
 
             // Act
             var copy = () => range.CopyCostsTo(costs);
@@ -406,9 +406,9 @@ namespace Migs.MPath.Tests
             copy.Should().Throw<InvalidOperationException>();
         }
 
-        private static float SumBoth(PathResult path, RangeResult range)
+        private static long SumBoth(PathResult path, RangeResult range)
         {
-            var sum = 0f;
+            var sum = 0L;
 
             foreach (var coordinate in path)
             {
@@ -436,7 +436,7 @@ namespace Migs.MPath.Tests
                     {
                         Coordinate = new Coordinate(x, y),
                         IsWalkable = random.NextDouble() >= wallChance,
-                        Weight = wallChance > 0 ? random.Next(3) : 0
+                        Weight = wallChance > 0 ? random.Next(3) * 100 : 0
                     };
                 }
             }

@@ -12,8 +12,8 @@ Defines the configuration settings for the MPath pathfinding system. This interf
 | `IsCalculatingOccupiedCells` | `bool` | Whether occupied cells are considered as blocked. |
 | `CornerBlocking` | [`CornerBlocking`](CornerBlocking.md) | Which flanking cells block a diagonal step. Usual default: `BetweenBlockedCells`. |
 | `IsCellWeightEnabled` | `bool` | Whether cell weight calculation is enabled. |
-| `StraightMovementMultiplier` | `float` | The cost multiplier for horizontal/vertical movement. |
-| `DiagonalMovementMultiplier` | `float` | The cost multiplier for diagonal movement. |
+| `StraightStepCost` | `int` | The cost of a horizontal/vertical step, at least 1. Costs are integers in a unit you pick; weights, budgets and reported costs use the same one. |
+| `DiagonalStepCost` | `int` | The cost of a diagonal step, at least 1 (only used with diagonal movement). |
 | `PathSmoothingMethod` | `PathSmoothingMethod` | The method used to smooth the calculated path. |
 | `TieBreaking` | [`TieBreaking`](TieBreaking.md) | Which route to return when several cost the same. Usual default: `None`. |
 | `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | When a `Cell[,]`, cell-holder or unordered `Cell[]` pathfinder copies the grid: every query (`PerQuery`) or once and after `Refresh()` (`Manual`). Usual default: `PerQuery`. |
@@ -38,8 +38,8 @@ var settings = new PathfinderSettings
     IsCalculatingOccupiedCells = false,
     CornerBlocking = CornerBlocking.None,
     IsCellWeightEnabled = true,
-    StraightMovementMultiplier = 1.0f,
-    DiagonalMovementMultiplier = 1.4f,
+    StraightStepCost = 10,
+    DiagonalStepCost = 14,
     PathSmoothingMethod = PathSmoothingMethod.StringPulling
 };
 

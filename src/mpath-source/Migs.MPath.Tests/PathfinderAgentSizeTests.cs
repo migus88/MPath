@@ -11,7 +11,7 @@ namespace Migs.MPath.Tests
 {
     /// <summary>
     /// Pins the <c>agentSize</c> overloads of <see cref="Pathfinder.GetPath(Coordinate, Coordinate, int)"/>,
-    /// <see cref="Pathfinder.GetReachable(Coordinate, float, int)"/> and
+    /// <see cref="Pathfinder.GetReachable(Coordinate, int, int)"/> and
     /// <see cref="Pathfinder.BeginStepwiseSearch(Coordinate, Coordinate, int)"/> (with and without
     /// <see cref="QueryOptions"/>): they match the <see cref="IAgent"/> overloads, default to a single-cell agent,
     /// reject sizes below 1 and share path cache entries with <see cref="IAgent"/> queries of the same size.
@@ -20,7 +20,7 @@ namespace Migs.MPath.Tests
     public class PathfinderAgentSizeTests
     {
         private const int GridSize = 12;
-        private const float Budget = 9f;
+        private const int Budget = 900;
 
         private static readonly Coordinate From = new Coordinate(0, 0);
         private static readonly Coordinate To = new Coordinate(1, 6);
