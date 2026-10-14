@@ -9,7 +9,7 @@ namespace Migs.MPath.Core
     {
         private const float RadToDeg = 57.2958f; // 180/π ≈ 57.2958
 
-        private PathResult SmoothPath(Coordinate[] originalPath, int originalLength, Cell* cells)
+        private PathResult SmoothPath(Coordinate[] originalPath, int originalLength, Cell* cells, int agentSize)
         {
             if (originalLength <= 2)
             {
@@ -19,14 +19,14 @@ namespace Migs.MPath.Core
 
             return _settings.PathSmoothingMethod switch
             {
-                PathSmoothingMethod.StringPulling => ApplyStringPulling(originalPath, originalLength, cells),
+                PathSmoothingMethod.StringPulling => ApplyStringPulling(originalPath, originalLength, cells, agentSize),
                 PathSmoothingMethod.Simple => ApplySimpleSmoothing(originalPath, originalLength),
                 PathSmoothingMethod.None => PathResult.Success(originalPath, originalLength),
                 _ => PathResult.Success(originalPath, originalLength)
             };
         }
 
-        private PathResult ApplyStringPulling(Coordinate[] originalPath, int originalLength, Cell* cells)
+        private PathResult ApplyStringPulling(Coordinate[] originalPath, int originalLength, Cell* cells, int agentSize)
         {
             var smoothedPath = ArrayPool<Coordinate>.Shared.Rent(originalLength);
             Array.Clear(smoothedPath, 0, smoothedPath.Length);
@@ -39,12 +39,12 @@ namespace Migs.MPath.Core
             {
                 var furthestVisible = currentIndex;
 
-                // Find furthest point with line of sight from current
+                // Find the furthest point the agent can walk to in a straight line from the current one
                 for (var i = originalLength - 1; i > currentIndex; i--)
                 {
-                    // Smoothing may only shortcut across cells an agent can actually walk through.
-                    if (!HasLineOfSight(originalPath[currentIndex], originalPath[i], cells,
-                            LineOfSightMode.BlockedByUnwalkableCells))
+                    // A shortcut must stay inside the space the search itself could traverse:
+                    // agent footprint at every cell and the corner rule at every diagonal step.
+                    if (!IsSegmentTraversable(originalPath[currentIndex], originalPath[i], cells, agentSize))
                     {
                         continue;
                     }
@@ -76,10 +76,11 @@ namespace Migs.MPath.Core
             smoothedPath[0] = originalPath[0];
             var smoothedLength = 1;
 
-            var direction = Coordinate.Zero;
+            // Start from the first segment's direction so the first waypoint is never written twice
+            var direction = originalPath[1] - originalPath[0];
 
-            // Process all points except the last one
-            for (var i = 1; i < originalLength - 1; i++)
+            // Keep every point where the direction changes (the turn points)
+            for (var i = 2; i < originalLength; i++)
             {
                 var newDirection = originalPath[i] - originalPath[i - 1];
 
@@ -99,6 +100,76 @@ namespace Migs.MPath.Core
             ArrayPool<Coordinate>.Shared.Return(originalPath);
             
             return PathResult.Success(smoothedPath, smoothedLength);
+        }
+
+        /// <summary>
+        /// Determines whether an agent of <paramref name="agentSize"/> can walk the straight segment from
+        /// <paramref name="from"/> to <paramref name="to"/>. The segment is traced as an 8-connected Bresenham walk
+        /// and every step is validated with the same rules the A* search applies to a move: the agent's
+        /// footprint must fit at the entered cell, and a diagonal step must obey the corner rule.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsSegmentTraversable(Coordinate from, Coordinate to, Cell* cells, int agentSize)
+        {
+            var x = from.X;
+            var y = from.Y;
+            var dx = Math.Abs(to.X - x);
+            var dy = -Math.Abs(to.Y - y);
+            var stepX = x < to.X ? 1 : -1;
+            var stepY = y < to.Y ? 1 : -1;
+            var error = dx + dy;
+
+            while (x != to.X || y != to.Y)
+            {
+                var doubledError = 2 * error;
+                var nextX = x;
+                var nextY = y;
+
+                if (doubledError >= dy)
+                {
+                    error += dy;
+                    nextX += stepX;
+                }
+
+                if (doubledError <= dx)
+                {
+                    error += dx;
+                    nextY += stepY;
+                }
+
+                if (nextX != x && nextY != y && !IsDiagonalStepAllowed(cells, x, y, nextX, nextY, agentSize))
+                {
+                    return false;
+                }
+
+                if (GetWalkableLocation(cells, nextX, nextY, agentSize) == null)
+                {
+                    return false;
+                }
+
+                x = nextX;
+                y = nextY;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Mirrors the diagonal rule of <see cref="PopulateNeighbors"/>: unless movement between corners is
+        /// allowed, a diagonal step needs at least one of its two cardinal intermediates to fit the agent.
+        /// When diagonal movement is disabled the step always needs a cardinal detour, since the search
+        /// could only have made it as two cardinal moves.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsDiagonalStepAllowed(Cell* cells, int x, int y, int nextX, int nextY, int agentSize)
+        {
+            if (_settings.IsDiagonalMovementEnabled && _settings.IsMovementBetweenCornersEnabled)
+            {
+                return true;
+            }
+
+            return GetWalkableLocation(cells, nextX, y, agentSize) != null
+                   || GetWalkableLocation(cells, x, nextY, agentSize) != null;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

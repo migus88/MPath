@@ -251,7 +251,7 @@ namespace Migs.MPath.Core
                 return PathResult.Failure();
             }
 
-            return ReconstructPath(current, ptr);
+            return ReconstructPath(current, ptr, agentSize);
         }
 
         /// <summary>
@@ -344,7 +344,7 @@ namespace Migs.MPath.Core
         /// <summary>
         /// Reconstructs the final path from the destination cell back to the start.
         /// </summary>
-        private PathResult ReconstructPath(Cell* lastCell, Cell* cells)
+        private PathResult ReconstructPath(Cell* lastCell, Cell* cells, int agentSize)
         {
             var depth = lastCell->Depth;
             var path = ArrayPool<Coordinate>.Shared.Rent(depth);
@@ -361,7 +361,7 @@ namespace Migs.MPath.Core
             // Apply path smoothing if enabled
             if (_settings.PathSmoothingMethod != PathSmoothingMethod.None && depth > 2)
             {
-                return SmoothPath(path, depth, cells);
+                return SmoothPath(path, depth, cells, agentSize);
             }
 
             return PathResult.Success(path, depth);

@@ -91,11 +91,13 @@ Available options:
 - With **StringPulling**, a more thorough line-of-sight calculation is performed to create the most direct paths possible, though with slightly higher computational cost.
 
 
+**Guarantees**:
+- **Simple** returns the first step, every turn point and the destination, with no repeated waypoints.
+- **StringPulling** only takes a shortcut the search itself could walk: the segment is traced cell by cell and every step must fit the agent's full `Size x Size` footprint (walls and, with `IsCalculatingOccupiedCells`, occupied cells block) and obey the corner rule. With `IsMovementBetweenCornersEnabled = false` (or diagonal movement disabled) a shortcut never passes diagonally between two obstacles that touch at a corner.
+
 **Limitations**:
-- **StringPullingSmoothing** might not behave as expected in all scenarios:
-  - In complex mazes with narrow passages, it can occasionally create paths that appear to cut corners
-  - When used with agents that have a size greater than 1, some paths might seem to brush too close to obstacles
-  - In highly dynamic environments where obstacles change frequently, the more optimized path might become invalid more quickly
+- **StringPulling** is the most expensive method, and larger agents make it costlier (`Size x Size` checks per traced cell).
+- In highly dynamic environments where obstacles change frequently, the more optimized path might become invalid more quickly
 
 **Example visualization**:
 ```
