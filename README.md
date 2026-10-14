@@ -13,6 +13,7 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 - Movement-range queries (`GetReachable`) for "where can this unit move?" mechanics
 - Configurable corner-cutting (`CornerBlocking`): walls and occupied cells can block diagonal steps separately
 - Per-query options (`QueryOptions`): units block or not, and specific occupied cells can be entered for one query, without touching the grid
+- Single-cell updates (`SetWalkable`, `SetOccupied`, `SetWeight`, `SetCell`): O(1) writes into your grid that keep the path cache valid
 - Distance metrics (Manhattan, Chebyshev) and line-of-sight checks for range and visibility logic
 - Stepwise search (`BeginStepwiseSearch`) for visualizing how the algorithm explores the grid
 - First-class support for Unity with dedicated integration components

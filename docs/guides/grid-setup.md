@@ -258,27 +258,23 @@ MPath does not automatically update your grid when game state changes. However, 
 
 ### Direct Cell Representation (Options 1 & 2)
 
-With direct cell arrays or matrices, you need to:
-
-1. Update your cell data
-2. Create a new pathfinder instance or
-3. Reinitialize your existing pathfinder with a new path calculation
+The pathfinder keeps a reference to your array or matrix and reads it on every query, so keep the same instance and update cells through it:
 
 ```csharp
-// Example: Updating a cell in a direct cell array
-cells[index].IsWalkable = false;
+// O(1), writes into your own array/matrix, and clears the path cache if needed
+pathfinder.SetWalkable(new Coordinate(4, 2), false);
+pathfinder.SetOccupied(unit.Position, true);
+pathfinder.SetWeight(new Coordinate(7, 3), 2.5f);
 
-// Option 1: Create a new pathfinder (more resource-intensive)
-using var newPathfinder = new Pathfinder(cells, width, height);
-
-// Option 2: Reuse existing pathfinder by requesting a new path
-// (The pathfinder will read the updated cells)
-using var path = existingPathfinder.GetPath(agent, start, end);
+// The next query sees the change
+using var path = pathfinder.GetPath(agent, start, end);
 ```
+
+The setters find the cell by its coordinate, so they work whatever order your `Cell[]` is in. Writing into the array yourself also works, but then mind the layout: queries expect `cells[X * height + Y]` (column-major, see `pathfinder.GetIndex(coordinate)`) and **sort your array into that order** on every query, so an array you index in another order (for example row-major `y * width + x`) gets reordered under you. After direct writes, call `InvalidateCache()` if path caching is enabled.
 
 ### Cell Holder Representation (Options 3 & 4)
 
-The ICellHolder interface is specifically designed to minimize the overhead of grid updates. Since the pathfinder accesses cell data through the holder when needed, updates are automatically reflected:
+The ICellHolder interface is specifically designed to minimize the overhead of grid updates. Since the pathfinder re-reads every holder on every query, updates are automatically reflected. The holder is the source of truth, so the `Set*` cell-update methods throw `NotSupportedException` in these modes (call `InvalidateCache()` yourself after a change when path caching is enabled):
 
 ```csharp
 // Example: Dynamically updating terrain in a game

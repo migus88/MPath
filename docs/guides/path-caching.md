@@ -38,7 +38,7 @@ pathfinder.DisablePathCaching();
 
 ### Invalidating the Cache
 
-The cache is not invalidated automatically. After changing the grid (writing to your `Cell[]`/`Cell[,]`, or changing what your cell holders report), invalidate the cache without disabling caching entirely, or later queries may return paths computed for the old grid:
+The cell-update methods (`SetWalkable`, `SetOccupied`, `SetWeight`, `SetCell`) clear the cache themselves whenever the change can affect a cached path. Any other grid change (writing to your `Cell[]`/`Cell[,]` directly, or changing what your cell holders report) is invisible to the cache: invalidate it without disabling caching entirely, or later queries may return paths computed for the old grid:
 
 ```csharp
 // Clear the path cache but keep caching enabled

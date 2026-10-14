@@ -26,6 +26,12 @@ A high-performance A* pathfinding implementation for grid-based environments.
 | `bool HasLineOfSight(Coordinate from, Coordinate to, LineOfSightMode mode = BlockedByUnwalkableCells)` | Returns whether an unobstructed straight line connects two cells. |
 | `static int GetManhattanDistance(Coordinate from, Coordinate to)` | Manhattan (taxicab) distance `\|dx\| + \|dy\|`. |
 | `static int GetChebyshevDistance(Coordinate from, Coordinate to)` | Chebyshev (chessboard) distance `max(\|dx\|, \|dy\|)`. |
+| `Cell GetCell(Coordinate coordinate)` | Returns the current cell at a coordinate, read from your grid (array, matrix or holder). |
+| `void SetWalkable(Coordinate coordinate, bool isWalkable)` | Updates one cell's walkability in your `Cell[]`/`Cell[,]`. See [cell updates](#cell-updates). |
+| `void SetOccupied(Coordinate coordinate, bool isOccupied)` | Updates one cell's occupancy. See [cell updates](#cell-updates). |
+| `void SetWeight(Coordinate coordinate, float weight)` | Updates one cell's weight. See [cell updates](#cell-updates). |
+| `void SetCell(Coordinate coordinate, in Cell cell)` | Updates walkability, occupancy and weight at once; `cell.Coordinate` is ignored. |
+| `int GetIndex(Coordinate coordinate)` | The cell's index in the layout queries use: `X * fieldHeight + Y` (column-major). |
 | `Pathfinder EnablePathCaching(IPathCaching pathCachingHandler = null)` | Enables path caching with optional custom implementation. |
 | `Pathfinder DisablePathCaching()` | Disables path caching. |
 | `Pathfinder InvalidateCache()` | Clears the current path cache without disabling caching. |
@@ -34,7 +40,7 @@ A high-performance A* pathfinding implementation for grid-based environments.
 ## Remarks
 
 - Implements `IDisposable` and should be disposed when no longer needed. The `Cell[,]`, `ICellHolder[]` and `ICellHolder[,]` constructors rent their cell buffer from `ArrayPool<Cell>.Shared` and `Dispose` gives it back (skipped, the buffer is never reused and is left to the GC). The `Cell[]` constructor uses your array directly and owns no pooled memory, so skipping `Dispose` is harmless there unless path caching is enabled (the cache holds pooled path results).
-- `Dispose` is idempotent: the buffer goes back to the pool exactly once. It ends an active `StepwiseSearch` first (that session's later `Tick()` throws `ObjectDisposedException`). After `Dispose`, every instance method (`GetPath`, `GetReachable`, `HasLineOfSight`, `BeginStepwiseSearch`, `EnablePathCaching`, `DisablePathCaching`, `InvalidateCache`) throws `ObjectDisposedException`; the static distance helpers keep working.
+- `Dispose` is idempotent: the buffer goes back to the pool exactly once. It ends an active `StepwiseSearch` first (that session's later `Tick()` throws `ObjectDisposedException`). After `Dispose`, every instance method (`GetPath`, `GetReachable`, `HasLineOfSight`, `BeginStepwiseSearch`, `EnablePathCaching`, `DisablePathCaching`, `InvalidateCache`, `GetCell`, `GetIndex`, the `Set*` cell updates) throws `ObjectDisposedException`; the static distance helpers keep working.
 - Uses unsafe code and array pooling internally to minimize garbage collection.
 - The pathfinding algorithm is optimized for speed and memory efficiency.
 - For larger grids, reuse the same `Pathfinder` instance for multiple path calculations.
@@ -42,6 +48,21 @@ A high-performance A* pathfinding implementation for grid-based environments.
 - A destination the agent cannot enter (not walkable, occupied while `IsCalculatingOccupiedCells` is enabled, or without clearance for the agent's size) fails immediately without searching: `GetPath` returns a failure result and a `StepwiseSearch` starts complete in the `Failure` state. A query from a cell to itself always succeeds with an empty path.
 - Settings are frozen at construction. To vary occupancy per query (units block for movement, not for a threat range) or to enter specific occupied cells (the mover's own cells, an attack target), pass [`QueryOptions`](QueryOptions.md) to the overloads that take it. `default(QueryOptions)` behaves exactly like the overloads without options, and the options never change the grid.
 - Path caching is disabled by default but can be enabled for improved performance when the same paths are requested multiple times.
+
+## Cell updates
+
+`SetWalkable`, `SetOccupied`, `SetWeight` and `SetCell` change one cell and keep the bookkeeping in the pathfinder:
+
+- **`Cell[]` and `Cell[,]` constructors:** the write goes to your own array or matrix (the pathfinder keeps the reference), so your grid and the pathfinder stay in sync and the next query sees the change. O(1) and allocation-free while the grid is in layout (`cells[GetIndex(c)]` holds `c`, which every query establishes by sorting a `Cell[]` into that order; a `Cell[,]` holds `c` at `[c.X, c.Y]`). Otherwise the cell is found by a linear search and your array is never reordered by a setter.
+- **`ICellHolder[]` and `ICellHolder[,]` constructors:** the setters throw `NotSupportedException`. The holders are the source of truth and are re-read on every query, so update the holder itself (and call `InvalidateCache()` when caching is on). `GetCell` and `GetIndex` work in every mode.
+- **Path cache:** a setter that changes a value cached paths depend on clears the cache (walkability always; occupancy only with `IsCalculatingOccupiedCells`; weight only with `IsCellWeightEnabled`). Setting the current value again leaves the cache alone. Direct writes to your grid still need `InvalidateCache()`.
+- Out-of-grid coordinates throw `ArgumentException`; a grid with no cell carrying the coordinate throws `InvalidOperationException`.
+
+```csharp
+pathfinder.SetOccupied(unit.Position, false);
+pathfinder.SetOccupied(destination, true);
+pathfinder.SetWalkable(new Coordinate(4, 2), false); // a wall appears
+```
 
 ## Examples
 
@@ -58,7 +79,10 @@ pathfinder.EnablePathCaching();
 var agent = new SimpleAgent { Size = 1 };
 using var result = pathfinder.GetPath(agent, new Coordinate(1, 1), new Coordinate(8, 8));
 
-// Clear the cache if the environment changes
+// Cell updates through the pathfinder clear the cache themselves
+pathfinder.SetWalkable(new Coordinate(4, 4), false);
+
+// Clear the cache by hand after writing to your grid directly
 pathfinder.InvalidateCache();
 
 // Disable caching when no longer needed

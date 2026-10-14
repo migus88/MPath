@@ -41,6 +41,18 @@ namespace Migs.MPath.Tests
                 .SetName("DisablePathCaching_AfterDispose_ThrowsObjectDisposedException");
             yield return new TestCaseData((Action<Pathfinder>)(p => p.InvalidateCache()))
                 .SetName("InvalidateCache_AfterDispose_ThrowsObjectDisposedException");
+            yield return new TestCaseData((Action<Pathfinder>)(p => p.GetIndex(Origin)))
+                .SetName("GetIndex_AfterDispose_ThrowsObjectDisposedException");
+            yield return new TestCaseData((Action<Pathfinder>)(p => p.GetCell(Origin)))
+                .SetName("GetCell_AfterDispose_ThrowsObjectDisposedException");
+            yield return new TestCaseData((Action<Pathfinder>)(p => p.SetCell(Origin, new Cell())))
+                .SetName("SetCell_AfterDispose_ThrowsObjectDisposedException");
+            yield return new TestCaseData((Action<Pathfinder>)(p => p.SetWalkable(Origin, false)))
+                .SetName("SetWalkable_AfterDispose_ThrowsObjectDisposedException");
+            yield return new TestCaseData((Action<Pathfinder>)(p => p.SetOccupied(Origin, true)))
+                .SetName("SetOccupied_AfterDispose_ThrowsObjectDisposedException");
+            yield return new TestCaseData((Action<Pathfinder>)(p => p.SetWeight(Origin, 1f)))
+                .SetName("SetWeight_AfterDispose_ThrowsObjectDisposedException");
         }
 
         [Test]
