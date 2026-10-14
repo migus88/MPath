@@ -57,20 +57,20 @@ The following benchmark compares different path smoothing options using the same
 
 | Method                           | Mean      | Allocated | Path Length |
 |--------------------------------- |----------:|----------:|-----------:|
-| NoSmoothing                      |  4.254 ms | 16.07 KB  | 1078 |
-| SimpleSmoothing                  |  4.230 ms | 16.07 KB  | 318 |
-| StringPullingSmoothing           |  6.207 ms | 16.07 KB  | 200 |
-| StringPullingSmoothingLargeAgent | 10.477 ms | 16.09 KB  | 401 |
+| NoSmoothing                      |  4.273 ms |      50 B | 1078 |
+| SimpleSmoothing                  |  4.291 ms |      50 B | 318 |
+| StringPullingSmoothing           |  6.229 ms |      50 B | 200 |
+| StringPullingSmoothingLargeAgent | 10.486 ms |      60 B | 401 |
 
 The results show that:
 - Simple smoothing adds negligible overhead compared to no smoothing
-- String pulling smoothing adds about 46% overhead, but still maintains the same memory efficiency
+- String pulling smoothing adds about 46% overhead and allocates no more than an unsmoothed query: the smoothed path goes into an array rented from `ArrayPool`, so a query whose result is disposed allocates only its result object (the 16 KB per query shown here before came from the benchmark not disposing its results)
 - Path smoothing significantly reduces the number of steps in the path (SimpleSmoothing: 71% reduction, StringPullingSmoothing: 81% reduction)
 - `StringPullingSmoothingLargeAgent` runs the same query with a 2x2 agent: every shortcut checks the agent's footprint at each cell, so both the search and the smoothing cost more
 
 ### Tie-Breaking Cost
 
-`TieBreaking.None` (the default) runs the float search unchanged. A tie-break runs an integer-keyed search that also settles every route's cells before the cells after them, so it explores more on open ground with many equal-cost routes. Same maze and machine, `PathCell[,]` grid:
+`TieBreaking.None` (the default) runs the plain search. A tie-break runs a keyed search that also orders equal-cost routes (by diagonals or turns) and settles every route's cells before the cells after them, so it explores more on open ground with many equal-cost routes. Costs are the same `int`s in both. Same maze and machine, `PathCell[,]` grid:
 
 | Query | None | FewerDiagonals | FewerTurns |
 |-------|-----:|---------------:|-----------:|
@@ -212,9 +212,8 @@ The `layout` suite runs 2-step queries on a 256x256 open grid. The grid is given
 
 ### Unity Benchmarks
 
-Unity benchmark scenes are available in the Unity project:
+The Unity project has the maze comparison as Editor performance tests (Unity Performance Testing package), in `src/mpath-unity-project/Assets/Benchmarks/Editor/PerformanceBenchmarks.cs`:
 
 1. Open the Unity project at `src/mpath-unity-project`
-2. Open the benchmark scene at `Assets/MPath/Samples/Benchmarks`
-3. Press play to run the benchmark scene
-4. Results will be displayed in the Unity console 
+2. Open **Window > General > Test Runner**, select **EditMode** and run the `PerformanceBenchmarks` tests (`RunAllPathfindingBenchmarks` runs every library on every maze in `Assets/Benchmarks/Mazes`; `MPathBenchmark`, `AStarLiteBenchmark` and `RoyTAStarBenchmark` run one library)
+3. Open **Tools > Benchmarks > Results > View Results** to compare the results
