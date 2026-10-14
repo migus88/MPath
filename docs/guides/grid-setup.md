@@ -15,7 +15,7 @@ carries no coordinate of its own.
 
 ## Your Game's Own `Cell` Type
 
-MPath's grid square is `Migs.MPath.Core.Data.PathCell` (it was `Cell` before 2.0), so it does not clash with the `Cell` type most games already have: import both namespaces and use each name unqualified.
+MPath's grid square is `Migs.MPath.Core.Data.PathCell`, so it does not clash with the `Cell` type most games already have: import both namespaces and use each name unqualified.
 
 ```csharp
 using Migs.MPath.Core.Data;

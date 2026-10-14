@@ -430,8 +430,7 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
 12. **Don't encode tie-breaks in the costs.** Skewing step costs (e.g. 1024 / 1025) to prefer straight lines and
     dividing costs back into steps is fragile and changes which routes are cheapest. Use `TieBreaking` and read `Steps` /
     `DiagonalSteps` instead.
-13. **The cell type is `PathCell`, not `Cell`** (renamed in 2.0), so it does not clash with a game's own `Cell`.
-    Code written for 1.x that says `Cell` means `PathCell`.
+13. **The cell type is `PathCell`, not `Cell`**, so it does not clash with a game's own `Cell`.
 
 ## Decision guide
 

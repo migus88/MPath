@@ -9,11 +9,11 @@ A Unity ScriptableObject implementation of the `IPathfinderSettings` interface. 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `IsDiagonalMovementEnabled` | `bool` | `true` | Whether agents can move diagonally. |
-| `AreOccupiedCellsBlocking` | `bool` | `true` | Whether occupied cells block: entry, agent clearance, the corner rule and line of sight. Renamed from `IsCalculatingOccupiedCells`; assets saved before 2.0 keep their value. |
+| `AreOccupiedCellsBlocking` | `bool` | `true` | Whether occupied cells block: entry, agent clearance, the corner rule and line of sight. |
 | `CornerBlocking` | [`CornerBlocking`](CornerBlocking.md) | `BetweenBlockedCells` | Which flanking cells (walls, occupied cells) block a diagonal step. |
 | `IsCellWeightEnabled` | `bool` | `true` | Whether cell weight calculation is enabled. |
 | `StraightStepCost` | `int` | `100` | The cost of a horizontal/vertical step (at least 1). |
-| `DiagonalStepCost` | `int` | `141` | The cost of a diagonal step (at least 1). Assets saved before 2.0 do not carry the old float multipliers over: enter both step costs again. |
+| `DiagonalStepCost` | `int` | `141` | The cost of a diagonal step (at least 1). |
 | `TieBreaking` | [`TieBreaking`](TieBreaking.md) | `None` | Which route wins among equal-cost routes. |
 | `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | `PerQuery` | When a `PathCell[,]` or cell-holder pathfinder copies the grid: every query, or once and after `Refresh()` (`Manual`). |
 | `CellLayout` | [`CellLayout`](CellLayout.md) | `ColumnMajor` | Which index of a `PathCell[]` or `ICellHolder[]` holds cell (X, Y): `ColumnMajor` (`X * height + Y`) or `RowMajor` (`Y * width + X`). |

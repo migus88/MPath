@@ -8,7 +8,7 @@ Decides when a pathfinder built over a `PathCell[,]` matrix or over [`ICellHolde
 
 | Value | Description |
 |-------|-------------|
-| `PerQuery` (0) | **Default.** Copy the whole grid before every query, so direct edits to the matrix or the holders are always seen. Every query costs at least O(grid size). The behaviour of versions before this setting existed. |
+| `PerQuery` (0) | **Default.** Copy the whole grid before every query, so direct edits to the matrix or the holders are always seen. Every query costs at least O(grid size). |
 | `Manual` (1) | Copy the grid once, before the first query, and again only after [`Pathfinder.Refresh()`](Pathfinder.md). A query then costs only the cells it searches. |
 
 ## What a query sees under `Manual`
