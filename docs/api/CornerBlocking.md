@@ -16,7 +16,7 @@ Each flag names one combination of the two flanking cells. If the flag for the a
 
 | Value | Blocks a diagonal step when the two flanking cells are |
 |-------|---------------------------------------------------------|
-| `None` (0) | never blocked. Same as `IsMovementBetweenCornersEnabled = true`. |
+| `None` (0) | never blocked. |
 | `WallAndWall` | wall + wall |
 | `WallAndOccupied` | wall + occupied |
 | `OccupiedAndOccupied` | occupied + occupied |
@@ -27,7 +27,7 @@ Each flag names one combination of the two flanking cells. If the flag for the a
 
 | Preset | Flags | Use it when |
 |--------|-------|-------------|
-| `BetweenBlockedCells` | `WallAndWall \| WallAndOccupied \| OccupiedAndOccupied` | **Default.** Diagonals are blocked only when both flanking cells are blocked, by anything. Same as `IsMovementBetweenCornersEnabled = false`. |
+| `BetweenBlockedCells` | `WallAndWall \| WallAndOccupied \| OccupiedAndOccupied` | **Default.** Diagonals are blocked only when both flanking cells are blocked, by anything. |
 | `BetweenWalls` | `WallAndWall` | Only walls matter. Units stand in cells but don't fill them, so neither two units nor a unit next to a wall block the diagonal. Typical for tactics games. |
 | `AnyWall` | `WallAndWall \| WallAndOccupied \| WallAndOpen` | A single wall corner blocks the diagonal; units never do. |
 | `All` | every flag | No corner-cutting at all: a diagonal step needs both flanking cells open. |

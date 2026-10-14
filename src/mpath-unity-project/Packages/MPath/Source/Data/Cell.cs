@@ -1,5 +1,3 @@
-using System;
-using System.Runtime.CompilerServices;
 
 namespace Migs.MPath.Core.Data
 {
@@ -32,15 +30,5 @@ namespace Migs.MPath.Core.Data
         /// This is used when <see cref="IPathfinderSettings.IsCellWeightEnabled"/> is enabled.
         /// </summary>
         public float Weight { get; set; }
-        
-        /// <summary>
-        /// Formerly reset the cell's internal search state. Does nothing: the search state now lives in the
-        /// pathfinder, so a search no longer writes into the cells.
-        /// </summary>
-        [Obsolete("Does nothing: the search state no longer lives in Cell. This member will be removed in the next major version.")]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Reset()
-        {
-        }
     }
 }

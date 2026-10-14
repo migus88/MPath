@@ -10,12 +10,10 @@ Default implementation of the `IPathfinderSettings` interface.
 |----------|------|---------|-------------|
 | `IsDiagonalMovementEnabled` | `bool` | `true` | Whether agents can move diagonally. |
 | `IsCalculatingOccupiedCells` | `bool` | `true` | Whether occupied cells are considered as blocked. |
-| `IsMovementBetweenCornersEnabled` | `bool` | `false` | All-or-nothing shorthand for `CornerBlocking`: `true` is `None`, `false` is `BetweenBlockedCells`. |
 | `CornerBlocking` | [`CornerBlocking`](CornerBlocking.md) | `BetweenBlockedCells` | Which flanking cells (walls, occupied cells) block a diagonal step. |
 | `IsCellWeightEnabled` | `bool` | `true` | Whether cell weight calculation is enabled. |
 | `StraightMovementMultiplier` | `float` | `1.0f` | The cost multiplier for horizontal/vertical movement. |
 | `DiagonalMovementMultiplier` | `float` | `1.41f` | The cost multiplier for diagonal movement. |
-| `InitialBufferSize` | `int?` | `null` | **Obsolete, ignored.** The open set is sized to the grid when the pathfinder is created. Will be removed in the next major version. |
 | `PathSmoothingMethod` | `PathSmoothingMethod` | `None` | The method used to smooth the calculated path. |
 | `TieBreaking` | [`TieBreaking`](TieBreaking.md) | `None` | Which route to return when several cost the same (`FewerDiagonals`, `FewerTurns`). |
 | `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | `PerQuery` | When a `Cell[,]`, cell-holder or unordered `Cell[]` pathfinder copies the grid: every query, or once and after `Refresh()` (`Manual`). No effect on a row- or column-major `Cell[]`. |
@@ -49,5 +47,4 @@ var pathfinder = new Pathfinder(cells, width, height, customSettings);
   - `None`: Returns the raw A* path without any smoothing
   - `Simple`: Removes redundant waypoints based on direction changes
   - `StringPulling`: Creates optimal direct paths using line-of-sight checks
-- `IsMovementBetweenCornersEnabled` is a view over `CornerBlocking`: it reads `true` only for `None`; setting `true` sets `None`, setting `false` sets `BetweenBlockedCells` unless a blocking rule is already set.
 - For Unity projects, consider using `ScriptablePathfinderSettings`

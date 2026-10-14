@@ -6,7 +6,7 @@ In addition to finding a path between two points, MPath can answer "where can th
 
 `Pathfinder.GetReachable` performs a uniform-cost (Dijkstra) flood fill bounded by the budget. It honours exactly the same movement rules as `GetPath`:
 
-- Diagonal movement (`IsDiagonalMovementEnabled`) and corner-cutting (`CornerBlocking`, or its shorthand `IsMovementBetweenCornersEnabled`)
+- Diagonal movement (`IsDiagonalMovementEnabled`) and corner-cutting (`CornerBlocking`)
 - Occupied cells (`IsCalculatingOccupiedCells`)
 - Agent clearance for agents with `Size > 1`
 

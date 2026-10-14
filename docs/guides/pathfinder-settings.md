@@ -22,7 +22,7 @@ var customSettings = new PathfinderSettings
 {
     IsDiagonalMovementEnabled = true,
     IsCalculatingOccupiedCells = true,
-    IsMovementBetweenCornersEnabled = false,
+    CornerBlocking = CornerBlocking.BetweenBlockedCells,
     IsCellWeightEnabled = true,
     StraightMovementMultiplier = 1.0f,
     DiagonalMovementMultiplier = 1.41f
@@ -49,35 +49,21 @@ settings.IsDiagonalMovementEnabled = true; // Allow diagonal movement (default)
 
 **Effect on pathfinding**: When enabled, paths can be shorter but may look less natural for certain types of games. When disabled, paths will follow a grid-like pattern.
 
-#### IsMovementBetweenCornersEnabled
+#### CornerBlocking
 
-Controls whether agents can move diagonally between two diagonal obstacles.
-
-```csharp
-settings.IsMovementBetweenCornersEnabled = false; // Don't allow corner cutting (default)
-```
-
-- **True**: Agents can squeeze between diagonal obstacles
-- **False**: Agents cannot move between diagonal obstacles
+Decides, separately for walls and occupied cells, which cells beside a diagonal step block it ("corner-cutting").
 
 **Visualization**:
 ```
-When false, this movement is illegal:
+With the default (BetweenBlockedCells), this movement is illegal; with None it is allowed:
 ◻◎◼◻
 ◻◼◎◻
 (◎ is the movement path, ◻ is walkable, ◼ is a wall)
 ```
-
-**Effect on pathfinding**: When disabled, paths are more realistic as agents can't "squeeze" through impossible corners. When enabled, more paths become available but may look unnatural.
-
-This is the all-or-nothing shorthand for `CornerBlocking` below: `true` is `CornerBlocking.None`, `false` is `CornerBlocking.BetweenBlockedCells`.
-
-#### CornerBlocking
-
-Decides, separately for walls and occupied cells, which cells beside a diagonal step block it. A diagonal step passes between two flanking cells; each is **open**, a **wall** (not walkable or off-grid) or **occupied** (when `IsCalculatingOccupiedCells` is on). Each [`CornerBlocking`](../api/CornerBlocking.md) flag blocks one combination:
+ A diagonal step passes between two flanking cells; each is **open**, a **wall** (not walkable or off-grid) or **occupied** (when `IsCalculatingOccupiedCells` is on). Each [`CornerBlocking`](../api/CornerBlocking.md) flag blocks one combination:
 
 ```csharp
-// Default: blocked only between two blocked cells (same as IsMovementBetweenCornersEnabled = false)
+// Default: blocked only between two blocked cells
 settings.CornerBlocking = CornerBlocking.BetweenBlockedCells;
 
 // Tactics games: walls block squeezing between them; units can't be entered but never block a diagonal
@@ -85,6 +71,9 @@ settings.CornerBlocking = CornerBlocking.BetweenWalls;
 
 // No cutting past a single wall corner, units never block
 settings.CornerBlocking = CornerBlocking.AnyWall;
+
+// Squeeze between any two corners
+settings.CornerBlocking = CornerBlocking.None;
 
 // Any mix of flags
 settings.CornerBlocking = CornerBlocking.WallAndWall | CornerBlocking.WallAndOpen | CornerBlocking.OccupiedAndOccupied;
@@ -116,7 +105,7 @@ Available options:
 
 **Guarantees**:
 - **Simple** returns the first step, every turn point and the destination, with no repeated waypoints.
-- **StringPulling** only takes a shortcut the search itself could walk: the segment is traced cell by cell and every step must fit the agent's full `Size x Size` footprint (walls and, with `IsCalculatingOccupiedCells`, occupied cells block) and obey the corner rule. With `IsMovementBetweenCornersEnabled = false` (or diagonal movement disabled) a shortcut never passes diagonally between two obstacles that touch at a corner.
+- **StringPulling** only takes a shortcut the search itself could walk: the segment is traced cell by cell and every step must fit the agent's full `Size x Size` footprint (walls and, with `IsCalculatingOccupiedCells`, occupied cells block) and obey the corner rule. With the default `CornerBlocking` (or diagonal movement disabled) a shortcut never passes diagonally between two obstacles that touch at a corner.
 
 **Limitations**:
 - **StringPulling** is the most expensive method, and larger agents make it costlier (`Size x Size` checks per traced cell).
@@ -239,14 +228,6 @@ settings.DiagonalMovementMultiplier = 1.41f; // Default value (approximation of 
 
 **Effect on pathfinding**: Higher values make diagonal movements more costly, potentially favoring straight movements.
 
-### Performance Settings
-
-#### InitialBufferSize (obsolete)
-
-Ignored, and marked `[Obsolete]`; it will be removed in the next major version. The open set (the priority queue of
-cells waiting to be expanded) is sized to the grid once, when the pathfinder is created, so it never grows and no
-search allocates for it, whatever its size. There is nothing to tune.
-
 ## Recommended Settings for Common Scenarios
 
 ### Top-down Grid-based Strategy Game
@@ -256,7 +237,7 @@ var settings = new PathfinderSettings
 {
     IsDiagonalMovementEnabled = true,
     IsCalculatingOccupiedCells = true,
-    IsMovementBetweenCornersEnabled = false,
+    CornerBlocking = CornerBlocking.BetweenBlockedCells,
     IsCellWeightEnabled = true,
     StraightMovementMultiplier = 1.0f,
     DiagonalMovementMultiplier = 1.41f
@@ -281,17 +262,17 @@ var settings = new PathfinderSettings
 {
     IsDiagonalMovementEnabled = true,
     IsCalculatingOccupiedCells = false, // Allow units to stack
-    IsMovementBetweenCornersEnabled = false,
     IsCellWeightEnabled = true // Consider terrain costs
 };
 ```
 
 ## Advanced: Creating Custom Settings
 
-You can create your own implementation of `IPathfinderSettings` if you need more dynamic behavior. Here's an example of a MonoBehaviour implementation for Unity:
+You can create your own implementation of `IPathfinderSettings` if you need more dynamic behavior. Every member is required (there are no default bodies); return `PathfinderSettings`'s defaults for the ones you don't care about. Here's an example of a MonoBehaviour implementation for Unity:
 
 ```csharp
 using UnityEngine;
+using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
 
 // This MonoBehaviour can be attached to a game manager or pathfinding manager object
@@ -323,11 +304,14 @@ public class GamePathfinderSettings : MonoBehaviour, IPathfinderSettings
     // IPathfinderSettings implementation
     public bool IsDiagonalMovementEnabled => AllowDiagonalMovement && !_gameState.IsInPuzzleMode;
     public bool IsCalculatingOccupiedCells => RespectOccupiedCells;
-    public bool IsMovementBetweenCornersEnabled => AllowCornerMovement;
+    public CornerBlocking CornerBlocking => AllowCornerMovement ? CornerBlocking.None : CornerBlocking.BetweenBlockedCells;
     public bool IsCellWeightEnabled => UseCellWeights;
     public float StraightMovementMultiplier => StraightCost;
     public float DiagonalMovementMultiplier => DiagonalCost;
-    public int? InitialBufferSize => null; // Obsolete and ignored
+    public PathSmoothingMethod PathSmoothingMethod => PathSmoothingMethod.None;
+    public GridSnapshotMode GridSnapshotMode => GridSnapshotMode.PerQuery;
+    public CellLayout CellLayout => CellLayout.Auto;
+    public TieBreaking TieBreaking => TieBreaking.None;
     
     // This allows you to easily swap between different pathfinding presets
     public void ApplyPreset(PathfindingPreset preset)

@@ -139,9 +139,33 @@ Pending: filled by #56.
 
 #### #57 Remove compatibility shims
 
-Remove compatibility shims: corner bool, InitialBufferSize, default interface members, Cell.Reset, 2-arg PathResult.Success.
+Members that 1.2.1 had and 2.0 no longer reads are removed outright, and `IPathfinderSettings` has no default bodies.
 
-Pending: filled by #57.
+- **`IsMovementBetweenCornersEnabled` is removed** from `IPathfinderSettings`, `PathfinderSettings` and `ScriptablePathfinderSettings`. Set `CornerBlocking` instead: `true` is `CornerBlocking.None`, `false` is `CornerBlocking.BetweenBlockedCells` (the default).
+- **`InitialBufferSize` is removed** from the same three types (and `ScriptablePathfinderSettings.InitialBufferSizeSerialized`). The open set is sized to the grid, so there is nothing to replace it with.
+- **Custom `IPathfinderSettings` implementations** must implement `CornerBlocking`, `GridSnapshotMode`, `CellLayout` and `TieBreaking`. To keep 1.2.1 behaviour, return `CornerBlocking.BetweenBlockedCells` (or `CornerBlocking.None` if your bool returned `true`), `GridSnapshotMode.PerQuery`, `CellLayout.Auto` and `TieBreaking.None`. [Drop Coordinate from the cell](#61-drop-coordinate-from-the-cell) later narrows `CellLayout`.
+- **`ScriptablePathfinderSettings` assets saved with 1.2.1:** the old bool is no longer read. An asset that had **Is Movement Between Corners Enabled** ticked must set **Corner Blocking** to `None` (`Nothing` in the Inspector's flags field). Every other asset already gets the default, `BetweenBlockedCells`.
+- **`Cell.Reset()` is removed.** Searches never write into cells, so there is nothing to reset.
+- **`PathResult.Success(path, length)` is removed.** Callers that build results themselves (custom caches, test doubles) pass the step counts: `Success(path, length, steps, diagonalSteps)`.
+
+```csharp
+// 1.2.1
+var settings = new PathfinderSettings { IsMovementBetweenCornersEnabled = true, InitialBufferSize = 512 };
+cell.Reset();
+var result = PathResult.Success(path, length);
+
+// 2.0
+var settings = new PathfinderSettings { CornerBlocking = CornerBlocking.None }; // false -> omit (BetweenBlockedCells is the default)
+// InitialBufferSize: delete the line.
+// cell.Reset(): delete the call.
+var result = PathResult.Success(path, length, steps: length, diagonalSteps: 0);
+
+// A custom IPathfinderSettings adds:
+public CornerBlocking CornerBlocking => CornerBlocking.BetweenBlockedCells;
+public GridSnapshotMode GridSnapshotMode => GridSnapshotMode.PerQuery;
+public CellLayout CellLayout => CellLayout.Auto;
+public TieBreaking TieBreaking => TieBreaking.None;
+```
 
 #### #58 Coordinate cleanup
 
@@ -192,6 +216,7 @@ Pending: filled by #62.
 1. Dispose every `PathResult`, `RangeResult` and `StepwiseSearch`, including path-cache hits.
 2. If you index a `Cell[]` grid yourself, declare its order with `CellLayout` or use `pathfinder.GetIndex`.
 3. Regenerate any stored or asserted routes, smoothed paths or stepwise scores.
-4. Replace `Coordinate.IsInitialized` and `Coordinate.Reset()` with a `Coordinate?` (or your own sentinel).
+4. Replace `IsMovementBetweenCornersEnabled` with `CornerBlocking`, including in `ScriptablePathfinderSettings` assets that had it ticked; delete `InitialBufferSize` and `Cell.Reset()` calls; pass step counts to `PathResult.Success`; add the four settings members to a custom `IPathfinderSettings`.
+5. Replace `Coordinate.IsInitialized` and `Coordinate.Reset()` with a `Coordinate?` (or your own sentinel).
 
 Steps for the breaking changes are added as their entries are filled.

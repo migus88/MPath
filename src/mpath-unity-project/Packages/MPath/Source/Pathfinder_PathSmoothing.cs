@@ -16,15 +16,15 @@ namespace Migs.MPath.Core
             if (originalLength <= 2)
             {
                 // Path is already optimal (just start and end points)
-                return PathResult.Success(originalPath, originalLength);
+                return PathResult.Create(originalPath, originalLength);
             }
 
             return _settings.PathSmoothingMethod switch
             {
                 PathSmoothingMethod.StringPulling => ApplyStringPulling(originalPath, originalLength, cells, agentSize),
                 PathSmoothingMethod.Simple => ApplySimpleSmoothing(originalPath, originalLength),
-                PathSmoothingMethod.None => PathResult.Success(originalPath, originalLength),
-                _ => PathResult.Success(originalPath, originalLength)
+                PathSmoothingMethod.None => PathResult.Create(originalPath, originalLength),
+                _ => PathResult.Create(originalPath, originalLength)
             };
         }
 
@@ -67,7 +67,7 @@ namespace Migs.MPath.Core
             }
 
             ArrayPool<Coordinate>.Shared.Return(originalPath);
-            return PathResult.Success(smoothedPath, smoothedLength);
+            return PathResult.Create(smoothedPath, smoothedLength);
         }
 
         private PathResult ApplySimpleSmoothing(Coordinate[] originalPath, int originalLength)
@@ -101,7 +101,7 @@ namespace Migs.MPath.Core
 
             ArrayPool<Coordinate>.Shared.Return(originalPath);
             
-            return PathResult.Success(smoothedPath, smoothedLength);
+            return PathResult.Create(smoothedPath, smoothedLength);
         }
 
         /// <summary>

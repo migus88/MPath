@@ -29,7 +29,6 @@ namespace Migs.MPath.Core.Data
     {
         /// <summary>
         /// No flanking cells block a diagonal step: the agent may squeeze between any two corners.
-        /// Equivalent to <see cref="Interfaces.IPathfinderSettings.IsMovementBetweenCornersEnabled"/> = <c>true</c>.
         /// </summary>
         None = 0,
 
@@ -50,7 +49,7 @@ namespace Migs.MPath.Core.Data
 
         /// <summary>
         /// The default: a diagonal step is blocked only when both flanking cells are blocked, whatever blocks
-        /// them. Equivalent to <see cref="Interfaces.IPathfinderSettings.IsMovementBetweenCornersEnabled"/> = <c>false</c>.
+        /// them.
         /// </summary>
         BetweenBlockedCells = WallAndWall | WallAndOccupied | OccupiedAndOccupied,
 

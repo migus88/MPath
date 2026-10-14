@@ -200,13 +200,14 @@ One row per type; click through for full members. The load-bearing facts are rep
 
 `PathfinderSettings` (`: IPathfinderSettings`). Construct with object-initializer syntax and pass to a
 `Pathfinder` constructor. Converted once into an internal fast struct, so changing the instance after
-construction has **no effect** — build a new `Pathfinder` to change settings.
+construction has **no effect** — build a new `Pathfinder` to change settings. A custom
+`IPathfinderSettings` must implement every member below (no default bodies); return these defaults for the
+ones it doesn't care about.
 
 | Property | Type | Default | Meaning |
 |----------|------|---------|---------|
 | `IsDiagonalMovementEnabled` | `bool` | `true` | Allow 8-direction movement. |
 | `IsCalculatingOccupiedCells` | `bool` | `true` | Treat `IsOccupied` cells as blocked (for paths *and* line of sight). |
-| `IsMovementBetweenCornersEnabled` | `bool` | `false` | All-or-nothing corner-cutting shorthand: `true` = `CornerBlocking.None`, `false` = `BetweenBlockedCells`. A view over `CornerBlocking`. |
 | `CornerBlocking` | `CornerBlocking` (`[Flags]`) | `BetweenBlockedCells` | Which flanking cells block a diagonal step: walls and occupied cells separately. See below. |
 | `IsCellWeightEnabled` | `bool` | `true` | Add per-cell `Weight` to movement cost (terrain cost). |
 | `StraightMovementMultiplier` | `float` | `1f` | Cost of a cardinal step. |
@@ -214,8 +215,7 @@ construction has **no effect** — build a new `Pathfinder` to change settings.
 | `PathSmoothingMethod` | `PathSmoothingMethod` | `None` | Post-process the path (`Simple`: first step + turn points + destination; `StringPulling`: straight shortcuts that keep the agent's footprint and the corner rule). |
 | `GridSnapshotMode` | `GridSnapshotMode` | `PerQuery` | `Cell[,]`/`ICellHolder` grids and unordered `Cell[]` arrays: copy the grid before every query (`PerQuery`, O(grid) per query) or once and after `Refresh()` (`Manual`, O(cells searched)). `Set*` updates are seen at once in both. |
 | `CellLayout` | `CellLayout` | `Auto` | `Cell[]` only: where cell (X, Y) is — `ColumnMajor` (`X * fieldHeight + Y`), `RowMajor` (`Y * fieldWidth + X`), `Unordered` (copied like a matrix), or `Auto` (detected at the first query and after `Refresh()`). A declared row/column-major layout is checked once and throws `InvalidOperationException` on a mismatch. Never reordered. |
-| `InitialBufferSize` | `int?` | `null` | **Obsolete, ignored.** The open set is sized to the grid at construction and never grows. Don't set it. |
-| `TieBreaking` | `TieBreaking` | `None` | Which route wins among equal-cost routes: `FewerDiagonals` (then fewer steps) or `FewerTurns`, with exact integer costs (4 decimal places) and a fixed final rule. `None` = earlier versions' behaviour. Default interface member on `IPathfinderSettings`. |
+| `TieBreaking` | `TieBreaking` | `None` | Which route wins among equal-cost routes: `FewerDiagonals` (then fewer steps) or `FewerTurns`, with exact integer costs (4 decimal places) and a fixed final rule. `None` = earlier versions' behaviour. |
 
 > **Weight is additive, not multiplicative.** With `IsCellWeightEnabled`, step cost = movement multiplier
 > **+** destination cell `Weight`. Because `Weight` defaults to `0`, a flat default grid behaves like

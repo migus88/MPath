@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   <IsDiagonalMovementEnabled>k__BackingField: 1
   <IsCalculatingOccupiedCells>k__BackingField: 1
-  <IsMovementBetweenCornersEnabled>k__BackingField: 0
+  <CornerBlocking>k__BackingField: 7
   <IsCellWeightEnabled>k__BackingField: 1
   <StraightMovementMultiplier>k__BackingField: 1
   <DiagonalMovementMultiplier>k__BackingField: 1.41

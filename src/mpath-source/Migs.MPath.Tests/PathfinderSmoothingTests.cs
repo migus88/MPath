@@ -137,7 +137,7 @@ namespace Migs.MPath.Tests
             SetWall(cells, 7, 3, 2);
             SetWall(cells, 7, 2, 3);
             var settings = Settings(PathSmoothingMethod.StringPulling);
-            settings.IsMovementBetweenCornersEnabled = true;
+            settings.CornerBlocking = CornerBlocking.None;
             using var pathfinder = new Pathfinder(cells, 7, 7, settings);
 
             // Act
@@ -182,7 +182,7 @@ namespace Migs.MPath.Tests
                 var cells = CreateRandomGrid(size, size, random, 0.3);
                 var settings = Settings(PathSmoothingMethod.StringPulling);
                 settings.IsDiagonalMovementEnabled = false;
-                settings.IsMovementBetweenCornersEnabled = true;
+                settings.CornerBlocking = CornerBlocking.None;
                 using var pathfinder = new Pathfinder(cells, size, size, settings);
                 var from = new Coordinate(0, 0);
 
@@ -262,7 +262,7 @@ namespace Migs.MPath.Tests
             var rawSettings = new PathfinderSettings
             {
                 IsDiagonalMovementEnabled = settings.IsDiagonalMovementEnabled,
-                IsMovementBetweenCornersEnabled = settings.IsMovementBetweenCornersEnabled,
+                CornerBlocking = settings.CornerBlocking,
                 IsCalculatingOccupiedCells = settings.IsCalculatingOccupiedCells,
                 PathSmoothingMethod = PathSmoothingMethod.None
             };

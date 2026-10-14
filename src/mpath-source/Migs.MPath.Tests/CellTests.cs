@@ -48,26 +48,5 @@ namespace Migs.MPath.Tests
             cell.Weight.Should().Be(weight);
         }
 
-        [Test]
-        public void Reset_IsObsolete_LeavesTheCellUnchanged()
-        {
-            // Arrange
-            var cell = new Cell
-            {
-                Coordinate = new Coordinate(5, 10),
-                IsWalkable = true,
-                IsOccupied = true,
-                Weight = 2.5f
-            };
-            var before = cell;
-
-            // Act
-#pragma warning disable CS0618
-            cell.Reset();
-#pragma warning restore CS0618
-
-            // Assert
-            cell.Should().Be(before);
-        }
     }
 }

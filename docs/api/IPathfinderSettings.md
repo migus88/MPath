@@ -10,16 +10,16 @@ Defines the configuration settings for the MPath pathfinding system. This interf
 |----------|------|-------------|
 | `IsDiagonalMovementEnabled` | `bool` | Whether agents can move diagonally. |
 | `IsCalculatingOccupiedCells` | `bool` | Whether occupied cells are considered as blocked. |
-| `IsMovementBetweenCornersEnabled` | `bool` | All-or-nothing corner-cutting shorthand (`true` = `CornerBlocking.None`). |
-| `CornerBlocking` | [`CornerBlocking`](CornerBlocking.md) | Which flanking cells block a diagonal step. Default interface implementation: derived from `IsMovementBetweenCornersEnabled`, so existing implementations keep working unchanged. |
+| `CornerBlocking` | [`CornerBlocking`](CornerBlocking.md) | Which flanking cells block a diagonal step. Usual default: `BetweenBlockedCells`. |
 | `IsCellWeightEnabled` | `bool` | Whether cell weight calculation is enabled. |
 | `StraightMovementMultiplier` | `float` | The cost multiplier for horizontal/vertical movement. |
 | `DiagonalMovementMultiplier` | `float` | The cost multiplier for diagonal movement. |
-| `InitialBufferSize` | `int?` | **Obsolete, ignored.** The open set is sized to the grid when the pathfinder is created. Will be removed in the next major version. |
 | `PathSmoothingMethod` | `PathSmoothingMethod` | The method used to smooth the calculated path. |
-| `TieBreaking` | [`TieBreaking`](TieBreaking.md) | Which route to return when several cost the same. Default interface implementation: `None`, so existing implementations keep working unchanged. |
-| `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | When a `Cell[,]`, cell-holder or unordered `Cell[]` pathfinder copies the grid: every query (`PerQuery`) or once and after `Refresh()` (`Manual`). Default interface implementation: `PerQuery`, so existing implementations keep working unchanged. |
-| `CellLayout` | [`CellLayout`](CellLayout.md) | Where a `Cell[]` pathfinder finds cell (X, Y): column-major, row-major, unordered, or detected (`Auto`). Default interface implementation: `Auto`, which accepts any order like earlier versions, without sorting your array. |
+| `TieBreaking` | [`TieBreaking`](TieBreaking.md) | Which route to return when several cost the same. Usual default: `None`. |
+| `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | When a `Cell[,]`, cell-holder or unordered `Cell[]` pathfinder copies the grid: every query (`PerQuery`) or once and after `Refresh()` (`Manual`). Usual default: `PerQuery`. |
+| `CellLayout` | [`CellLayout`](CellLayout.md) | Where a `Cell[]` pathfinder finds cell (X, Y): column-major, row-major, unordered, or detected (`Auto`). Usual default: `Auto`. |
+
+Every member is required: a custom implementation returns a value for each, with no default bodies to fall back on. `PathfinderSettings`'s defaults (`BetweenBlockedCells`, `PerQuery`, `Auto`, `None`) are a safe starting point.
 
 ## Implementations
 
@@ -36,7 +36,7 @@ var settings = new PathfinderSettings
 {
     IsDiagonalMovementEnabled = true,
     IsCalculatingOccupiedCells = false,
-    IsMovementBetweenCornersEnabled = true,
+    CornerBlocking = CornerBlocking.None,
     IsCellWeightEnabled = true,
     StraightMovementMultiplier = 1.0f,
     DiagonalMovementMultiplier = 1.4f,

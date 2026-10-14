@@ -18,7 +18,7 @@ namespace Migs.MPath.Tests
             {
                 IsDiagonalMovementEnabled = false,
                 IsCalculatingOccupiedCells = true,
-                IsMovementBetweenCornersEnabled = false,
+                CornerBlocking = CornerBlocking.BetweenBlockedCells,
                 IsCellWeightEnabled = false
             };
             
@@ -200,7 +200,7 @@ namespace Migs.MPath.Tests
             {
                 IsDiagonalMovementEnabled = true,
                 IsCalculatingOccupiedCells = true,
-                IsMovementBetweenCornersEnabled = true,
+                CornerBlocking = CornerBlocking.None,
                 IsCellWeightEnabled = true // Enable cell weights
             };
             

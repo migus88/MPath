@@ -95,29 +95,6 @@ namespace Migs.MPath.Core.Data
         }
 
         /// <summary>
-        /// Creates a successful path result with the specified path.
-        /// </summary>
-        /// <param name="path">The array of coordinates representing the path.</param>
-        /// <param name="length">The actual number of coordinates in the path.</param>
-        /// <returns>A new PathResult representing a successful pathfinding operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when path is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when length is negative or greater than the path array length.</exception>
-        public static PathResult Success(Coordinate[] path, int length)
-        {
-            if (path == null)
-            {
-                throw new ArgumentNullException(nameof(path));
-            }
-                
-            if (length < 0 || length > path.Length)
-            {
-                throw new ArgumentOutOfRangeException(nameof(length));
-            }
-                
-            return new PathResult(path, length, true);
-        }
-
-        /// <summary>
         /// Creates a successful path result with the specified path and the step counts of the route it came from
         /// (for example a smoothed path, whose waypoints are fewer than the steps of the route).
         /// </summary>
@@ -132,6 +109,16 @@ namespace Migs.MPath.Core.Data
         /// <paramref name="steps"/>.</exception>
         public static PathResult Success(Coordinate[] path, int length, int steps, int diagonalSteps)
         {
+            if (path == null)
+            {
+                throw new ArgumentNullException(nameof(path));
+            }
+
+            if (length < 0 || length > path.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(length));
+            }
+
             if (steps < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(steps));
@@ -142,7 +129,15 @@ namespace Migs.MPath.Core.Data
                 throw new ArgumentOutOfRangeException(nameof(diagonalSteps));
             }
 
-            return Success(path, length).WithStepCounts(steps, diagonalSteps);
+            return new PathResult(path, length, true).WithStepCounts(steps, diagonalSteps);
+        }
+
+        /// <summary>
+        /// Wraps a path the pathfinder built; the caller sets the step counts with <see cref="WithStepCounts"/>.
+        /// </summary>
+        internal static PathResult Create(Coordinate[] path, int length)
+        {
+            return new PathResult(path, length, true);
         }
 
         /// <summary>
