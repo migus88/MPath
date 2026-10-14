@@ -6,7 +6,7 @@ New features that change nothing for existing code are not listed here; see the 
 
 ## 1.2.1 → 2.0
 
-2.0 is the first release after 1.2.1. It changes what some existing calls return (listed under [Behaviour changes](#behaviour-changes)) and breaks parts of the API (listed under [Breaking changes](#breaking-changes)). Work through the [Checklist](#checklist) at the end.
+2.0 is the first release after 1.2.1. It changes what some existing calls return (listed under [Behaviour changes](#behaviour-changes)) and breaks parts of the API (listed under [Breaking changes](#breaking-changes)). Work through the [Checklist](#checklist) at the end. The architectural changes behind 2.0 and their measured results are in [What changed in 2.0](whats-new-2.0.md).
 
 ### Behaviour changes
 

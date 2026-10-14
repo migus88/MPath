@@ -35,9 +35,11 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 | [RoyTAStar](https://github.com/roy-t/AStar) | 62.412 ms | 12.30 MB |
 | [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,884.7 ms | 108.13 MB |
 
-Compared with 1.2.1 on the same machine, 2.0 finds the maze path about 21% faster. On grids with 20% random walls it is 6–7x faster. Short queries and small movement ranges are 25–90x faster, and up to 25,000x with `GridSnapshotMode.Manual`. A query still allocates only its result object, a few dozen bytes.
+A query allocates only its result object, a few dozen bytes. Search state lives in the pathfinder and is reset lazily, so a short query on a 1024x1024 grid takes about 170 µs, or 0.21 µs with `GridSnapshotMode.Manual`.
 
 For detailed information about MPath's performance benchmarks, including implementation comparisons and path smoothing options, see the [benchmarks documentation](docs/benchmarks/README.md).
+
+What changed in 2.0, and what it measured: [docs/whats-new-2.0.md](docs/whats-new-2.0.md).
 
 ## Installation
 
@@ -68,7 +70,7 @@ For detailed information about MPath's performance benchmarks, including impleme
        }
      ],
      "dependencies": {
-       "com.migsweb.mpath": "1.0.0",
+       "com.migsweb.mpath": "2.0.0",
        // ... other dependencies
      }
    }
@@ -88,9 +90,9 @@ Add MPath to your project via the Unity Package Manager:
    https://github.com/migus88/MPath.git?path=/src/mpath-unity-project/Packages/MPath
    ```
 
-To use a specific version, append a tag with version (e.g `1.0.0`) to the URL:
+To use a specific version, append a tag with version (e.g `2.0.0`) to the URL:
    ```
-   https://github.com/migus88/MPath.git?path=/src/mpath-unity-project/Packages/MPath#1.0.0
+   https://github.com/migus88/MPath.git?path=/src/mpath-unity-project/Packages/MPath#2.0.0
    ```
 </details>
 

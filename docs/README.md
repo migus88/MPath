@@ -27,4 +27,5 @@ MPath provides a robust implementation of the A* pathfinding algorithm with seve
 - [Performance Considerations](guides/performance.md) - Optimizing for different scenarios
 - [API Reference](api/README.md) - Detailed API documentation
 - [Upgrading](upgrading.md) - What changed between versions and how to migrate; read it first when upgrading
-- [Benchmarks](benchmarks/README.md) - Detailed API documentation
+- [What changed in 2.0](whats-new-2.0.md) - The architectural changes in 2.0 and their measured results
+- [Benchmarks](benchmarks/README.md) - Performance numbers, methodology and how to run the benchmarks

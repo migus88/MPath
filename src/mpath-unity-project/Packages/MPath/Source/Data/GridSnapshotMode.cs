@@ -11,7 +11,7 @@ namespace Migs.MPath.Core.Data
     {
         /// <summary>
         /// Copy the whole grid before every query, so direct edits to the caller's grid are always seen. Every query
-        /// costs at least O(grid size). The default, and the behaviour of versions before this setting existed.
+        /// costs at least O(grid size). The default.
         /// </summary>
         PerQuery = 0,
 
