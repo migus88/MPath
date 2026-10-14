@@ -18,8 +18,11 @@ A high-performance A* pathfinding implementation for grid-based environments.
 | Method | Description |
 |--------|-------------|
 | `PathResult GetPath(IAgent agent, Coordinate from, Coordinate to)` | Calculates a path from starting position to destination. |
+| `PathResult GetPath(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)` | `GetPath` with per-query [`QueryOptions`](QueryOptions.md) (occupancy override, always-enterable cells). |
 | `RangeResult GetReachable(IAgent agent, Coordinate from, float budget)` | Finds every cell whose cheapest path cost from the origin is within the budget. |
+| `RangeResult GetReachable(IAgent agent, Coordinate from, float budget, QueryOptions options)` | `GetReachable` with per-query [`QueryOptions`](QueryOptions.md). |
 | `StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to)` | Begins a tick-by-tick A* search for visualizing the algorithm's progress. |
+| `StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)` | `BeginStepwiseSearch` with per-query [`QueryOptions`](QueryOptions.md), applied on every tick. |
 | `bool HasLineOfSight(Coordinate from, Coordinate to, LineOfSightMode mode = BlockedByUnwalkableCells)` | Returns whether an unobstructed straight line connects two cells. |
 | `static int GetManhattanDistance(Coordinate from, Coordinate to)` | Manhattan (taxicab) distance `\|dx\| + \|dy\|`. |
 | `static int GetChebyshevDistance(Coordinate from, Coordinate to)` | Chebyshev (chessboard) distance `max(\|dx\|, \|dy\|)`. |
@@ -37,6 +40,7 @@ A high-performance A* pathfinding implementation for grid-based environments.
 - For larger grids, reuse the same `Pathfinder` instance for multiple path calculations.
 - `GetPath` and `BeginStepwiseSearch` throw `ArgumentException` when `from` or `to` is outside the grid.
 - A destination the agent cannot enter (not walkable, occupied while `IsCalculatingOccupiedCells` is enabled, or without clearance for the agent's size) fails immediately without searching: `GetPath` returns a failure result and a `StepwiseSearch` starts complete in the `Failure` state. A query from a cell to itself always succeeds with an empty path.
+- Settings are frozen at construction. To vary occupancy per query (units block for movement, not for a threat range) or to enter specific occupied cells (the mover's own cells, an attack target), pass [`QueryOptions`](QueryOptions.md) to the overloads that take it. `default(QueryOptions)` behaves exactly like the overloads without options, and the options never change the grid.
 - Path caching is disabled by default but can be enabled for improved performance when the same paths are requested multiple times.
 
 ## Examples

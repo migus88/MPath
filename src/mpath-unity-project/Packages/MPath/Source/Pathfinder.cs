@@ -23,6 +23,9 @@ namespace Migs.MPath.Core
         private int Size { get; }
 
         private readonly FastPathfinderSettings _settings;
+
+        // The occupancy rules of the running query. The settings' defaults outside an options query.
+        private QueryRules _query;
         private readonly UnsafePriorityQueue _openSet;
         
         private readonly InitializationMode _initializationMode;
@@ -119,6 +122,7 @@ namespace Migs.MPath.Core
             Size = Width * Height;
 
             _settings = FastPathfinderSettings.FromSettings(settings ?? new PathfinderSettings());
+            _query = QueryRules.FromSettings(_settings);
             _openSet = new UnsafePriorityQueue(settings?.InitialBufferSize);
         }
         
@@ -254,7 +258,7 @@ namespace Migs.MPath.Core
         /// </remarks>
         private bool TryGetCachedPath(IAgent agent, Coordinate from, Coordinate to, out PathResult pathResult)
         {
-            if (_isPathCachingEnabled && _pathCaching.TryGetCachedPath(agent, from, to, out var cachedPath))
+            if (IsCachingQuery() && _pathCaching.TryGetCachedPath(agent, from, to, out var cachedPath))
             {
                 pathResult = cachedPath.Copy();
                 return true;
@@ -270,9 +274,58 @@ namespace Migs.MPath.Core
         /// </summary>
         private void CachePath(IAgent agent, Coordinate from, Coordinate to, PathResult result)
         {
-            if (_isPathCachingEnabled && result.IsSuccess)
+            if (result.IsSuccess && IsCachingQuery())
             {
                 _pathCaching.CachePath(agent, from, to, result.Copy());
+            }
+        }
+
+        /// <summary>
+        /// Whether the running query may use the path cache: caching is enabled and the query runs under the settings'
+        /// own rules. Cached paths are keyed by <c>(agent, from, to)</c> only, so a query whose
+        /// <see cref="QueryOptions"/> change the rules neither reads nor fills the cache.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsCachingQuery()
+        {
+            return _isPathCachingEnabled && _query.IsDefault(_settings);
+        }
+
+        /// <summary>
+        /// Calculates a path like <see cref="GetPath(IAgent, Coordinate, Coordinate)"/>, with movement rules
+        /// overridden for this query only by <paramref name="options"/>. The grid and the settings are not modified.
+        /// </summary>
+        /// <param name="agent">The agent for which to calculate the path. Cannot be null.</param>
+        /// <param name="from">The starting coordinate.</param>
+        /// <param name="to">The destination coordinate.</param>
+        /// <param name="options">
+        /// The per-query rules. <c>default</c> behaves exactly like the overload without options. With
+        /// <see cref="QueryOptions.IsDestinationAlwaysEnterable"/>, a path to an occupied destination can succeed.
+        /// </param>
+        /// <returns>A <see cref="PathResult"/> containing the calculated path or a failure result.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="agent"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when the origin or the destination is outside the valid field.</exception>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
+        /// <remarks>
+        /// When the options change the rules, path caching is bypassed: the cache is neither read nor filled.
+        /// </remarks>
+        public PathResult GetPath(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)
+        {
+            var enterableCells = options.AlwaysEnterable;
+
+            fixed (Coordinate* enterable = enterableCells)
+            {
+                _query = QueryRules.FromOptions(_settings, options.Occupancy, enterable, enterableCells.Length,
+                    options.IsDestinationAlwaysEnterable, to);
+
+                try
+                {
+                    return GetPath(agent, from, to);
+                }
+                finally
+                {
+                    _query = QueryRules.FromSettings(_settings);
+                }
             }
         }
 
@@ -649,9 +702,12 @@ namespace Migs.MPath.Core
                 return CellBlocker.Wall;
             }
 
-            return _settings.IsCalculatingOccupiedCells && cell->IsOccupied
-                ? CellBlocker.Occupied
-                : CellBlocker.Open;
+            if (!_query.IsCalculatingOccupiedCells || !cell->IsOccupied)
+            {
+                return CellBlocker.Open;
+            }
+
+            return _query.IsAlwaysEnterable(x, y) ? CellBlocker.Open : CellBlocker.Occupied;
         }
 
         /// <summary>

@@ -30,6 +30,7 @@
 using Migs.MPath.Core;            // Pathfinder
 using Migs.MPath.Core.Data;       // Cell, Coordinate, PathResult, RangeResult, ReachableCell,
                                   // PathfinderSettings, CornerBlocking, LineOfSightMode, PathSmoothingMethod,
+                                  // QueryOptions, OccupancyRule,
                                   // SearchStep, SearchNode, SearchState, SearchNodeState
 using Migs.MPath.Core.Interfaces; // IAgent, ICellHolder, IPathfinderSettings, IPathCaching
 using Migs.MPath.Core.Caching;    // DefaultPathCaching (only if you need it directly)
@@ -126,11 +127,14 @@ cells with your own objects (e.g. Unity `MonoBehaviour`s) via `Cell CellData { g
 | Signature | Returns | Notes |
 |-----------|---------|-------|
 | `GetPath(IAgent agent, Coordinate from, Coordinate to)` | `PathResult` | Core A* query. Throws `ArgumentNullException` if `agent` is null, `ArgumentException` if `from` or `to` is outside the grid. Returns a **failure** result (not an exception) when no path exists; a destination the agent can't enter (unwalkable, occupied while `IsCalculatingOccupiedCells`, or no clearance for its size) fails immediately without searching, unless `from == to`. |
+| `GetPath(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)` | `PathResult` | Same, with per-query rules (see [Per-query options](#per-query-options-units-block-or-not-enter-specific-occupied-cells)). Options that change the rules bypass the path cache. |
 | `GetReachable(IAgent agent, Coordinate from, float budget)` | `RangeResult` | Every cell reachable for total cost `<= budget` ("where can this unit move?"). Uniform-cost flood fill. |
+| `GetReachable(IAgent agent, Coordinate from, float budget, QueryOptions options)` | `RangeResult` | Same, with per-query rules (`IsDestinationAlwaysEnterable` is ignored: no destination). |
 | `HasLineOfSight(Coordinate from, Coordinate to, LineOfSightMode mode = BlockedByUnwalkableCells)` | `bool` | Single-cell Bresenham ray. Endpoints not tested; agent size ignored. |
 | `static GetManhattanDistance(Coordinate from, Coordinate to)` | `int` | `|dx| + |dy|`. Pure metric, allocation-free. |
 | `static GetChebyshevDistance(Coordinate from, Coordinate to)` | `int` | `max(|dx|, |dy|)`. Pure metric, allocation-free. |
 | `BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to)` | `StepwiseSearch` | Educational/visualization driver running the same A* one expansion at a time. **Pins the grid until disposed** — the pathfinder can't serve other queries meanwhile, and a second concurrent session throws. |
+| `BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)` | `StepwiseSearch` | Same, with per-query rules applied on every tick. |
 | `EnablePathCaching(IPathCaching handler = null)` | `Pathfinder` | Fluent (returns `this`). Opt-in. Pass your own `IPathCaching` or use the built-in `DefaultPathCaching`. |
 | `DisablePathCaching()` | `Pathfinder` | Fluent. |
 | `InvalidateCache()` | `Pathfinder` | Fluent. **Mutating the grid does NOT auto-invalidate** — call this after the grid changes. |
@@ -149,6 +153,7 @@ One row per type; click through for full members. The load-bearing facts are rep
 | `StepwiseSearch` | session, `IDisposable` | `Tick()`, `RunToCompletion()`, `State`, `IsComplete` | [api](api/StepwiseSearch.md) |
 | `SearchStep` | immutable class | Per-tick snapshot: `Searched`, `Open/ClosedCount`, `Current`, `Iteration`, `Path` | [api](api/SearchStep.md) |
 | `SearchNode` | `readonly struct` | `Coordinate` + `State` + `ScoreG/ScoreH/ScoreF` | [api](api/SearchNode.md) |
+| `QueryOptions` | `readonly ref struct` | Per-query rules: `Occupancy` (`OccupancyRule`), `AlwaysEnterable` (`ReadOnlySpan<Coordinate>`), `IsDestinationAlwaysEnterable`; `default` = no override | [api](api/QueryOptions.md) |
 | `Cell` | `struct` | Grid square: `Coordinate`, `IsWalkable`, `IsOccupied`, `Weight` — **all default to zero** | [api](api/Cell.md) |
 | `Coordinate` | `struct` | `X`, `Y`, `IsInitialized`, `static Zero`; ctor `(x,y)`; `== != + -`; `↔ (int,int)` | [api](api/Coordinate.md) |
 | `IAgent` | interface | `int Size` (cells; `> 1` ⇒ clearance scan) | [api](api/IAgent.md) |
@@ -162,6 +167,7 @@ One row per type; click through for full members. The load-bearing facts are rep
 |------|--------|
 | `CornerBlocking` (`[Flags]`) | `None` (0) · `WallAndWall` (1) · `WallAndOccupied` (2) · `OccupiedAndOccupied` (4) · `WallAndOpen` (8) · `OccupiedAndOpen` (16); presets `BetweenBlockedCells` (default) · `BetweenWalls` · `AnyWall` · `All` — [api](api/CornerBlocking.md) |
 | `LineOfSightMode` | `BlockedByUnwalkableCells` (0, default) · `IgnoreUnwalkableCells` (1) |
+| `OccupancyRule` | `UseSettings` (0, default) · `Block` (1) · `Ignore` (2) — [api](api/OccupancyRule.md) |
 | `PathSmoothingMethod` | `None` (0) · `Simple` (1) · `StringPulling` (2) |
 | `SearchState` | `InProgress` · `Success` · `Failure` |
 | `SearchNodeState` | `Open` · `Closed` |
@@ -263,6 +269,26 @@ var settings = new PathfinderSettings
 Applies to `GetPath`, `GetReachable`, stepwise search and `StringPulling` smoothing. For `Size > 1` a flank is the agent's footprint
 (wall if any cell is a wall, else occupied if any is occupied). `HasLineOfSight` ignores it.
 
+### Per-query options: units block or not, enter specific occupied cells
+
+Settings are frozen, but each `GetPath` / `GetReachable` / `BeginStepwiseSearch` has an overload taking a
+`QueryOptions` (`readonly ref struct`, allocation-free; `default` = exactly the overload without options):
+
+```csharp
+// Movement range with units blocking, threat range ignoring them - same pathfinder, same grid.
+using var move   = pathfinder.GetReachable(agent, unitCell, 5f);
+using var threat = pathfinder.GetReachable(agent, unitCell, 5f, new QueryOptions(OccupancyRule.Ignore));
+
+// Move to attack an occupied cell; the mover's own (occupied) cells don't block it either.
+ReadOnlySpan<Coordinate> own = stackalloc Coordinate[] { unitCell };
+using var path = pathfinder.GetPath(agent, unitCell, target,
+    new QueryOptions(alwaysEnterable: own, isDestinationAlwaysEnterable: true));
+```
+
+An `AlwaysEnterable` cell is treated as unoccupied for that query only (entry, `Size > 1` clearance, open
+flank for `CornerBlocking`); walls stay walls; the grid is never modified. `OccupancyRule.Block`/`Ignore`
+override `IsCalculatingOccupiedCells` for the query. `HasLineOfSight` takes no options.
+
 ### Multi-cell agents & terrain cost
 
 - `Size > 1`: the agent only traverses cells where the whole `Size×Size` block is walkable.
@@ -299,7 +325,8 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
    but cached results are returned verbatim — call `InvalidateCache()` after changing the grid if caching
    is on. Cache hits are fresh copies owned by the caller: dispose them like any other result.
 7. **Settings are frozen at construction.** Mutating the `PathfinderSettings` object afterward does
-   nothing — create a new `Pathfinder`.
+   nothing — create a new `Pathfinder`. To vary occupancy per query, pass `QueryOptions` instead of
+   flipping `IsOccupied` around the call.
 8. **Indexing is `x * Height + y` (X-major).** Relevant only if you build the flat `Cell[]` form
    yourself; matrix/holder constructors handle it for you.
 9. **`Cell` fields default to zero.** `IsWalkable` defaults to `false` — initialize every cell or the
@@ -313,6 +340,7 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
   Have a pre-flattened array and want zero copy → `Cell[]` (+ width/height).
 - **Which query?** A route → `GetPath`. All reachable tiles within a budget → `GetReachable`.
   Just visibility/distance → `HasLineOfSight` / `Get*Distance`. A teaching animation → `BeginStepwiseSearch`.
+  Different occupancy rules for one query, or a path onto an occupied cell → the same call with `QueryOptions`.
 - **Caching?** Enable it when the same `(agent, from, to)` queries repeat on a static grid; remember to
   `InvalidateCache()` on grid changes.
 
