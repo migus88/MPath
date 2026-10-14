@@ -35,11 +35,16 @@ var path2 = pathfinder.GetPath(agent, start2, end2);
 pathfinder.Dispose();
 ```
 
-### Open Set Sizing
+### Search Buffers
 
-The open set (the priority queue of cells waiting to be expanded) is a fixed array of 8 bytes per cell, rented from
-the pool once when the pathfinder is created and returned by `Dispose`. It never grows, so a search allocates
-nothing for it however wide its frontier gets. The old `InitialBufferSize` setting is obsolete and ignored.
+A pathfinder keeps two fixed buffers sized to the grid, rented from the pool once when it is created and returned by
+`Dispose`: the search state (24 bytes per cell: scores, parent, open-set slot, a generation stamp) and the open set
+(the priority queue of cells waiting to be expanded, 8 bytes per cell). Neither grows, so a search allocates nothing
+for them however wide its frontier gets. The old `InitialBufferSize` setting is obsolete and ignored.
+
+The search state is reset lazily: each query starts a new generation, and a cell's state counts only once the
+running query has touched it. Starting a query never walks the grid, so a 2-step search costs a 2-step search, not
+the grid size. Searches never write into your cells.
 
 ## Computational Optimization
 
@@ -60,6 +65,24 @@ Cell[] cells = new Cell[width * height];
 // Initialize cells...
 var pathfinder = new Pathfinder(cells, width, height, settings);
 ```
+
+The `Cell[,]` and holder constructors search a snapshot of your grid. By default
+([`GridSnapshotMode.PerQuery`](../api/GridSnapshotMode.md)) every query copies the whole grid into it first, so each
+query costs at least O(grid size) however short it is. If you run many short queries on a large grid (movement
+ranges per unit, AI turns, simulations), switch to `Manual`: the grid is copied once and then only after
+`Refresh()`, and edits through `SetWalkable`/`SetOccupied`/`SetWeight`/`SetCell` are seen at once:
+
+```csharp
+var settings = new PathfinderSettings { GridSnapshotMode = GridSnapshotMode.Manual };
+using var pathfinder = new Pathfinder(cellMatrix, settings);
+
+pathfinder.SetOccupied(unitCell, true); // seen by the next query
+cellMatrix[3, 4].IsWalkable = false;    // a direct edit...
+pathfinder.Refresh();                   // ...needs Refresh before the next query
+```
+
+On a 1024x1024 open grid a 6-step `GetReachable` drops from milliseconds to microseconds this way (see
+[benchmarks](../benchmarks/README.md)).
 
 However, the performance differences between these options are usually minimal in most real-world scenarios. Choose the representation that makes the most sense for your game architecture and is easiest to work with. If your game frequently updates the grid, the benefits of using `ICellHolder` implementations will likely outweigh any small performance penalty from the interface calls.
 

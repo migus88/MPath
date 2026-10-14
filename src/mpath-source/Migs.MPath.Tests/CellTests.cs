@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using FluentAssertions;
 using Migs.MPath.Core.Data;
 using NUnit.Framework;
@@ -50,52 +49,25 @@ namespace Migs.MPath.Tests
         }
 
         [Test]
-        public void Reset_ShouldResetInternalPathfindingState()
+        public void Reset_IsObsolete_LeavesTheCellUnchanged()
         {
             // Arrange
             var cell = new Cell
             {
                 Coordinate = new Coordinate(5, 10),
                 IsWalkable = true,
-                IsOccupied = false,
-                Weight = 1.0f
+                IsOccupied = true,
+                Weight = 2.5f
             };
-
-            // Set parent coordinate using private field through reflection for testing
-            var parentField = typeof(Cell).GetField("parentCoordinate", BindingFlags.NonPublic | BindingFlags.Instance);
-            if (parentField != null)
-            {
-                parentField.SetValue(cell, new Coordinate(1, 1));
-            }
-
-            // Set f, g, h values using reflection
-            var fField = typeof(Cell).GetField("f", BindingFlags.NonPublic | BindingFlags.Instance);
-            var gField = typeof(Cell).GetField("g", BindingFlags.NonPublic | BindingFlags.Instance);
-            var hField = typeof(Cell).GetField("h", BindingFlags.NonPublic | BindingFlags.Instance);
-            var isClosedField = typeof(Cell).GetField("isClosed", BindingFlags.NonPublic | BindingFlags.Instance);
-            var isOpenField = typeof(Cell).GetField("isOpen", BindingFlags.NonPublic | BindingFlags.Instance);
-
-            fField?.SetValue(cell, 10.0f);
-            gField?.SetValue(cell, 5.0f);
-            hField?.SetValue(cell, 5.0f);
-            isClosedField?.SetValue(cell, true);
-            isOpenField?.SetValue(cell, true);
+            var before = cell;
 
             // Act
+#pragma warning disable CS0618
             cell.Reset();
+#pragma warning restore CS0618
 
-            // Assert - test only a subset of fields to avoid fragility
-            if (parentField != null)
-            {
-                var parentAfterReset = (Coordinate)parentField.GetValue(cell);
-                parentAfterReset.Should().Be(new Coordinate(0, 0));
-            }
-
-            if (isClosedField != null)
-            {
-                var isClosedAfterReset = (bool)isClosedField.GetValue(cell);
-                isClosedAfterReset.Should().BeFalse();
-            }
+            // Assert
+            cell.Should().Be(before);
         }
     }
 }

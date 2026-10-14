@@ -14,7 +14,7 @@ The following benchmark was run on a complex maze to test pathfinding performanc
 
 | Method    | Mean      | Allocated   |
 |---------- |----------:|------------:|
-| MPath     |  5.108 ms |    24.06 KB |
+| MPath     |  4.802 ms |        42 B |
 | [AStarLite](https://github.com/valantonini/AStar) |  7.623 ms |  8.75 MB |
 | [RoyTAStar](https://github.com/roy-t/AStar) | 62.006 ms | 12.30 MB |
 | [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,809.5 ms | 108.13 MB |
@@ -80,6 +80,7 @@ dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchm
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark internal
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark reachability
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark grid
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark short
 
 # Render result images / print path stats
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- render
@@ -100,8 +101,30 @@ mostly open, so the search keeps a wide frontier and the open set does more of t
 
 | Method              | Mean      | Allocated |
 |-------------------- |----------:|----------:|
-| RandomWalls_200x200 | 0.878 ms  |      33 B |
-| RandomWalls_500x500 | 5.505 ms  |      42 B |
+| RandomWalls_200x200 | 0.810 ms  |      36 B |
+| RandomWalls_500x500 | 5.014 ms  |     138 B |
+
+Allocation figures of a few dozen to a few hundred bytes are the result object plus, amortized, the pooled result
+array: BenchmarkDotNet forces a full GC between iterations, which can make `ArrayPool<T>.Shared` drop its arrays, so
+the first query of an iteration rents a fresh one. Outside the harness a query allocates only its result object.
+
+### Short Queries on Large Grids
+
+The `short` suite runs a 2-step and a 6-step `GetPath` and `GetReachable` from the center of 256x256 and 1024x1024
+open `Cell[,]` grids, under both [`GridSnapshotMode`](../api/GridSnapshotMode.md)s. The search touches a handful of
+cells, so the numbers are the per-query overhead: the copy of the matrix with `PerQuery`, nothing that scales with the
+grid with `Manual`.
+
+| Method              | Grid | PerQuery  | Manual   |
+|-------------------- |-----:|----------:|---------:|
+| GetPath_2Steps      |  256 | 0.153 ms  | 0.2 µs   |
+| GetPath_6Steps      |  256 | 0.153 ms  | 0.4 µs   |
+| GetReachable_2Steps |  256 | 0.154 ms  | 0.6 µs   |
+| GetReachable_6Steps |  256 | 0.159 ms  | 5.0 µs   |
+| GetPath_2Steps      | 1024 | 2.534 ms  | 0.2 µs   |
+| GetPath_6Steps      | 1024 | 2.539 ms  | 0.4 µs   |
+| GetReachable_2Steps | 1024 | 2.461 ms  | 0.6 µs   |
+| GetReachable_6Steps | 1024 | 2.467 ms  | 5.1 µs   |
 
 ### Unity Benchmarks
 

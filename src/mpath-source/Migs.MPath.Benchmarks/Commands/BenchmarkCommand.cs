@@ -29,12 +29,15 @@ public sealed class BenchmarkCommand : Command<BenchmarkCommand.Settings>
 
         /// <summary>Corner-to-corner searches over grids with 20% random walls (wide open sets).</summary>
         Grid,
+
+        /// <summary>2- and 6-step paths and ranges on large open grids, per grid snapshot mode (per-query overhead).</summary>
+        Short,
     }
 
     public sealed class Settings : CommandSettings
     {
         [CommandArgument(0, "[suite]")]
-        [Description("Which suite to run: maze (default), smoothing, internal, reachability or grid.")]
+        [Description("Which suite to run: maze (default), smoothing, internal, reachability, grid or short.")]
         [DefaultValue(BenchmarkSuite.Maze)]
         public BenchmarkSuite Suite { get; init; }
     }
@@ -60,6 +63,9 @@ public sealed class BenchmarkCommand : Command<BenchmarkCommand.Settings>
                 break;
             case BenchmarkSuite.Grid:
                 BenchmarkRunner.Run<RandomGridBenchmarkRunner>(config);
+                break;
+            case BenchmarkSuite.Short:
+                BenchmarkRunner.Run<ShortQueryBenchmarkRunner>(config);
                 break;
         }
 

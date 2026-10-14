@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using FluentAssertions;
-using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Internal;
 
 namespace Migs.MPath.Tests
@@ -24,12 +23,12 @@ namespace Migs.MPath.Tests
         {
             // Arrange
             var random = new Random(seed);
-            var cells = new Cell[CellCount];
+            var nodes = new PathNode[CellCount];
             using var queue = new UnsafePriorityQueue(CellCount);
             var reference = new SortedSet<(float Priority, int Index)>();
             var priorities = new Dictionary<int, float>();
 
-            fixed (Cell* ptr = cells)
+            fixed (PathNode* ptr = nodes)
             {
                 queue.Reset(ptr);
 
@@ -37,39 +36,38 @@ namespace Migs.MPath.Tests
                 {
                     // Act
                     var index = random.Next(CellCount);
-                    var cell = ptr + index;
                     var operation = random.Next(3);
 
                     if (operation == 0 && !priorities.ContainsKey(index))
                     {
                         // Few distinct priorities, so ties are common.
                         var priority = random.Next(50);
-                        queue.Enqueue(cell, priority);
+                        queue.Enqueue(index, priority);
                         priorities[index] = priority;
                         reference.Add((priority, index));
                     }
                     else if (operation == 1 && priorities.TryGetValue(index, out var current))
                     {
                         var priority = current - random.Next(10);
-                        queue.UpdatePriority(cell, priority);
+                        queue.UpdatePriority(index, priority);
                         reference.Remove((current, index));
                         priorities[index] = priority;
                         reference.Add((priority, index));
                     }
                     else if (operation == 2 && reference.Count > 0)
                     {
-                        var dequeued = (int)(queue.Dequeue() - ptr);
+                        var dequeued = queue.Dequeue();
 
                         // Assert
                         priorities.Should().ContainKey(dequeued);
                         priorities[dequeued].Should().Be(reference.Min.Priority);
                         reference.Remove((priorities[dequeued], dequeued));
                         priorities.Remove(dequeued);
-                        queue.Contains(ptr + dequeued).Should().BeFalse();
+                        queue.Contains(dequeued).Should().BeFalse();
                     }
 
                     queue.Count.Should().Be(reference.Count);
-                    queue.Contains(cell).Should().Be(priorities.ContainsKey(index));
+                    queue.Contains(index).Should().Be(priorities.ContainsKey(index));
                 }
             }
         }
@@ -78,16 +76,16 @@ namespace Migs.MPath.Tests
         public void Reset_AfterUse_EmptiesTheQueueAndForgetsMembers()
         {
             // Arrange
-            var cells = new Cell[CellCount];
+            var nodes = new PathNode[CellCount];
             using var queue = new UnsafePriorityQueue(CellCount);
 
-            fixed (Cell* ptr = cells)
+            fixed (PathNode* ptr = nodes)
             {
                 queue.Reset(ptr);
 
                 for (var i = 0; i < CellCount; i++)
                 {
-                    queue.Enqueue(ptr + i, CellCount - i);
+                    queue.Enqueue(i, CellCount - i);
                 }
 
                 // Act
@@ -98,7 +96,7 @@ namespace Migs.MPath.Tests
 
                 for (var i = 0; i < CellCount; i++)
                 {
-                    queue.Contains(ptr + i).Should().BeFalse();
+                    queue.Contains(i).Should().BeFalse();
                 }
             }
         }
@@ -107,23 +105,23 @@ namespace Migs.MPath.Tests
         public void Enqueue_EveryCell_FitsWithoutGrowing()
         {
             // Arrange
-            var cells = new Cell[CellCount];
+            var nodes = new PathNode[CellCount];
             using var queue = new UnsafePriorityQueue(CellCount);
 
-            fixed (Cell* ptr = cells)
+            fixed (PathNode* ptr = nodes)
             {
                 queue.Reset(ptr);
 
                 // Act
                 for (var i = 0; i < CellCount; i++)
                 {
-                    queue.Enqueue(ptr + i, CellCount - i);
+                    queue.Enqueue(i, CellCount - i);
                 }
 
                 // Assert
                 for (var i = CellCount - 1; i >= 0; i--)
                 {
-                    (queue.Dequeue() - ptr).Should().Be(i);
+                    queue.Dequeue().Should().Be(i);
                 }
 
                 queue.Count.Should().Be(0);

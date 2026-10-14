@@ -17,7 +17,7 @@ dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchm
 
 | Command                  | Description                                                       |
 |--------------------------|-------------------------------------------------------------------|
-| `benchmark [suite]`      | Run a suite: `maze` (default), `smoothing`, `internal`, `reachability`. |
+| `benchmark [suite]`      | Run a suite: `maze` (default), `smoothing`, `internal`, `reachability`, `grid`, `short`. |
 | `render [target]`        | Render result images to `Results/`: `maze` (default) or `smoothing`. |
 | `info [target]`          | Print stats without benchmarking (`smoothing` path lengths).      |
 

@@ -14,6 +14,7 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 - Configurable corner-cutting (`CornerBlocking`): walls and occupied cells can block diagonal steps separately
 - Per-query options (`QueryOptions`): units block or not, and specific occupied cells can be entered for one query, without touching the grid
 - Single-cell updates (`SetWalkable`, `SetOccupied`, `SetWeight`, `SetCell`): O(1) writes into your grid that keep the path cache valid
+- Short queries stay short on large grids: search state lives in the pathfinder and is reset lazily, and `GridSnapshotMode.Manual` stops `Cell[,]`/holder grids from being copied per query
 - Distance metrics (Manhattan, Chebyshev) and line-of-sight checks for range and visibility logic
 - Stepwise search (`BeginStepwiseSearch`) for visualizing how the algorithm explores the grid
 - First-class support for Unity with dedicated integration components
@@ -27,7 +28,7 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 
 | Method    | Mean      | Allocated   |
 |---------- |----------:|------------:|
-| MPath     |  5.108 ms |    24.06 KB |
+| MPath     |  4.802 ms |        42 B |
 | [AStarLite](https://github.com/valantonini/AStar) |  7.623 ms |  8.75 MB |
 | [RoyTAStar](https://github.com/roy-t/AStar) | 62.006 ms | 12.30 MB |
 | [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,809.5 ms | 108.13 MB |

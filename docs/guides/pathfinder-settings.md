@@ -141,6 +141,20 @@ S = Start, E = End, + = Waypoint
 - **Simple**: For most game scenarios - good balance of performance and path quality. Almost no overhead.
 - **StringPulling**: When you need the most direct and natural-looking paths and can afford the slight performance cost; best for open areas rather than complex mazes
 
+#### GridSnapshotMode
+
+Decides when a pathfinder built over a `Cell[,]` matrix or over `ICellHolder`s copies your grid into its internal snapshot. It has no effect on the `Cell[]` constructor, which searches your array directly.
+
+```csharp
+settings.GridSnapshotMode = GridSnapshotMode.PerQuery; // Copy before every query (default)
+settings.GridSnapshotMode = GridSnapshotMode.Manual;   // Copy once, then only after pathfinder.Refresh()
+```
+
+- **PerQuery**: every query sees direct edits to your matrix or holders, but costs at least O(grid size) for the copy, however short the search.
+- **Manual**: a query costs only the cells it searches. `SetWalkable`/`SetOccupied`/`SetWeight`/`SetCell` are seen at once; after editing the matrix or a holder directly, call `pathfinder.Refresh()` before the next query (and `InvalidateCache()` if caching is on).
+
+**When to use Manual**: many short queries on a large grid, such as movement ranges per unit during an AI turn or in simulations, with grid changes that go through the `Set*` methods or happen at known points (end of a turn) where you can call `Refresh()`. See [GridSnapshotMode](../api/GridSnapshotMode.md).
+
 ### Cell Handling Settings
 
 #### IsCalculatingOccupiedCells

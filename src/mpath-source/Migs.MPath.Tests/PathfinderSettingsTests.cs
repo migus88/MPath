@@ -23,6 +23,7 @@ namespace Migs.MPath.Tests
             settings.StraightMovementMultiplier.Should().Be(1.0f);
             settings.DiagonalMovementMultiplier.Should().Be(1.41f);
             settings.PathSmoothingMethod.Should().Be(PathSmoothingMethod.None);
+            settings.GridSnapshotMode.Should().Be(GridSnapshotMode.PerQuery);
         }
         
         [Test]

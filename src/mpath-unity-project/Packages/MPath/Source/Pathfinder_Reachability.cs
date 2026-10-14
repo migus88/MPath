@@ -86,11 +86,11 @@ namespace Migs.MPath.Core
             var cells = new Span<Cell>(_cells, 0, Size);
 
             fixed (Cell* ptr = &MemoryMarshal.GetReference(cells))
+            fixed (PathNode* nodes = _nodes)
             {
-                ResetCells(ptr);
-                _openSet.Reset(ptr);
+                BeginSearch(nodes);
 
-                return CalculateReachable(agentSize, from, budget, ptr);
+                return CalculateReachable(agentSize, from, budget, ptr, nodes);
             }
         }
 
@@ -174,37 +174,49 @@ namespace Migs.MPath.Core
         /// <summary>
         /// Runs the bounded uniform-cost search that backs <see cref="GetReachable"/>.
         /// </summary>
-        private RangeResult CalculateReachable(int agentSize, Coordinate from, float budget, Cell* ptr)
+        private RangeResult CalculateReachable(int agentSize, Coordinate from, float budget, Cell* cells,
+            PathNode* nodes)
         {
             // The reachable set can never exceed the number of cells in the grid.
             var reachable = ArrayPool<ReachableCell>.Shared.Rent(Size);
             var count = 0;
 
-            var start = GetCell(ptr, from.X, from.Y);
-            start->ScoreG = 0;
-            _openSet.Enqueue(start, 0);
+            OpenNode(nodes, GetLayoutIndex(from.X, from.Y), PathNode.NoParent, 0, 0f, 0f);
 
             var neighbors = stackalloc Cell*[MaxNeighbors];
+            var generation = _generation;
 
             while (_openSet.Count > 0)
             {
                 var current = _openSet.Dequeue();
+                var currentCell = cells + current;
+                var currentNode = nodes + current;
 
                 // In Dijkstra's algorithm the cost of a cell is final once it is dequeued.
-                current->IsClosed = true;
-                reachable[count++] = new ReachableCell(current->Coordinate, current->ScoreG);
+                currentNode->QueueIndex = PathNode.ClosedQueueIndex;
+                reachable[count++] = new ReachableCell(currentCell->Coordinate, currentNode->ScoreG);
 
-                PopulateNeighbors(ptr, current, agentSize, neighbors);
+                PopulateNeighbors(cells, currentCell, agentSize, neighbors);
 
                 for (var n = 0; n < MaxNeighbors; n++)
                 {
                     var neighbor = neighbors[n];
-                    if (neighbor == null || neighbor->IsClosed)
+                    if (neighbor == null)
                     {
                         continue;
                     }
 
-                    var tentativeG = current->ScoreG + GetStepCost(current, neighbor);
+                    var index = (int)(neighbor - cells);
+                    var node = nodes + index;
+
+                    // A node is touched only when it is queued, so a touched node is either closed or open.
+                    var isTouched = node->Generation == generation;
+                    if (isTouched && node->IsClosed)
+                    {
+                        continue;
+                    }
+
+                    var tentativeG = currentNode->ScoreG + GetStepCost(currentCell, neighbor);
 
                     // Cells that cannot be entered within the budget are pruned from the search.
                     if (tentativeG > budget)
@@ -212,15 +224,16 @@ namespace Migs.MPath.Core
                         continue;
                     }
 
-                    if (!_openSet.Contains(neighbor))
+                    if (!isTouched)
                     {
-                        neighbor->ScoreG = tentativeG;
-                        _openSet.Enqueue(neighbor, tentativeG);
+                        node->Generation = generation;
+                        node->ScoreG = tentativeG;
+                        _openSet.Enqueue(index, tentativeG);
                     }
-                    else if (tentativeG < neighbor->ScoreG)
+                    else if (tentativeG < node->ScoreG)
                     {
-                        neighbor->ScoreG = tentativeG;
-                        _openSet.UpdatePriority(neighbor, tentativeG);
+                        node->ScoreG = tentativeG;
+                        _openSet.UpdatePriority(index, tentativeG);
                     }
                 }
             }

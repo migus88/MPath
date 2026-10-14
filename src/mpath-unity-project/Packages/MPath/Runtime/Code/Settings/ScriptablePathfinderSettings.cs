@@ -31,6 +31,8 @@ namespace Migs.MPath.Settings
         [field: SerializeField] public float DiagonalMovementMultiplier { get; set; } = 1.41f;
         /// <inheritdoc/>
         [field: SerializeField] public PathSmoothingMethod PathSmoothingMethod { get; set; } = PathSmoothingMethod.None;
+        /// <inheritdoc/>
+        [field: SerializeField] public GridSnapshotMode GridSnapshotMode { get; set; } = GridSnapshotMode.PerQuery;
         /// <inheritdoc cref="InitialBufferSize"/>
         [Obsolete("Ignored: the open set is sized to the grid when the pathfinder is created and never grows. This member will be removed in the next major version.")]
         [field: SerializeField] public int InitialBufferSizeSerialized { get; set; } = -1;

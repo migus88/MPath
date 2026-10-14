@@ -41,13 +41,16 @@ A high-performance A* pathfinding implementation for grid-based environments.
 | `Pathfinder EnablePathCaching(IPathCaching pathCachingHandler = null)` | Enables path caching with optional custom implementation. |
 | `Pathfinder DisablePathCaching()` | Disables path caching. |
 | `Pathfinder InvalidateCache()` | Clears the current path cache without disabling caching. |
-| `void Dispose()` | Returns the pooled cell buffer, disposes the path cache and ends an active `StepwiseSearch`. Idempotent. |
+| `Pathfinder Refresh()` | Marks the `Cell[,]`/holder snapshot stale so the next query copies your grid again. Needed only with [`GridSnapshotMode.Manual`](GridSnapshotMode.md), after editing the matrix or the holders directly. |
+| `void Dispose()` | Returns the pooled buffers (cells, search state, open set), disposes the path cache and ends an active `StepwiseSearch`. Idempotent. |
 
 ## Remarks
 
 - Implements `IDisposable` and should be disposed when no longer needed. The `Cell[,]`, `ICellHolder[]` and `ICellHolder[,]` constructors rent their cell buffer from `ArrayPool<Cell>.Shared` and `Dispose` gives it back (skipped, the buffer is never reused and is left to the GC). The `Cell[]` constructor uses your array directly and owns no pooled memory, so skipping `Dispose` is harmless there unless path caching is enabled (the cache holds pooled path results).
-- `Dispose` is idempotent: the buffer goes back to the pool exactly once. It ends an active `StepwiseSearch` first (that session's later `Tick()` throws `ObjectDisposedException`). After `Dispose`, every instance method (`GetPath`, `GetReachable`, `HasLineOfSight`, `BeginStepwiseSearch`, `EnablePathCaching`, `DisablePathCaching`, `InvalidateCache`, `GetCell`, `GetIndex`, the `Set*` cell updates) throws `ObjectDisposedException`; the static distance helpers keep working.
+- `Dispose` is idempotent: the buffer goes back to the pool exactly once. It ends an active `StepwiseSearch` first (that session's later `Tick()` throws `ObjectDisposedException`). After `Dispose`, every instance method (`GetPath`, `GetReachable`, `HasLineOfSight`, `BeginStepwiseSearch`, `EnablePathCaching`, `DisablePathCaching`, `InvalidateCache`, `Refresh`, `GetCell`, `GetIndex`, the `Set*` cell updates) throws `ObjectDisposedException`; the static distance helpers keep working.
 - Uses unsafe code and array pooling internally to minimize garbage collection.
+- The search state (scores, parents, open/closed) lives in the pathfinder, one node per cell, and is reset lazily: each query starts a new generation instead of clearing the grid, so a search costs the cells it touches, not the grid size. Queries never write into your cells.
+- The `Cell[,]` and holder constructors search a snapshot of your grid. With the default [`GridSnapshotMode.PerQuery`](GridSnapshotMode.md) every query copies the whole grid first (O(grid size)); with `Manual` the copy happens once and after `Refresh()`, so short queries on a large grid stay cheap.
 - The pathfinding algorithm is optimized for speed and memory efficiency.
 - For larger grids, reuse the same `Pathfinder` instance for multiple path calculations.
 - `GetPath` and `BeginStepwiseSearch` throw `ArgumentException` when `from` or `to` is outside the grid, and the `agentSize` overloads throw `ArgumentOutOfRangeException` when `agentSize < 1`.
@@ -75,7 +78,8 @@ using var range = pathfinder.GetReachable(from, 5f, new QueryOptions(OccupancyRu
 `SetWalkable`, `SetOccupied`, `SetWeight` and `SetCell` change one cell and keep the bookkeeping in the pathfinder:
 
 - **`Cell[]` and `Cell[,]` constructors:** the write goes to your own array or matrix (the pathfinder keeps the reference), so your grid and the pathfinder stay in sync and the next query sees the change. O(1) and allocation-free while the grid is in layout (`cells[GetIndex(c)]` holds `c`, which every query establishes by sorting a `Cell[]` into that order; a `Cell[,]` holds `c` at `[c.X, c.Y]`). Otherwise the cell is found by a linear search and your array is never reordered by a setter.
-- **`ICellHolder[]` and `ICellHolder[,]` constructors:** the setters throw `NotSupportedException`. The holders are the source of truth and are re-read on every query, so update the holder itself (and call `InvalidateCache()` when caching is on). `GetCell` and `GetIndex` work in every mode.
+- **`Cell[,]` constructor:** the setters also write the pathfinder's snapshot, so the change is seen at once under [`GridSnapshotMode.Manual`](GridSnapshotMode.md) too (no `Refresh()` needed).
+- **`ICellHolder[]` and `ICellHolder[,]` constructors:** the setters throw `NotSupportedException`. The holders are the source of truth the pathfinder reads, so update the holder itself (and call `Refresh()` with `GridSnapshotMode.Manual`, and `InvalidateCache()` when caching is on). `GetCell` and `GetIndex` work in every mode.
 - **Path cache:** a setter that changes a value cached paths depend on clears the cache (walkability always; occupancy only with `IsCalculatingOccupiedCells`; weight only with `IsCellWeightEnabled`). Setting the current value again leaves the cache alone. Direct writes to your grid still need `InvalidateCache()`.
 - Out-of-grid coordinates throw `ArgumentException`; a grid with no cell carrying the coordinate throws `InvalidOperationException`.
 

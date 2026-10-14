@@ -17,6 +17,7 @@ namespace Migs.MPath.Core.Internal
         public readonly PathSmoothingMethod PathSmoothingMethod;
         public readonly float StraightMovementMultiplier;
         public readonly float DiagonalMovementMultiplier;
+        public readonly GridSnapshotMode GridSnapshotMode;
 
         /// <summary>
         /// Heuristic cost per unit of the larger axis distance to the destination
@@ -39,7 +40,7 @@ namespace Migs.MPath.Core.Internal
 
         private FastPathfinderSettings(bool isDiagonalMovementEnabled, bool isCalculatingOccupiedCells,
             CornerBlocking cornerBlocking, bool isCellWeightEnabled, PathSmoothingMethod pathSmoothingMethod,
-            float straightMovementMultiplier, float diagonalMovementMultiplier)
+            float straightMovementMultiplier, float diagonalMovementMultiplier, GridSnapshotMode gridSnapshotMode)
         {
             IsDiagonalMovementEnabled = isDiagonalMovementEnabled;
             IsCalculatingOccupiedCells = isCalculatingOccupiedCells;
@@ -48,6 +49,7 @@ namespace Migs.MPath.Core.Internal
             PathSmoothingMethod = pathSmoothingMethod;
             StraightMovementMultiplier = straightMovementMultiplier;
             DiagonalMovementMultiplier = diagonalMovementMultiplier;
+            GridSnapshotMode = gridSnapshotMode;
             (HeuristicMajorAxisCost, HeuristicMinorAxisCost) = GetHeuristicAxisCosts(isDiagonalMovementEnabled,
                 straightMovementMultiplier, diagonalMovementMultiplier);
             _cornerBlockingTable = BuildCornerBlockingTable(cornerBlocking);
@@ -57,7 +59,7 @@ namespace Migs.MPath.Core.Internal
         {
             return new FastPathfinderSettings(settings.IsDiagonalMovementEnabled, settings.IsCalculatingOccupiedCells,
                 settings.CornerBlocking, settings.IsCellWeightEnabled, settings.PathSmoothingMethod,
-                settings.StraightMovementMultiplier, settings.DiagonalMovementMultiplier);
+                settings.StraightMovementMultiplier, settings.DiagonalMovementMultiplier, settings.GridSnapshotMode);
         }
 
         /// <summary>
