@@ -12,12 +12,14 @@ The following benchmark was run on a complex maze to test pathfinding performanc
 
 ### Implementation Comparison
 
-| Method    | Mean      | Allocated   |
-|---------- |----------:|------------:|
-| MPath     |  4.223 ms |       178 B |
-| [AStarLite](https://github.com/valantonini/AStar) |  8.042 ms |  8.75 MB |
-| [RoyTAStar](https://github.com/roy-t/AStar) | 62.412 ms | 12.30 MB |
-| [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,884.7 ms | 108.13 MB |
+| Library | Maze ctor alloc | Maze query | Maze query alloc | 100x100 ctor alloc | 100x100 query | 100x100 query alloc |
+|---|---:|---:|---:|---:|---:|---:|
+| **MPath 2.0** | 11.5 MB | 4.04 ms | 177 B | 719 KB | 123 µs | 40 B |
+| [AStarLite](https://github.com/valantonini/AStar) 1.3.0-beta.1 | 768 KB | 5.29 ms | 8.75 MB | 39.3 KB | 123 µs | 351 KB |
+| [RoyT.AStar](https://github.com/roy-t/AStar) 3.0.2 | 103 MB | 63.4 ms | 12.0 MB | 7.21 MB | 3.13 ms | 721 KB |
+| [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) 1.2.1 | 5.76 MB | 3.56 s | 108 MB | 151 KB | 1.08 ms | 514 KB |
+
+This table comes from a cross-library run on .NET 8.0.21 (same machine, BenchmarkDotNet 0.14.0, MemoryDiagnoser); the other tables on this page are from the .NET 7 suites below. Query: one search with the pathfinder built once and reused. Ctor: building one pathfinder from the shared bool grid (including the library's own cell format), never disposed; MPath rents pooled arrays, so constructing after disposing a previous pathfinder allocates about 1 KB besides its 8 B/cell input matrix. 100x100: 20% random walls (fixed seed), corner to corner, the same grid for every library; MPath ties AStarLite there on speed, not on memory.
 
 MPath returns a cheapest route (its A* heuristic never overestimates the remaining cost). On this maze the narrow corridors leave little room for a better route; on open or randomly obstructed grids the exact cost model also cuts the number of expanded cells sharply.
 

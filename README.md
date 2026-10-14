@@ -28,12 +28,21 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 
 ## Benchmarks
 
-| Method    | Mean      | Allocated   |
-|---------- |----------:|------------:|
-| MPath     |  4.223 ms |       178 B |
-| [AStarLite](https://github.com/valantonini/AStar) |  8.042 ms |  8.75 MB |
-| [RoyTAStar](https://github.com/roy-t/AStar) | 62.412 ms | 12.30 MB |
-| [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,884.7 ms | 108.13 MB |
+![MPath vs other C# A* libraries](docs/images/comparison.svg)
+
+<details>
+<summary>Table as text</summary>
+
+| Library | Maze ctor alloc | Maze query | Maze query alloc | 100x100 ctor alloc | 100x100 query | 100x100 query alloc |
+|---|---:|---:|---:|---:|---:|---:|
+| **MPath 2.0** | 11.5 MB | 4.04 ms | 177 B | 719 KB | 123 µs | 40 B |
+| [AStarLite](https://github.com/valantonini/AStar) 1.3.0-beta.1 | 768 KB | 5.29 ms | 8.75 MB | 39.3 KB | 123 µs | 351 KB |
+| [RoyT.AStar](https://github.com/roy-t/AStar) 3.0.2 | 103 MB | 63.4 ms | 12.0 MB | 7.21 MB | 3.13 ms | 721 KB |
+| [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) 1.2.1 | 5.76 MB | 3.56 s | 108 MB | 151 KB | 1.08 ms | 514 KB |
+
+</details>
+
+<sub>Query: one search with the pathfinder built once and reused. Ctor: building one pathfinder from the shared bool grid (including the library's own cell format), never disposed. Apple M1 Max, .NET 8.0.21, BenchmarkDotNet 0.14.0 mean with MemoryDiagnoser, diagonal movement on, MPath defaults. Maze: 512x384 cavern image, (10,10) to (502,374). 100x100: 20% random walls (fixed seed), corner to corner, the same grid for every library. On 100x100 MPath ties AStarLite on speed, not on memory.</sub>
 
 A query allocates only its result object, a few dozen bytes. Search state lives in the pathfinder and is reset lazily, so a short query on a 1024x1024 grid takes about 170 µs, or 0.21 µs with `GridSnapshotMode.Manual`.
 

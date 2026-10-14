@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="326" viewBox="0 0 960 326" role="img" aria-labelledby="t">
+<title id="t">MPath 2.0 and 1.2.1 vs other C# A* libraries: constructor allocation, query speed and query allocation on a maze and a 100x100 grid</title>
+<rect width="960" height="326" rx="10" fill="#191919"/>
+<defs><clipPath id="c"><rect x="12" y="12" width="936" height="302" rx="8"/></clipPath></defs>
+<g clip-path="url(#c)"><rect x="12" y="12" width="936" height="72" fill="#222222"/></g>
+<g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#efefed">
+<line x1="12" y1="84.5" x2="948" y2="84.5" stroke="#383835"/>
+<line x1="12" y1="130.5" x2="948" y2="130.5" stroke="#383835"/>
+<line x1="12" y1="176.5" x2="948" y2="176.5" stroke="#383835"/>
+<line x1="12" y1="222.5" x2="948" y2="222.5" stroke="#383835"/>
+<line x1="12" y1="268.5" x2="948" y2="268.5" stroke="#383835"/>
+<rect x="12.5" y="12.5" width="935" height="301" rx="8" fill="none" stroke="#383835"/>
+<text x="30" y="42" font-weight="600">Library</text>
+<rect x="191" y="27" width="58" height="21" rx="3" fill="#314b3b"/>
+<text x="196" y="42" fill="#e3efe6" font-weight="500">[Maze]</text>
+<text x="194" y="66" font-weight="500">ctor alloc</text>
+<rect x="317" y="27" width="58" height="21" rx="3" fill="#314b3b"/>
+<text x="322" y="42" fill="#e3efe6" font-weight="500">[Maze]</text>
+<text x="320" y="66" font-weight="500">query speed</text>
+<rect x="443" y="27" width="58" height="21" rx="3" fill="#314b3b"/>
+<text x="448" y="42" fill="#e3efe6" font-weight="500">[Maze]</text>
+<text x="446" y="66" font-weight="500">query alloc</text>
+<rect x="569" y="27" width="83" height="21" rx="3" fill="#2d425f"/>
+<text x="574" y="42" fill="#e2e9f3" font-weight="500">[100x100]</text>
+<text x="572" y="66" font-weight="500">ctor alloc</text>
+<rect x="695" y="27" width="83" height="21" rx="3" fill="#2d425f"/>
+<text x="700" y="42" fill="#e2e9f3" font-weight="500">[100x100]</text>
+<text x="698" y="66" font-weight="500">query speed</text>
+<rect x="821" y="27" width="83" height="21" rx="3" fill="#2d425f"/>
+<text x="826" y="42" fill="#e2e9f3" font-weight="500">[100x100]</text>
+<text x="824" y="66" font-weight="500">query alloc</text>
+<text x="30" y="112" font-weight="700">MPath 2.0</text>
+<text x="194" y="112" fill="#d27b2d" font-weight="500">11.5 MB</text>
+<text x="320" y="112" fill="#50946f" font-weight="500">4.04 ms</text>
+<text x="446" y="112" fill="#50946f" font-weight="500">177 B</text>
+<text x="572" y="112" fill="#d27b2d" font-weight="500">719 KB</text>
+<text x="698" y="112" fill="#50946f" font-weight="500">123 µs</text>
+<text x="824" y="112" fill="#50946f" font-weight="500">40 B</text>
+<text x="30" y="158" font-weight="600">MPath 1.2.1</text>
+<text x="194" y="158" fill="#d27b2d" font-weight="500">24.5 MB</text>
+<text x="320" y="158" fill="#cb9434" font-weight="500">5.28 ms</text>
+<text x="446" y="158" fill="#50946f" font-weight="500">233 B</text>
+<text x="572" y="158" fill="#d27b2d" font-weight="500">1.41 MB</text>
+<text x="698" y="158" fill="#cb9434" font-weight="500">869 µs</text>
+<text x="824" y="158" fill="#50946f" font-weight="500">35 B</text>
+<text x="30" y="204" font-weight="600">AStarLite 1.3.0</text>
+<text x="194" y="204" fill="#50946f" font-weight="500">768 KB</text>
+<text x="320" y="204" fill="#cb9434" font-weight="500">5.29 ms</text>
+<text x="446" y="204" fill="#d27b2d" font-weight="500">8.75 MB</text>
+<text x="572" y="204" fill="#50946f" font-weight="500">39.3 KB</text>
+<text x="698" y="204" fill="#50946f" font-weight="500">123 µs</text>
+<text x="824" y="204" fill="#d27b2d" font-weight="500">351 KB</text>
+<text x="30" y="250" font-weight="600">RoyT.AStar 3.0.2</text>
+<text x="194" y="250" fill="#cf5148" font-weight="500">103 MB</text>
+<text x="320" y="250" fill="#d27b2d" font-weight="500">63.4 ms</text>
+<text x="446" y="250" fill="#d27b2d" font-weight="500">12.0 MB</text>
+<text x="572" y="250" fill="#cf5148" font-weight="500">7.21 MB</text>
+<text x="698" y="250" fill="#cf5148" font-weight="500">3.13 ms</text>
+<text x="824" y="250" fill="#d27b2d" font-weight="500">721 KB</text>
+<text x="30" y="296" font-weight="600">LinqToAStar 1.2.1</text>
+<text x="194" y="296" fill="#cb9434" font-weight="500">5.76 MB</text>
+<text x="320" y="296" fill="#cf5148" font-weight="500">3.56 s</text>
+<text x="446" y="296" fill="#cf5148" font-weight="500">108 MB</text>
+<text x="572" y="296" fill="#cb9434" font-weight="500">151 KB</text>
+<text x="698" y="296" fill="#d27b2d" font-weight="500">1.08 ms</text>
+<text x="824" y="296" fill="#d27b2d" font-weight="500">514 KB</text>
+</g></svg>
