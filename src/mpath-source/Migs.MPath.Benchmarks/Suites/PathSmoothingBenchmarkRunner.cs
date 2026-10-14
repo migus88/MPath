@@ -94,16 +94,28 @@ public class PathSmoothingBenchmarkRunner
     }
 
     [Benchmark(Baseline = true)]
-    public void NoSmoothing() => RunBenchmark(_pathfinderNoSmoothing);
+    public void NoSmoothing()
+    {
+        using var result = RunBenchmark(_pathfinderNoSmoothing);
+    }
 
     [Benchmark]
-    public void SimpleSmoothing() => RunBenchmark(_pathfinderSimpleSmoothing);
+    public void SimpleSmoothing()
+    {
+        using var result = RunBenchmark(_pathfinderSimpleSmoothing);
+    }
 
     [Benchmark]
-    public void StringPullingSmoothing() => RunBenchmark(_pathfinderStringPullingSmoothing);
+    public void StringPullingSmoothing()
+    {
+        using var result = RunBenchmark(_pathfinderStringPullingSmoothing);
+    }
 
     [Benchmark]
-    public void StringPullingSmoothingLargeAgent() => RunBenchmark(_pathfinderStringPullingSmoothing, LargeAgentSize);
+    public void StringPullingSmoothingLargeAgent()
+    {
+        using var result = RunBenchmark(_pathfinderStringPullingSmoothing, LargeAgentSize);
+    }
 
     private PathResult RunBenchmark(Pathfinder pathfinder, int agentSize = 1)
     {

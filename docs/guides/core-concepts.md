@@ -10,7 +10,7 @@ MPath is designed specifically for grid-based environments where:
 - Each cell has properties like walkability and movement cost
 - Agents navigate from one cell to another following optimal paths
 
-The A* algorithm used in MPath calculates the cheapest path while considering both the cost traveled so far and an estimated cost to the destination. The estimate never exceeds the real cost, so the returned path is always a cheapest one; its cost is the sum of each step's movement multiplier plus the entered cell's weight, the same cost `GetReachable` reports.
+The A* algorithm used in MPath calculates the cheapest path while considering both the cost traveled so far and an estimated cost to the destination. The estimate never exceeds the real cost, so the returned path is always a cheapest one; its cost is the sum of each step's step cost (`StraightStepCost` or `DiagonalStepCost`) plus the entered cell's weight, the same cost `GetReachable` reports.
 
 ## Key Components
 
