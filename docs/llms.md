@@ -134,7 +134,7 @@ cells with your own objects (e.g. Unity `MonoBehaviour`s) via `Cell CellData { g
 | `EnablePathCaching(IPathCaching handler = null)` | `Pathfinder` | Fluent (returns `this`). Opt-in. Pass your own `IPathCaching` or use the built-in `DefaultPathCaching`. |
 | `DisablePathCaching()` | `Pathfinder` | Fluent. |
 | `InvalidateCache()` | `Pathfinder` | Fluent. **Mutating the grid does NOT auto-invalidate** — call this after the grid changes. |
-| `Dispose()` | `void` | Returns the rented cell buffer to the pool. Call once, at end of life. |
+| `Dispose()` | `void` | Returns the rented cell buffer to the pool, disposes the cache, ends an active `StepwiseSearch`. Idempotent; every instance method throws `ObjectDisposedException` afterwards. |
 
 ### Everything else — type map
 
@@ -286,7 +286,10 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
    memory. Always `using`. Leaking them defeats the zero-allocation design and (for `StepwiseSearch`)
    keeps the grid pinned and the pathfinder unusable.
 2. **Reuse the `Pathfinder`; don't recreate it per query.** It is designed as a long-lived instance.
-   Dispose it once when you're done with it (or its grid).
+   Dispose it once when you're done with it (or its grid). A second `Dispose()` is a no-op; any query after
+   it throws `ObjectDisposedException`. The `Cell[,]` / `ICellHolder[]` / `ICellHolder[,]` constructors rent
+   pooled memory (skipped, it never goes back to the pool); the `Cell[]` constructor doesn't, so skipping
+   `Dispose` is harmless there unless path caching is enabled.
 3. **Not thread-safe.** No concurrent queries on one instance, no sharing across threads. One per thread.
 4. **`Path` excludes the origin.** It is the sequence of steps *after* `from`. Don't expect `from` first.
 5. **No path → failure result, not an exception.** Check `IsSuccess`. Only bad arguments throw

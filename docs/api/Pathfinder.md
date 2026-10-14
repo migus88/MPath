@@ -26,11 +26,12 @@ A high-performance A* pathfinding implementation for grid-based environments.
 | `Pathfinder EnablePathCaching(IPathCaching pathCachingHandler = null)` | Enables path caching with optional custom implementation. |
 | `Pathfinder DisablePathCaching()` | Disables path caching. |
 | `Pathfinder InvalidateCache()` | Clears the current path cache without disabling caching. |
-| `void Dispose()` | Releases resources used by the Pathfinder. |
+| `void Dispose()` | Returns the pooled cell buffer, disposes the path cache and ends an active `StepwiseSearch`. Idempotent. |
 
 ## Remarks
 
-- Implements `IDisposable` and should be disposed when no longer needed.
+- Implements `IDisposable` and should be disposed when no longer needed. The `Cell[,]`, `ICellHolder[]` and `ICellHolder[,]` constructors rent their cell buffer from `ArrayPool<Cell>.Shared` and `Dispose` gives it back (skipped, the buffer is never reused and is left to the GC). The `Cell[]` constructor uses your array directly and owns no pooled memory, so skipping `Dispose` is harmless there unless path caching is enabled (the cache holds pooled path results).
+- `Dispose` is idempotent: the buffer goes back to the pool exactly once. It ends an active `StepwiseSearch` first (that session's later `Tick()` throws `ObjectDisposedException`). After `Dispose`, every instance method (`GetPath`, `GetReachable`, `HasLineOfSight`, `BeginStepwiseSearch`, `EnablePathCaching`, `DisablePathCaching`, `InvalidateCache`) throws `ObjectDisposedException`; the static distance helpers keep working.
 - Uses unsafe code and array pooling internally to minimize garbage collection.
 - The pathfinding algorithm is optimized for speed and memory efficiency.
 - For larger grids, reuse the same `Pathfinder` instance for multiple path calculations.

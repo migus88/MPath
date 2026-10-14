@@ -67,7 +67,7 @@ The `Searched` list is the accumulated searched area — the cells you typically
 
 - **Dispose the session.** It pins the pathfinder's cell buffer for the duration of the search (the open set holds raw pointers into it that must stay valid across ticks). Always wrap it in `using`.
 - **One search at a time.** While a session is active, don't use the owning `Pathfinder` for anything else — not `GetPath`, not `GetReachable`, not a second `BeginStepwiseSearch`. Starting a second session before disposing the first throws `InvalidOperationException`. Once disposed, the pathfinder is free for normal use again.
-- `Tick()` after completion returns the same final snapshot; `Tick()` after `Dispose()` throws `ObjectDisposedException`.
+- `Tick()` after completion returns the same final snapshot; `Tick()` after `Dispose()` throws `ObjectDisposedException`. Disposing the owning `Pathfinder` also ends an active session.
 
 ## Edge cases
 

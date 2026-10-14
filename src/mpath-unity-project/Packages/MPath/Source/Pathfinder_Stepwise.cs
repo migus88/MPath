@@ -8,8 +8,9 @@ namespace Migs.MPath.Core
 {
     public sealed unsafe partial class Pathfinder
     {
-        // Guards against two concurrent stepwise searches sharing this instance's open set and cell buffer.
-        private bool _searchSessionActive;
+        // The active session, if any: guards against two concurrent stepwise searches sharing this instance's
+        // open set and cell buffer, and lets Dispose end the session before returning the buffer it pins.
+        private StepwiseSearch _activeSearch;
 
         /// <summary>
         /// Begins a stepwise (tick-by-tick) A* search that can be advanced one expansion at a time, exposing
@@ -32,8 +33,11 @@ namespace Migs.MPath.Core
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="agent"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="from"/> or <paramref name="to"/> is outside the grid.</exception>
         /// <exception cref="InvalidOperationException">Thrown when a stepwise search is already active on this instance.</exception>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         public StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to)
         {
+            ThrowIfDisposed();
+
             if (agent == null)
             {
                 throw new ArgumentNullException(nameof(agent));
@@ -49,24 +53,15 @@ namespace Migs.MPath.Core
                 throw new ArgumentException("Destination is outside the valid field range", nameof(to));
             }
 
-            if (_searchSessionActive)
+            if (_activeSearch != null)
             {
                 throw new InvalidOperationException(
                     "A stepwise search is already in progress on this Pathfinder. " +
                     "Dispose the previous StepwiseSearch before starting a new one.");
             }
 
-            _searchSessionActive = true;
-
-            try
-            {
-                return new StepwiseSearch(this, agent, from, to);
-            }
-            catch
-            {
-                _searchSessionActive = false;
-                throw;
-            }
+            _activeSearch = new StepwiseSearch(this, agent, from, to);
+            return _activeSearch;
         }
 
         /// <summary>
@@ -309,7 +304,7 @@ namespace Migs.MPath.Core
 
                 _disposed = true;
                 ReleaseHandle();
-                _pathfinder._searchSessionActive = false;
+                _pathfinder._activeSearch = null;
             }
         }
     }
