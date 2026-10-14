@@ -10,7 +10,7 @@ namespace Migs.MPath.Core
     public sealed unsafe partial class Pathfinder
     {
         // The active session, if any: guards against two concurrent stepwise searches sharing this instance's
-        // open set and cell buffer, and lets Dispose end the session before returning the buffer it pins.
+        // open set and buffers, and lets Dispose end the session before returning the buffers it pins.
         private StepwiseSearch _activeSearch;
 
         /// <summary>
@@ -21,9 +21,9 @@ namespace Migs.MPath.Core
         /// </summary>
         /// <remarks>
         /// The returned <see cref="StepwiseSearch"/> drives the very same A* expansion as <see cref="GetPath"/>
-        /// (it shares this instance's open set and cell buffer), so it produces an identical path; it simply
-        /// pauses between expansions. Because it pins this instance's cell buffer for the lifetime of the
-        /// search, the session <b>must be disposed</b> (wrap it in <c>using</c>), and the owning
+        /// (it shares this instance's open set and buffers), so it produces an identical path; it simply
+        /// pauses between expansions. Because it pins this instance's cell and search-state buffers for the
+        /// lifetime of the search, the session <b>must be disposed</b> (wrap it in <c>using</c>), and the owning
         /// <see cref="Pathfinder"/> must not be used for any other query — including a second
         /// <see cref="BeginStepwiseSearch"/> — until the session is disposed.
         /// </remarks>
@@ -154,10 +154,10 @@ namespace Migs.MPath.Core
         /// <see cref="SearchStep"/> with the accumulated searched area and, on success, the path.
         /// </summary>
         /// <remarks>
-        /// Obtain an instance from <see cref="BeginStepwiseSearch"/>. It pins the pathfinder's cell buffer for
-        /// the duration of the search and therefore implements <see cref="IDisposable"/> — always dispose it.
-        /// This type favours clarity over the allocation-free design of the main pathfinder: it is not meant
-        /// for a real-time hot path.
+        /// Obtain an instance from <see cref="BeginStepwiseSearch"/>. It pins the pathfinder's cell and
+        /// search-state buffers for the duration of the search and therefore implements
+        /// <see cref="IDisposable"/> — always dispose it. This type favours clarity over the allocation-free
+        /// design of the main pathfinder: it is not meant for a real-time hot path.
         /// </remarks>
         public sealed unsafe class StepwiseSearch : IDisposable
         {
@@ -170,11 +170,12 @@ namespace Migs.MPath.Core
             private readonly Coordinate[] _enterableCells;
             private readonly bool _isDestinationEnterable;
 
-            // The cell buffer is pinned for the whole search because the open set holds raw pointers into it
-            // that must stay valid across ticks.
+            // The cell and node buffers are pinned for the whole search because the search holds raw pointers into
+            // them (the open set into the nodes) that must stay valid across ticks.
             private GCHandle _handle;
+            private GCHandle _nodesHandle;
             private Cell* _cells;
-            private bool _pinned;
+            private PathNode* _nodes;
 
             // Every cell ever discovered (in grid order of discovery). _seen[index] guards against duplicates.
             private readonly List<Coordinate> _discovered = new List<Coordinate>();
@@ -203,20 +204,19 @@ namespace Migs.MPath.Core
                 try
                 {
                     _handle = GCHandle.Alloc(pathfinder._cells, GCHandleType.Pinned);
-                    _pinned = true;
+                    _nodesHandle = GCHandle.Alloc(pathfinder._nodes, GCHandleType.Pinned);
                     _cells = (Cell*)_handle.AddrOfPinnedObject();
+                    _nodes = (PathNode*)_nodesHandle.AddrOfPinnedObject();
 
-                    pathfinder.ResetCells(_cells);
-                    pathfinder._openSet.Reset(_cells);
+                    pathfinder.BeginSearch(_nodes);
 
                     _seen = new bool[pathfinder.Size];
 
-                    // Seed the open set with the origin, mirroring CalculatePath. ScoreH is set purely so the
-                    // start node reports a consistent f = g + h when visualized; it does not affect the search.
-                    var start = pathfinder.GetCell(_cells, from.X, from.Y);
-                    start->ScoreH = pathfinder.GetH(from.X, from.Y, to.X, to.Y);
-                    pathfinder._openSet.Enqueue(start, start->ScoreH);
-                    MarkDiscovered(start);
+                    // Seed the open set with the origin, exactly as CalculatePath does.
+                    var startIndex = pathfinder.GetLayoutIndex(from.X, from.Y);
+                    pathfinder.OpenNode(_nodes, startIndex, PathNode.NoParent, 0, 0f,
+                        pathfinder.GetH(from.X, from.Y, to.X, to.Y));
+                    MarkDiscovered(_cells + startIndex);
 
                     // Like GetPath, a destination the agent cannot enter fails before the first expansion.
                     _state = IsDestinationEnterable(from)
@@ -277,7 +277,7 @@ namespace Migs.MPath.Core
 
                 var neighbors = stackalloc Cell*[MaxNeighbors];
                 var reachedGoal = ExpandNext(neighbors, out var current);
-                _current = current->Coordinate;
+                _current = _cells[current].Coordinate;
 
                 if (reachedGoal)
                 {
@@ -332,7 +332,7 @@ namespace Migs.MPath.Core
                 }
             }
 
-            private bool ExpandNext(Cell** neighbors, out Cell* current)
+            private bool ExpandNext(Cell** neighbors, out int current)
             {
                 fixed (Coordinate* enterable = _enterableCells)
                 {
@@ -340,7 +340,7 @@ namespace Migs.MPath.Core
 
                     try
                     {
-                        return _pathfinder.ExpandNext(_cells, _to, _agentSize, neighbors, out current);
+                        return _pathfinder.ExpandNext(_cells, _nodes, _to, _agentSize, neighbors, out current);
                     }
                     finally
                     {
@@ -377,17 +377,16 @@ namespace Migs.MPath.Core
             /// <see cref="Pathfinder.ReconstructPath"/> but without pooling or smoothing, and — like it — excludes
             /// the origin cell.
             /// </summary>
-            private Coordinate[] TracePath(Cell* lastCell)
+            private Coordinate[] TracePath(int lastIndex)
             {
-                var depth = lastCell->Depth;
+                var depth = _nodes[lastIndex].Depth;
                 var path = new Coordinate[depth];
 
-                var current = lastCell;
+                var index = lastIndex;
                 for (var i = depth - 1; i >= 0; i--)
                 {
-                    path[i] = current->Coordinate;
-                    var parent = current->ParentCoordinate;
-                    current = _pathfinder.GetCell(_cells, parent.X, parent.Y);
+                    path[i] = _cells[index].Coordinate;
+                    index = _nodes[index].ParentIndex;
                 }
 
                 return path;
@@ -402,16 +401,17 @@ namespace Migs.MPath.Core
                 for (var i = 0; i < count; i++)
                 {
                     var coordinate = _discovered[i];
-                    var cell = _pathfinder.GetCell(_cells, coordinate.X, coordinate.Y);
-                    var nodeState = cell->IsClosed ? SearchNodeState.Closed : SearchNodeState.Open;
+                    var node = _nodes + _pathfinder.GetLayoutIndex(coordinate.X, coordinate.Y);
+                    var nodeState = node->IsClosed ? SearchNodeState.Closed : SearchNodeState.Open;
 
                     if (nodeState == SearchNodeState.Open)
                     {
                         openCount++;
                     }
 
+                    // f is the node's open-set priority, g + h, recomputed with the same float arithmetic.
                     searched[i] = new SearchNode(coordinate, nodeState,
-                        cell->ScoreG, cell->ScoreH, cell->ScoreF);
+                        node->ScoreG, node->ScoreH, node->ScoreG + node->ScoreH);
                 }
 
                 return new SearchStep(_state, _iteration, _current, searched, openCount, count - openCount, path);
@@ -419,18 +419,22 @@ namespace Migs.MPath.Core
 
             private void ReleaseHandle()
             {
-                if (!_pinned)
+                if (_handle.IsAllocated)
                 {
-                    return;
+                    _handle.Free();
                 }
 
-                _handle.Free();
-                _pinned = false;
+                if (_nodesHandle.IsAllocated)
+                {
+                    _nodesHandle.Free();
+                }
+
                 _cells = null;
+                _nodes = null;
             }
 
             /// <summary>
-            /// Releases the pinned cell buffer and frees the owning <see cref="Pathfinder"/> for other queries.
+            /// Releases the pinned buffers and frees the owning <see cref="Pathfinder"/> for other queries.
             /// </summary>
             public void Dispose()
             {

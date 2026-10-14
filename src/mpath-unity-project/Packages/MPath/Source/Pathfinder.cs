@@ -33,6 +33,14 @@ namespace Migs.MPath.Core
         private readonly ICellHolder[,] _cellHoldersMatrix;
         private Cell[] _cells;
         private readonly Cell[,] _cellsMatrix;
+
+        // Whether the matrix/holder snapshot in _cells has been taken and not marked stale by Refresh since.
+        private bool _isSnapshotCurrent;
+
+        // The search state of every cell (same index as _cells). Only nodes stamped with the current generation
+        // belong to the running search, so starting a search never walks the grid.
+        private PathNode[] _nodes;
+        private uint _generation;
         
         private bool _isPathCachingEnabled;
         private IPathCaching _pathCaching;
@@ -124,6 +132,32 @@ namespace Migs.MPath.Core
             _settings = FastPathfinderSettings.FromSettings(settings ?? new PathfinderSettings());
             _query = QueryRules.FromSettings(_settings);
             _openSet = new UnsafePriorityQueue(Size);
+
+            // Pooled arrays may hold another owner's data; generation 0 marks every node as untouched.
+            _nodes = ArrayPool<PathNode>.Shared.Rent(Size);
+            Array.Clear(_nodes, 0, Size);
+        }
+
+        /// <summary>
+        /// Marks the grid snapshot as stale, so the next query copies the caller's <see cref="Cell"/>[,] matrix or
+        /// cell holders again. Needed only with <see cref="GridSnapshotMode.Manual"/>, after editing the matrix or the
+        /// holders directly; edits through the cell-update methods (<see cref="SetWalkable"/>, ...) are seen at once.
+        /// </summary>
+        /// <returns>The current pathfinder instance.</returns>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
+        /// <remarks>
+        /// Cheap: the copy happens on the next query, once, however many times this is called before it. Does nothing
+        /// with <see cref="GridSnapshotMode.PerQuery"/> (every query copies anyway) and for a pathfinder built over a
+        /// <see cref="Cell"/>[] array (it has no snapshot). Like any direct edit to the grid, it does not clear the
+        /// path cache: call <see cref="InvalidateCache"/> when cached paths may be affected.
+        /// </remarks>
+        public Pathfinder Refresh()
+        {
+            ThrowIfDisposed();
+
+            _isSnapshotCurrent = false;
+
+            return this;
         }
         
         /// <summary>
@@ -262,16 +296,16 @@ namespace Migs.MPath.Core
             var cells = new Span<Cell>(_cells, 0, Size);
 
             fixed (Cell* ptr = &MemoryMarshal.GetReference(cells))
+            fixed (PathNode* nodes = _nodes)
             {
                 if (!IsDestinationEnterable(ptr, from, to, agentSize))
                 {
                     return PathResult.Failure();
                 }
 
-                ResetCells(ptr);
-                _openSet.Reset(ptr);
+                BeginSearch(nodes);
 
-                var result = CalculatePath(agentSize, from, to, ptr);
+                var result = CalculatePath(agentSize, from, to, ptr, nodes);
                 
                 CachePath(agent, agentSize, from, to, result);
                 
@@ -405,34 +439,68 @@ namespace Migs.MPath.Core
         /// <summary>
         /// Calculates the path using A* algorithm.
         /// </summary>
-        private PathResult CalculatePath(int agentSize, Coordinate from, Coordinate to, Cell* ptr)
+        private PathResult CalculatePath(int agentSize, Coordinate from, Coordinate to, Cell* cells, PathNode* nodes)
         {
-            var scoreH = GetH(from.X, from.Y, to.X, to.Y);
-            var start = GetCell(ptr, from.X, from.Y);
-
-            _openSet.Enqueue(start, scoreH);
+            OpenNode(nodes, GetLayoutIndex(from.X, from.Y), PathNode.NoParent, 0, 0f,
+                GetH(from.X, from.Y, to.X, to.Y));
 
             var neighbors = stackalloc Cell*[MaxNeighbors];
 
             // A* algorithm main loop. Each iteration expands one cell; ExpandNext is the single
             // source of truth for that step, shared with the stepwise (tick-by-tick) search.
-            Cell* current = null;
             while (_openSet.Count > 0)
             {
-                if (ExpandNext(ptr, to, agentSize, neighbors, out current))
+                if (ExpandNext(cells, nodes, to, agentSize, neighbors, out var current))
                 {
                     // Destination dequeued — search is done.
-                    break;
+                    return ReconstructPath(current, cells, nodes, agentSize);
                 }
             }
 
-            // Path reconstruction
-            if (current == null || current->Coordinate != to)
+            return PathResult.Failure();
+        }
+
+        /// <summary>
+        /// Starts a search over <paramref name="nodes"/> (the pinned <see cref="_nodes"/>): a new generation makes
+        /// every node untouched without visiting it, and the open set is emptied. On the rare wrap-around of the
+        /// generation counter the nodes are cleared once, so no stale stamp can match a later generation.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void BeginSearch(PathNode* nodes)
+        {
+            if (++_generation == 0)
             {
-                return PathResult.Failure();
+                new Span<PathNode>(nodes, Size).Clear();
+                _generation = 1;
             }
 
-            return ReconstructPath(current, ptr, agentSize);
+            _openSet.Reset(nodes);
+        }
+
+        /// <summary>
+        /// The generation of the latest search. Internal so tests can force the counter near its wrap-around.
+        /// </summary>
+        internal uint SearchGeneration
+        {
+            get => _generation;
+            set => _generation = value;
+        }
+
+        /// <summary>
+        /// Touches the node at <paramref name="index"/> for the running search and queues it with priority
+        /// <paramref name="scoreG"/> + <paramref name="scoreH"/>. The node must be untouched in this search.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void OpenNode(PathNode* nodes, int index, int parentIndex, int depth, float scoreG, float scoreH)
+        {
+            var node = nodes + index;
+            node->Generation = _generation;
+            node->ScoreG = scoreG;
+            node->ScoreH = scoreH;
+            node->ParentIndex = parentIndex;
+            node->Depth = depth;
+
+            _openSet.Enqueue(index, scoreG + scoreH);
         }
 
         /// <summary>
@@ -441,98 +509,93 @@ namespace Migs.MPath.Core
         /// factored out so the batch <see cref="GetPath"/> and the stepwise <see cref="StepwiseSearch"/> run the
         /// exact same logic. The caller is responsible for ensuring the open set is non-empty.
         /// </summary>
+        /// <param name="current">The index of the dequeued cell.</param>
         /// <returns><c>true</c> when the dequeued cell is the destination and the search should stop;
         /// otherwise <c>false</c>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool ExpandNext(Cell* ptr, Coordinate to, int agentSize, Cell** neighbors, out Cell* current)
+        private bool ExpandNext(Cell* cells, PathNode* nodes, Coordinate to, int agentSize, Cell** neighbors,
+            out int current)
         {
             current = _openSet.Dequeue();
 
-            if (current->Coordinate == to)
+            var cell = cells + current;
+
+            if (cell->Coordinate == to)
             {
                 return true;
             }
 
-            current->IsClosed = true;
+            nodes[current].QueueIndex = PathNode.ClosedQueueIndex;
 
-            PopulateNeighbors(ptr, current, agentSize, neighbors);
-            ProcessNeighbors(current, neighbors, to);
+            PopulateNeighbors(cells, cell, agentSize, neighbors);
+            ProcessNeighbors(cells, nodes, current, neighbors, to);
 
             return false;
         }
 
         /// <summary>
-        /// Processes each neighbor of the current cell in the pathfinding algorithm.
+        /// Processes each neighbor of the current cell in the pathfinding algorithm. A node this search has not
+        /// touched yet is opened; a touched one is either closed (skipped) or open (decrease-key when cheaper).
         /// </summary>
-        private void ProcessNeighbors(Cell* current, Cell** neighbors, Coordinate to)
+        private void ProcessNeighbors(Cell* cells, PathNode* nodes, int current, Cell** neighbors, Coordinate to)
         {
+            var currentCell = cells + current;
+            var currentNode = nodes + current;
+            var generation = _generation;
+
             for (var n = 0; n < MaxNeighbors; n++)
             {
                 var neighbor = neighbors[n];
-                if (neighbor == null || neighbor->IsClosed)
+                if (neighbor == null)
                 {
                     continue;
                 }
 
-                var scoreG = current->ScoreG + GetStepCost(current, neighbor);
+                var index = (int)(neighbor - cells);
+                var node = nodes + index;
 
-                if (!_openSet.Contains(neighbor))
+                if (node->Generation != generation)
                 {
                     var neighborCoord = neighbor->Coordinate;
-                    var scoreH = GetH(neighborCoord.X, neighborCoord.Y, to.X, to.Y);
-                    AddNeighborToOpenSet(current, neighbor, scoreG, scoreH);
+                    OpenNode(nodes, index, current, currentNode->Depth + 1,
+                        currentNode->ScoreG + GetStepCost(currentCell, neighbor),
+                        GetH(neighborCoord.X, neighborCoord.Y, to.X, to.Y));
+                    continue;
                 }
-                else if (scoreG < neighbor->ScoreG)
+
+                if (node->IsClosed)
                 {
-                    UpdateNeighborInOpenSet(current, neighbor, scoreG);
+                    continue;
+                }
+
+                var scoreG = currentNode->ScoreG + GetStepCost(currentCell, neighbor);
+
+                if (scoreG < node->ScoreG)
+                {
+                    node->ScoreG = scoreG;
+                    node->ParentIndex = current;
+                    node->Depth = currentNode->Depth + 1;
+
+                    // A cheaper g lowers f, so the cell must move up the heap (a decrease-key), not just change in place.
+                    _openSet.UpdatePriority(index, scoreG + node->ScoreH);
                 }
             }
         }
 
         /// <summary>
-        /// Adds a neighbor to the open set for consideration in the pathfinding algorithm.
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void AddNeighborToOpenSet(Cell* current, Cell* neighbor, float scoreG, float scoreH)
-        {
-            neighbor->ParentCoordinate = current->Coordinate;
-            neighbor->Depth = current->Depth + 1;
-            neighbor->ScoreG = scoreG;
-            neighbor->ScoreH = scoreH;
-
-            var scoreF = scoreG + scoreH;
-            _openSet.Enqueue(neighbor, scoreF);
-        }
-
-        /// <summary>
-        /// Updates a neighbor that is already in the open set if a better path is found.
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void UpdateNeighborInOpenSet(Cell* current, Cell* neighbor, float scoreG)
-        {
-            neighbor->ScoreG = scoreG;
-            neighbor->ParentCoordinate = current->Coordinate;
-            neighbor->Depth = current->Depth + 1;
-
-            // A cheaper g lowers f, so the cell must move up the heap (a decrease-key), not just change in place.
-            _openSet.UpdatePriority(neighbor, scoreG + neighbor->ScoreH);
-        }
-
-        /// <summary>
         /// Reconstructs the final path from the destination cell back to the start.
         /// </summary>
-        private PathResult ReconstructPath(Cell* lastCell, Cell* cells, int agentSize)
+        private PathResult ReconstructPath(int lastIndex, Cell* cells, PathNode* nodes, int agentSize)
         {
-            var depth = lastCell->Depth;
+            var depth = nodes[lastIndex].Depth;
             var path = ArrayPool<Coordinate>.Shared.Rent(depth);
             Array.Clear(path, 0, path.Length);
 
-            var current = lastCell;
+            var index = lastIndex;
             for (var i = depth - 1; i >= 0; i--)
             {
-                path[i] = current->Coordinate;
-                var parentCoord = current->ParentCoordinate;
-                current = GetCell(cells, parentCoord.X, parentCoord.Y);
+                path[i] = cells[index].Coordinate;
+                index = nodes[index].ParentIndex;
             }
 
             // Apply path smoothing if enabled
@@ -542,15 +605,6 @@ namespace Migs.MPath.Core
             }
 
             return PathResult.Success(path, depth);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ResetCells(Cell* cells)
-        {
-            for (var i = 0; i < Size; i++)
-            {
-                (cells + i)->Reset();
-            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -573,9 +627,16 @@ namespace Migs.MPath.Core
         private void InitializeCellsArray()
         {
             TryInitializingCellsArrayFromCellsArray();
+
+            if (_isSnapshotCurrent && _settings.GridSnapshotMode == GridSnapshotMode.Manual)
+            {
+                return;
+            }
+
             TryInitializingCellsArrayFromCellHolders();
             TryInitializingCellsArrayFromCellsMatrix();
             TryInitializingCellsArrayFromCellHoldersMatrix();
+            _isSnapshotCurrent = true;
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -877,7 +938,8 @@ namespace Migs.MPath.Core
 
         /// <summary>
         /// Releases all resources used by this Pathfinder instance: returns the pooled cell buffer (every
-        /// constructor except the <see cref="Cell"/>[] one rents it), disposes the path cache and ends an active
+        /// constructor except the <see cref="Cell"/>[] one rents it), the search-state and open-set buffers, disposes
+        /// the path cache and ends an active
         /// <see cref="StepwiseSearch"/>.
         /// </summary>
         /// <remarks>
@@ -903,6 +965,9 @@ namespace Migs.MPath.Core
             }
 
             _cells = null;
+
+            ArrayPool<PathNode>.Shared.Return(_nodes);
+            _nodes = null;
 
             _openSet.Dispose();
 

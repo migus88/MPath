@@ -2,21 +2,20 @@ using System;
 using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Migs.MPath.Core.Data;
 
 namespace Migs.MPath.Core.Internal
 {
     /// <summary>
     /// The open set of the A* and reachability searches: a binary min-heap of <see cref="HeapEntry"/> values
     /// (priority + cell index) in a fixed array sized to the grid. Comparisons read the priority from the entry, so a
-    /// sift never touches the cells it passes; each cell keeps its slot in <see cref="Cell.QueueIndex"/> for O(1)
+    /// sift never touches the nodes it passes; each node keeps its slot in <see cref="PathNode.QueueIndex"/> for O(1)
     /// membership tests and O(log n) decrease-key.
     /// </summary>
     /// <remarks>
     /// A cell is in the heap at most once at a time, so the heap never holds more entries than the grid has cells
     /// and never grows: after construction no operation allocates. The array is rented from
     /// <see cref="ArrayPool{T}.Shared"/> and returned by <see cref="Dispose"/>. Every search starts with
-    /// <see cref="Reset"/>, which binds the heap to the pinned cell buffer the entries index into.
+    /// <see cref="Reset"/>, which binds the heap to the pinned node buffer whose slots it maintains.
     /// </remarks>
     internal sealed unsafe class UnsafePriorityQueue : IDisposable
     {
@@ -25,9 +24,9 @@ namespace Migs.MPath.Core.Internal
         /// </summary>
         public int Count;
 
-        // 1-based: slot 0 is unused, so a cell whose QueueIndex is 0 is never mistaken for a member.
+        // 1-based: slot 0 is unused, so a node whose QueueIndex is 0 is never mistaken for a member.
         private HeapEntry[] _heap;
-        private Cell* _cells;
+        private PathNode* _nodes;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="UnsafePriorityQueue"/> class.
@@ -39,42 +38,40 @@ namespace Migs.MPath.Core.Internal
         }
 
         /// <summary>
-        /// Empties the queue and binds it to the cell buffer of the next search. Every enqueued cell must lie in
-        /// <paramref name="cells"/>, and the buffer must stay pinned until the search ends.
+        /// Empties the queue and binds it to the node buffer of the next search. Every enqueued index must index
+        /// <paramref name="nodes"/>, and the buffer must stay pinned until the search ends.
         /// </summary>
-        /// <param name="cells">The first cell of the pinned cell buffer.</param>
+        /// <param name="nodes">The first node of the pinned node buffer.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Reset(Cell* cells)
+        public void Reset(PathNode* nodes)
         {
-            _cells = cells;
+            _nodes = nodes;
             Count = 0;
         }
 
         /// <summary>
-        /// Adds a cell to the queue with the specified priority.
+        /// Adds a node to the queue with the specified priority.
         /// </summary>
-        /// <param name="item">Pointer to the cell to add. Must not already be in the queue.</param>
+        /// <param name="index">The node's index in the node buffer. Must not already be in the queue.</param>
         /// <param name="priority">Priority value (lower values have higher priority).</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Enqueue(Cell* item, float priority)
+        public void Enqueue(int index, float priority)
         {
-            Debug.Assert(item != null && !Contains(item), "The cell is null or already queued.");
-
-            item->ScoreF = priority;
+            Debug.Assert(!Contains(index), "The node is already queued.");
 
             fixed (HeapEntry* heap = _heap)
             {
-                CascadeUp(heap, ++Count, new HeapEntry(priority, (int)(item - _cells)));
+                CascadeUp(heap, ++Count, new HeapEntry(priority, index));
             }
         }
 
         /// <summary>
-        /// Removes and returns the cell with the highest priority (lowest value) from the queue.
+        /// Removes and returns the node with the highest priority (lowest value) from the queue.
         /// </summary>
-        /// <returns>A pointer to the highest priority cell.</returns>
+        /// <returns>The index of the highest priority node.</returns>
         /// <exception cref="InvalidOperationException">Thrown when the queue is empty.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Cell* Dequeue()
+        public int Dequeue()
         {
             if (Count == 0)
             {
@@ -83,7 +80,7 @@ namespace Migs.MPath.Core.Internal
 
             fixed (HeapEntry* heap = _heap)
             {
-                var result = _cells + heap[1].Index;
+                var result = heap[1].Index;
                 var last = heap[Count--];
 
                 if (Count > 0)
@@ -96,49 +93,47 @@ namespace Migs.MPath.Core.Internal
         }
 
         /// <summary>
-        /// Updates the priority of a cell already contained in the queue and restores the heap property.
+        /// Updates the priority of a node already contained in the queue and restores the heap property.
         /// Used to perform a decrease-key operation (e.g. when a cheaper route to a cell is discovered).
         /// </summary>
-        /// <param name="item">Pointer to the cell whose priority should change. Must already be in the queue.</param>
+        /// <param name="index">The node's index in the node buffer. Must already be in the queue.</param>
         /// <param name="priority">The new priority value (lower values have higher priority).</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdatePriority(Cell* item, float priority)
+        public void UpdatePriority(int index, float priority)
         {
-            Debug.Assert(item != null && Contains(item), "The cell is null or not queued.");
-
-            item->ScoreF = priority;
+            Debug.Assert(Contains(index), "The node is not queued.");
 
             fixed (HeapEntry* heap = _heap)
             {
-                var index = item->QueueIndex;
-                var entry = new HeapEntry(priority, heap[index].Index);
+                var slot = _nodes[index].QueueIndex;
+                var entry = new HeapEntry(priority, index);
 
-                if (index > 1 && priority < heap[index >> 1].Priority)
+                if (slot > 1 && priority < heap[slot >> 1].Priority)
                 {
-                    CascadeUp(heap, index, entry);
+                    CascadeUp(heap, slot, entry);
                 }
                 else
                 {
-                    CascadeDown(heap, index, entry);
+                    CascadeDown(heap, slot, entry);
                 }
             }
         }
 
         /// <summary>
-        /// Determines whether the queue contains the specified cell.
+        /// Determines whether the queue contains the specified node.
         /// </summary>
-        /// <param name="item">Pointer to the cell to locate.</param>
-        /// <returns>true if the queue contains the cell; otherwise, false.</returns>
+        /// <param name="index">The node's index in the node buffer.</param>
+        /// <returns>true if the queue contains the node; otherwise, false.</returns>
         /// <remarks>
-        /// <see cref="Cell.QueueIndex"/> is never cleared, so it may be stale; the cell is a member only when the
-        /// slot it names is live and holds that very cell.
+        /// <see cref="PathNode.QueueIndex"/> is not cleared when a node leaves the heap or a new search starts, so it
+        /// may be stale; the node is a member only when the slot it names is live and holds that very node.
         /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Contains(Cell* item)
+        public bool Contains(int index)
         {
-            var index = item->QueueIndex;
+            var slot = _nodes[index].QueueIndex;
 
-            return (uint)(index - 1) < (uint)Count && _heap[index].Index == (int)(item - _cells);
+            return (uint)(slot - 1) < (uint)Count && _heap[slot].Index == index;
         }
 
         /// <summary>
@@ -163,7 +158,7 @@ namespace Migs.MPath.Core.Internal
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void CascadeUp(HeapEntry* heap, int index, HeapEntry entry)
         {
-            var cells = _cells;
+            var nodes = _nodes;
 
             while (index > 1)
             {
@@ -176,12 +171,12 @@ namespace Migs.MPath.Core.Internal
                 }
 
                 heap[index] = parent;
-                cells[parent.Index].QueueIndex = index;
+                nodes[parent.Index].QueueIndex = index;
                 index = parentIndex;
             }
 
             heap[index] = entry;
-            cells[entry.Index].QueueIndex = index;
+            nodes[entry.Index].QueueIndex = index;
         }
 
         /// <summary>
@@ -191,7 +186,7 @@ namespace Migs.MPath.Core.Internal
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void CascadeDown(HeapEntry* heap, int index, HeapEntry entry)
         {
-            var cells = _cells;
+            var nodes = _nodes;
             var count = Count;
 
             while (true)
@@ -216,16 +211,16 @@ namespace Migs.MPath.Core.Internal
                 }
 
                 heap[index] = child;
-                cells[child.Index].QueueIndex = index;
+                nodes[child.Index].QueueIndex = index;
                 index = childIndex;
             }
 
             heap[index] = entry;
-            cells[entry.Index].QueueIndex = index;
+            nodes[entry.Index].QueueIndex = index;
         }
 
         /// <summary>
-        /// One slot of the heap: the priority it is ordered by and the index of its cell in the cell buffer.
+        /// One slot of the heap: the priority it is ordered by and the index of its node (and cell).
         /// </summary>
         private readonly struct HeapEntry
         {

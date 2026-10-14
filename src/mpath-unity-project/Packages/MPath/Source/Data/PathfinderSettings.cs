@@ -47,6 +47,9 @@ namespace Migs.MPath.Core.Data
         public PathSmoothingMethod PathSmoothingMethod { get; set; } = PathSmoothingMethod.None;
 
         /// <inheritdoc/>
+        public GridSnapshotMode GridSnapshotMode { get; set; } = GridSnapshotMode.PerQuery;
+
+        /// <inheritdoc/>
         [Obsolete("Ignored: the open set is sized to the grid when the pathfinder is created and never grows. This member will be removed in the next major version.")]
         public int? InitialBufferSize { get; set; } = null;
     }

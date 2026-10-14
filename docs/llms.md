@@ -117,8 +117,10 @@ Pathfinder(ICellHolder[,] cellHoldersMatrix,                                 IPa
 ```
 
 Matrix constructors infer width/height from the array. The flat `Cell[]` form sorts in place (X-major) and
-is the only mode that doesn't copy; the others flatten into a pooled buffer. `ICellHolder` lets you back
-cells with your own objects (e.g. Unity `MonoBehaviour`s) via `Cell CellData { get; }`.
+is the only mode that doesn't copy; the others flatten into a pooled snapshot — before every query by default,
+or once and after `Refresh()` with `GridSnapshotMode.Manual`. `ICellHolder` lets you back cells with your own
+objects (e.g. Unity `MonoBehaviour`s) via `Cell CellData { get; }`. Queries never write into your cells: the search
+state lives in the pathfinder and is reset lazily, so a short search costs only the cells it touches.
 
 **Methods:**
 
@@ -149,7 +151,8 @@ a leading `IAgent agent` (reads `agent.Size`). Both find the same results and sh
 | `EnablePathCaching(IPathCaching handler = null)` | `Pathfinder` | Fluent (returns `this`). Opt-in. Pass your own `IPathCaching` or use the built-in `DefaultPathCaching`. |
 | `DisablePathCaching()` | `Pathfinder` | Fluent. |
 | `InvalidateCache()` | `Pathfinder` | Fluent. The `Set*` cell updates invalidate for you; **direct writes to your grid or holders do NOT** — call this after them. |
-| `Dispose()` | `void` | Returns the rented cell buffer to the pool, disposes the cache, ends an active `StepwiseSearch`. Idempotent; every instance method throws `ObjectDisposedException` afterwards. |
+| `Refresh()` | `Pathfinder` | Fluent. Marks the `Cell[,]`/holder snapshot stale; the next query copies your grid again. Needed only with `GridSnapshotMode.Manual` after direct edits. Does not touch the cache. |
+| `Dispose()` | `void` | Returns the rented buffers (cells, search state, open set) to the pool, disposes the cache, ends an active `StepwiseSearch`. Idempotent; every instance method throws `ObjectDisposedException` afterwards. |
 
 ### Everything else — type map
 
@@ -176,6 +179,7 @@ One row per type; click through for full members. The load-bearing facts are rep
 
 | Enum | Values |
 |------|--------|
+| `GridSnapshotMode` | `PerQuery` (0, default) · `Manual` (1) — [api](api/GridSnapshotMode.md) |
 | `CornerBlocking` (`[Flags]`) | `None` (0) · `WallAndWall` (1) · `WallAndOccupied` (2) · `OccupiedAndOccupied` (4) · `WallAndOpen` (8) · `OccupiedAndOpen` (16); presets `BetweenBlockedCells` (default) · `BetweenWalls` · `AnyWall` · `All` — [api](api/CornerBlocking.md) |
 | `LineOfSightMode` | `BlockedByUnwalkableCells` (0, default) · `IgnoreUnwalkableCells` (1) |
 | `OccupancyRule` | `UseSettings` (0, default) · `Block` (1) · `Ignore` (2) — [api](api/OccupancyRule.md) |
@@ -201,6 +205,7 @@ construction has **no effect** — build a new `Pathfinder` to change settings.
 | `StraightMovementMultiplier` | `float` | `1f` | Cost of a cardinal step. |
 | `DiagonalMovementMultiplier` | `float` | `1.41f` | Cost of a diagonal step (≈√2). |
 | `PathSmoothingMethod` | `PathSmoothingMethod` | `None` | Post-process the path (`Simple`: first step + turn points + destination; `StringPulling`: straight shortcuts that keep the agent's footprint and the corner rule). |
+| `GridSnapshotMode` | `GridSnapshotMode` | `PerQuery` | `Cell[,]`/`ICellHolder` grids only: copy the grid before every query (`PerQuery`, O(grid) per query) or once and after `Refresh()` (`Manual`, O(cells searched)). `Set*` updates are seen at once in both. |
 | `InitialBufferSize` | `int?` | `null` | **Obsolete, ignored.** The open set is sized to the grid at construction and never grows. Don't set it. |
 
 > **Weight is additive, not multiplicative.** With `IsCellWeightEnabled`, step cost = movement multiplier
@@ -316,7 +321,18 @@ Cell cell = pathfinder.GetCell(door);                 // reads your grid, every 
 ```
 
 Works for the `Cell[]` (any order) and `Cell[,]` constructors. With `ICellHolder` constructors the holders
-are re-read every query, so change the holder instead (the setters throw `NotSupportedException`).
+are the source the pathfinder reads, so change the holder instead (the setters throw `NotSupportedException`).
+
+**Many short queries on a large grid** (ranges per unit, AI turns, simulations): with a `Cell[,]` or holder grid,
+set `GridSnapshotMode.Manual` so queries stop copying the whole grid; then `Set*` updates are seen at once, and
+after a direct edit to the matrix or a holder call `Refresh()` before the next query:
+
+```csharp
+var settings = new PathfinderSettings { GridSnapshotMode = GridSnapshotMode.Manual };
+using var pathfinder = new Pathfinder(matrix, settings);
+pathfinder.SetOccupied(c, true);                      // seen at once
+matrix[x, y].IsWalkable = false; pathfinder.Refresh(); // direct edit: Refresh (+ InvalidateCache if caching)
+```
 
 ### Multi-cell agents & terrain cost
 
@@ -343,16 +359,16 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
    keeps the grid pinned and the pathfinder unusable.
 2. **Reuse the `Pathfinder`; don't recreate it per query.** It is designed as a long-lived instance.
    Dispose it once when you're done with it (or its grid). A second `Dispose()` is a no-op; any query after
-   it throws `ObjectDisposedException`. Every constructor rents the open-set heap (8 bytes per cell) from the
-   pool, and the `Cell[,]` / `ICellHolder[]` / `ICellHolder[,]` constructors also rent a cell buffer; skip
+   it throws `ObjectDisposedException`. Every constructor rents the search state (24 bytes per cell) and the open-set heap
+   (8 bytes per cell) from the pool, and the `Cell[,]` / `ICellHolder[]` / `ICellHolder[,]` constructors also rent a cell buffer; skip
    `Dispose` and that memory is collected instead of going back to the pool. Queries allocate nothing but
    their result, however large the search.
 3. **Not thread-safe.** No concurrent queries on one instance, no sharing across threads. One per thread.
 4. **`Path` excludes the origin.** It is the sequence of steps *after* `from`. Don't expect `from` first.
 5. **No path → failure result, not an exception.** Check `IsSuccess`. Only bad arguments throw
    (`agent == null`; `agentSize < 1`; `from` or `to` outside the grid).
-6. **Direct grid edits aren't seen by the cache.** The pathfinder re-reads your grid each query, but
-   cached results are returned verbatim — call `InvalidateCache()` after writing to your grid or holders
+6. **Direct grid edits aren't seen by the cache.** The pathfinder re-reads your grid each query (with
+   `GridSnapshotMode.Manual`, only after `Refresh()`), but cached results are returned verbatim — call `InvalidateCache()` after writing to your grid or holders
    directly if caching is on. `SetWalkable`/`SetOccupied`/`SetWeight`/`SetCell` invalidate for you. Cache hits are fresh copies owned by the caller: dispose them like any other result.
 7. **Settings are frozen at construction.** Mutating the `PathfinderSettings` object afterward does
    nothing — create a new `Pathfinder`. To vary occupancy per query, pass `QueryOptions` instead of
@@ -374,6 +390,8 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
 
 - **Which constructor?** Have a 2D array → `Cell[,]` (simplest). Have game objects → `ICellHolder[,]`.
   Have a pre-flattened array and want zero copy → `Cell[]` (+ width/height).
+- **Many short queries on a big `Cell[,]`/holder grid?** Set `GridSnapshotMode.Manual` and update through
+  `Set*` (or call `Refresh()` after direct edits).
 - **`IAgent` or `agentSize`?** Pass `agentSize` (or nothing, for one-cell units). Use the `IAgent` overloads
   when your unit type already implements it, or for a custom `IPathCaching` that keys on more than size.
 - **Which query?** A route → `GetPath`. All reachable tiles within a budget → `GetReachable`.

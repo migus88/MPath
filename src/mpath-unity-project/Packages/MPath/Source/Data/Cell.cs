@@ -1,10 +1,11 @@
+using System;
 using System.Runtime.CompilerServices;
 
 namespace Migs.MPath.Core.Data
 {
     /// <summary>
-    /// Represents a single cell in the pathfinding grid.
-    /// Contains both public properties used by client code and internal fields used by the pathfinding algorithm.
+    /// Represents a single cell in the pathfinding grid: its coordinate and the data a search reads (walkability,
+    /// occupancy and weight). Searches only read cells; their state lives in the pathfinder.
     /// </summary>
     public struct Cell
     {
@@ -32,28 +33,14 @@ namespace Migs.MPath.Core.Data
         /// </summary>
         public float Weight { get; set; }
         
-        // Internal fields used by the pathfinding algorithm
-        internal bool IsClosed { get; set; }
-        internal float ScoreF { get; set; }
-        internal float ScoreH { get; set; }
-        internal float ScoreG { get; set; }
-        internal int Depth { get; set; }
-        internal Coordinate ParentCoordinate { get; set; }
-        internal int QueueIndex { get; set; }
-    
         /// <summary>
-        /// Resets the internal pathfinding state of this cell.
-        /// This method is called at the beginning of each pathfinding operation.
+        /// Formerly reset the cell's internal search state. Does nothing: the search state now lives in the
+        /// pathfinder, so a search no longer writes into the cells.
         /// </summary>
+        [Obsolete("Does nothing: the search state no longer lives in Cell. This member will be removed in the next major version.")]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset()
         {
-            IsClosed = false;
-            ScoreF = 0;
-            ScoreH = 0;
-            ScoreG = 0;
-            Depth = 0;
-            ParentCoordinate.Reset();
         }
     }
 }

@@ -24,7 +24,7 @@ public class MPathMazeBenchmarkRunner : BaseMazeBenchmarkRunner
         {
             return;
         }
-        var result = _pathfinder.GetPath((Coordinate)start, (Coordinate)destination);
+        using var result = _pathfinder.GetPath((Coordinate)start, (Coordinate)destination);
 
         if (!result.IsSuccess)
         {
@@ -42,18 +42,37 @@ public class MPathMazeBenchmarkRunner : BaseMazeBenchmarkRunner
         }
         
         
-        var propertyInfo = typeof(Cell).GetProperty("IsClosed", BindingFlags.NonPublic | BindingFlags.Instance);
-        
-        foreach (var cell in _maze.Cells)
-        {
-            if ((bool)(propertyInfo?.GetValue(cell) ?? false))
-            {
-                _maze.SetClosed(cell.Coordinate);
-            }
-        }
+        MarkClosedCells();
             
         _maze.AddPath(result.Path.ToArray());
             
         SaveMazeResultAsImage();
+    }
+
+    /// <summary>
+    /// Marks the cells the last search closed. The search state is internal to <see cref="Pathfinder"/>: one node per
+    /// cell at the cell's layout index (<c>x * height + y</c>), part of the last search when its generation matches,
+    /// closed when its queue index is -1. It is read by reflection because this is render-only code.
+    /// </summary>
+    private void MarkClosedCells()
+    {
+        const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Instance;
+
+        var nodes = (Array)typeof(Pathfinder).GetField("_nodes", flags).GetValue(_pathfinder);
+        var generation = (uint)typeof(Pathfinder).GetField("_generation", flags).GetValue(_pathfinder);
+        var nodeType = nodes.GetType().GetElementType();
+        var generationField = nodeType.GetField("Generation");
+        var queueIndexField = nodeType.GetField("QueueIndex");
+        var height = _maze.Cells.GetLength(1);
+
+        foreach (var cell in _maze.Cells)
+        {
+            var node = nodes.GetValue(cell.Coordinate.X * height + cell.Coordinate.Y);
+
+            if ((uint)generationField.GetValue(node) == generation && (int)queueIndexField.GetValue(node) == -1)
+            {
+                _maze.SetClosed(cell.Coordinate);
+            }
+        }
     }
 }

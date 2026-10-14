@@ -82,8 +82,9 @@ namespace Migs.MPath.Core
         /// <see cref="Cell"/>[] or <see cref="Cell"/>[,], so the caller's grid and the pathfinder stay in sync, and
         /// the next query sees it. When the value changes in a way cached paths depend on, the path cache is
         /// cleared, as by <see cref="InvalidateCache"/>; setting the current value again does nothing. Not
-        /// supported by the <see cref="ICellHolder"/> constructors: the holders are re-read on every query, so
-        /// update the holder itself (and call <see cref="InvalidateCache"/> when caching is enabled).
+        /// supported by the <see cref="ICellHolder"/> constructors: the holders are the source the pathfinder reads,
+        /// so update the holder itself (and call <see cref="Refresh"/> with <see cref="GridSnapshotMode.Manual"/>, and
+        /// <see cref="InvalidateCache"/> when caching is enabled).
         /// </remarks>
         /// <exception cref="ArgumentException">Thrown when <paramref name="coordinate"/> is outside the grid.</exception>
         /// <exception cref="InvalidOperationException">Thrown when the grid holds no cell with that coordinate.</exception>
@@ -163,7 +164,7 @@ namespace Migs.MPath.Core
         /// <summary>
         /// The caller-owned cell a setter writes to: the element of the caller's <see cref="Cell"/>[] or
         /// <see cref="Cell"/>[,]. Holder modes have no writable source, since <see cref="ICellHolder.CellData"/> is
-        /// re-read on every query.
+        /// read-only.
         /// </summary>
         private ref Cell GetWritableCell(Coordinate coordinate)
         {
@@ -179,8 +180,8 @@ namespace Migs.MPath.Core
                     return ref _cellsMatrix[x, y];
                 default:
                     throw new NotSupportedException(
-                        "Cell holders are re-read on every query: update the holder instead " +
-                        "(and call InvalidateCache when path caching is enabled).");
+                        "Cell holders are the source the pathfinder reads: update the holder instead " +
+                        "(and call Refresh with GridSnapshotMode.Manual, and InvalidateCache when path caching is enabled).");
             }
         }
 
