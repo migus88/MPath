@@ -19,11 +19,15 @@ var pathfinder = new Pathfinder(cells, width, height);
 pathfinder.EnablePathCaching();
 
 // Get a path (will be calculated)
-var firstPath = pathfinder.GetPath(agent, from, to);
+using var firstPath = pathfinder.GetPath(agent, from, to);
 
 // Get the same path again (will be retrieved from cache)
-var secondPath = pathfinder.GetPath(agent, from, to);
+using var secondPath = pathfinder.GetPath(agent, from, to);
 ```
+
+### Result Ownership
+
+Every `PathResult` that `GetPath` returns is owned by the caller, cache hit or not, so dispose it as usual. The cache keeps its own private copy of each stored path and never hands that instance out: a cache hit returns a fresh result holding a copy of the cached coordinates. Disposing a result, holding it across `InvalidateCache()`, or getting the same cached path twice never affects the cache or another caller's result.
 
 ### Disabling Path Caching
 
@@ -34,7 +38,7 @@ pathfinder.DisablePathCaching();
 
 ### Invalidating the Cache
 
-When the environment changes, you may need to invalidate the current cache without disabling caching entirely:
+The cache is not invalidated automatically. After changing the grid (writing to your `Cell[]`/`Cell[,]`, or changing what your cell holders report), invalidate the cache without disabling caching entirely, or later queries may return paths computed for the old grid:
 
 ```csharp
 // Clear the path cache but keep caching enabled
@@ -44,6 +48,8 @@ pathfinder.InvalidateCache();
 ## Custom Path Caching Implementation
 
 You can provide your own path caching implementation by creating a class that implements the `IPathCaching` interface.
+
+Ownership contract: the `PathResult` passed to `CachePath` belongs to your cache (dispose it when you evict or clear the entry). The instance you return from `TryGetCachedPath` stays yours too: the pathfinder copies it before returning it to its caller.
 
 ```csharp
 public class CustomPathCaching : IPathCaching
@@ -99,13 +105,14 @@ Consider disabling path caching in scenarios where:
 ### Costs
 
 - Increased memory usage
+- Storing a path and serving a cache hit each copy the path's coordinates into a pooled array (far cheaper than a search)
 
 ## Implementation Details
 
 The default path caching implementation (`DefaultPathCaching`):
 
 - Uses a dictionary to store paths, with keys based on agent size, start, and destination coordinates
-- Properly manages resources by disposing of replaced paths
+- Owns the paths it stores (copies made by the pathfinder) and disposes them when they are replaced or cleared
 - Doesn't cache failed path results
 
 ## Best Practices

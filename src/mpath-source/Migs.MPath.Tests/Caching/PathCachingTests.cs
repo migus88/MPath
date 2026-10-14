@@ -1,5 +1,7 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.Linq;
 using FluentAssertions;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Caching;
@@ -214,12 +216,101 @@ namespace Migs.MPath.Tests.Caching
             customCaching.TryGetCachedPathCalls.Should().Be(2);
         }
         
+        [Test]
+        public void GetPath_CacheHitAfterCallerDisposedFirstResult_ReturnsValidEqualPath()
+        {
+            // Arrange
+            _pathfinder.EnablePathCaching();
+            var from = new Coordinate(0, 0);
+            var to = new Coordinate(5, 5);
+            Coordinate[] expected;
+
+            using (var first = _pathfinder.GetPath(_agent, from, to))
+            {
+                expected = first.Path.ToArray();
+            }
+
+            // Reuse whatever the disposed result gave back to the pool, as unrelated code would.
+            var reused = ArrayPool<Coordinate>.Shared.Rent(expected.Length);
+            Array.Fill(reused, new Coordinate(-1, -1));
+
+            // Act
+            using var second = _pathfinder.GetPath(_agent, from, to);
+
+            // Assert
+            second.IsSuccess.Should().BeTrue();
+            second.Path.Should().Equal(expected);
+            ArrayPool<Coordinate>.Shared.Return(reused);
+        }
+
+        [Test]
+        public void GetPath_TwoCacheHits_ReturnDistinctInstancesThatDisposeIndependently()
+        {
+            // Arrange
+            _pathfinder.EnablePathCaching();
+            var from = new Coordinate(0, 0);
+            var to = new Coordinate(5, 5);
+            using var computed = _pathfinder.GetPath(_agent, from, to);
+            var expected = computed.Path.ToArray();
+
+            // Act
+            var firstHit = _pathfinder.GetPath(_agent, from, to);
+            using var secondHit = _pathfinder.GetPath(_agent, from, to);
+            firstHit.Dispose();
+
+            // Assert
+            secondHit.Should().NotBeSameAs(firstHit);
+            secondHit.Should().NotBeSameAs(computed);
+            secondHit.Path.Should().Equal(expected);
+            computed.Path.Should().Equal(expected);
+        }
+
+        [Test]
+        public void InvalidateCache_WhileCallerHoldsResults_LeavesThemValid()
+        {
+            // Arrange
+            _pathfinder.EnablePathCaching();
+            var from = new Coordinate(0, 0);
+            var to = new Coordinate(5, 5);
+            using var computed = _pathfinder.GetPath(_agent, from, to);
+            using var hit = _pathfinder.GetPath(_agent, from, to);
+            var expected = computed.Path.ToArray();
+
+            // Act
+            _pathfinder.InvalidateCache();
+
+            // Assert
+            computed.Path.Should().Equal(expected);
+            hit.Path.Should().Equal(expected);
+        }
+
+        [Test]
+        public void GetPath_WithCustomCaching_NeverHandsOutTheInstanceTheCacheKeeps()
+        {
+            // Arrange
+            var customCaching = new TestPathCaching();
+            _pathfinder.EnablePathCaching(customCaching);
+            var from = new Coordinate(0, 0);
+            var to = new Coordinate(5, 5);
+
+            // Act
+            using var computed = _pathfinder.GetPath(_agent, from, to);
+            using var hit = _pathfinder.GetPath(_agent, from, to);
+
+            // Assert
+            customCaching.LastCached.Should().NotBeNull();
+            computed.Should().NotBeSameAs(customCaching.LastCached);
+            hit.Should().NotBeSameAs(customCaching.LastCached);
+            hit.Path.Should().Equal(customCaching.LastCached!.Path);
+        }
+
         private class TestPathCaching : IPathCaching
         {
             private readonly Dictionary<CacheKey, PathResult> _cache = new();
             
             public int CachePathCalls { get; private set; }
             public int TryGetCachedPathCalls { get; private set; }
+            public PathResult? LastCached { get; private set; }
             
             public bool TryGetCachedPath(IAgent agent, Coordinate from, Coordinate to, out PathResult pathResult)
             {
@@ -231,6 +322,7 @@ namespace Migs.MPath.Tests.Caching
             public void CachePath(IAgent agent, Coordinate from, Coordinate to, PathResult pathResult)
             {
                 CachePathCalls++;
+                LastCached = pathResult;
                 var key = new CacheKey(agent.Size, from, to);
                 _cache[key] = pathResult;
             }

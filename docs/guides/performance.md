@@ -110,36 +110,15 @@ For large agents, consider caching paths when possible.
 
 ### Path Caching
 
-For static environments where paths don't change frequently:
+For static environments where the same paths are requested repeatedly, use the built-in cache instead of keeping `PathResult`s yourself:
 
 ```csharp
-private Dictionary<(Coordinate, Coordinate, int), PathResult> _pathCache = new();
+_pathfinder.EnablePathCaching();
 
-public PathResult GetCachedPath(IAgent agent, Coordinate start, Coordinate end)
-{
-    // Include agent size in the cache key
-    var key = (start, end, agent.Size);
-    
-    if (_pathCache.TryGetValue(key, out var cachedPath))
-    {
-        return cachedPath;
-    }
-    
-    var newPath = _pathfinder.GetPath(agent, start, end);
-    _pathCache[key] = newPath; 
-    return newPath;
-}
-
-private PathResult ClonePath(PathResult original)
-{
-    // Implementation to create a persistent copy
-    // ...
-}
+using var path = _pathfinder.GetPath(agent, start, end); // a cache hit is a fresh copy, still yours to dispose
 ```
 
-By including the agent's size in the cache key, you ensure that agents of different sizes will get appropriate paths, even between the same start and end points.
-
-> Consider not disposing the `PathResult`s in this scenario because disposal will return a lot of arrays to the pool that potentially not needed anymore and it can create a memory leak.
+The cache is keyed by start, destination and agent size, keeps its own copy of every stored path, and never hands that copy out, so disposing results as usual is safe. Call `InvalidateCache()` after changing the grid. See [Path Caching](path-caching.md).
 
 ### Distributed Pathfinding
 

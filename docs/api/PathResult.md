@@ -25,6 +25,7 @@ Represents the result of a pathfinding operation. Implements `IDisposable`.
 
 - **IMPORTANT:** Always dispose of `PathResult` objects after use to release memory resources.
 - Use the `using` statement for automatic disposal.
+- Every result returned by `Pathfinder.GetPath` is owned by the caller, including cache hits (they are fresh copies), so disposing it never affects the path cache.
 - The object uses array pooling internally to minimize garbage collection overhead.
 - If you need to store path results for later use, copy the coordinates before disposing.
 

@@ -116,6 +116,29 @@ namespace Migs.MPath.Core.Data
         }
 
         /// <summary>
+        /// Creates an independent result with the same path in a freshly rented array, so the copy and the original
+        /// can be disposed separately.
+        /// </summary>
+        /// <returns>A new successful result, or the shared failure result when this result is a failure.</returns>
+        /// <exception cref="ObjectDisposedException">Thrown when the PathResult has been disposed.</exception>
+        internal PathResult Copy()
+        {
+            if (_isDisposed)
+            {
+                throw new ObjectDisposedException(nameof(PathResult));
+            }
+
+            if (!IsSuccess)
+            {
+                return FailureResult;
+            }
+
+            var path = ArrayPool<Coordinate>.Shared.Rent(Length);
+            Array.Copy(_path, path, Length);
+            return new PathResult(path, Length, true);
+        }
+
+        /// <summary>
         /// Releases the resources used by the PathResult.
         /// </summary>
         public void Dispose()

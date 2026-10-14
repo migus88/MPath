@@ -242,6 +242,7 @@ if (search.State == SearchState.Success)
 
 ```csharp
 pathfinder.EnablePathCaching();                       // fluent; reuses identical (agent, from, to) results
+using var hit = pathfinder.GetPath(agent, from, to);  // a hit is a fresh copy: still yours to dispose
 // ... after you mutate the grid:
 pathfinder.InvalidateCache();                         // NOT automatic
 ```
@@ -296,7 +297,7 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
    (`agent == null`; `from` or `to` outside the grid).
 6. **Grid edits aren't seen automatically by the cache.** The pathfinder re-reads your grid each query,
    but cached results are returned verbatim — call `InvalidateCache()` after changing the grid if caching
-   is on.
+   is on. Cache hits are fresh copies owned by the caller: dispose them like any other result.
 7. **Settings are frozen at construction.** Mutating the `PathfinderSettings` object afterward does
    nothing — create a new `Pathfinder`.
 8. **Indexing is `x * Height + y` (X-major).** Relevant only if you build the flat `Cell[]` form

@@ -107,7 +107,7 @@ Public `IPathfinderSettings` / `PathfinderSettings` (or Unity's `ScriptablePathf
 
 ### Caching — `Source/Caching/` + `Source/Interfaces/IPathCaching.cs`
 
-Opt-in via `EnablePathCaching()`. `GetPath` consults the cache before searching and stores successful results after. `DefaultPathCaching` is the built-in implementation; callers can supply their own `IPathCaching`. `InvalidateCache()` clears it (the grid changing does **not** auto-invalidate).
+Opt-in via `EnablePathCaching()`. `GetPath` consults the cache before searching and stores successful results after, both through the private `TryGetCachedPath`/`CachePath` helpers in `Pathfinder.cs` (the single gate for any query that must bypass the cache). Ownership: the cache gets a private `PathResult.Copy()` on store and a hit is returned as a fresh copy, so every result `GetPath` returns is the caller's to dispose and the cache's instances are never handed out. `DefaultPathCaching` is the built-in implementation; callers can supply their own `IPathCaching`. `InvalidateCache()` clears it (the grid changing does **not** auto-invalidate).
 
 ### Unity integration — `Runtime/Code/`
 
