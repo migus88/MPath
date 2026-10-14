@@ -83,7 +83,7 @@ namespace Migs.MPath.Tests
 
             // Act
             using (pathfinder.GetPath(CorridorStart, destination,
-                       new QueryOptions(alwaysEnterable: new[] { unit })))
+                       1, new QueryOptions(alwaysEnterable: new[] { unit })))
             {
             }
 
@@ -105,7 +105,7 @@ namespace Migs.MPath.Tests
 
             // Act
             using var result = pathfinder.GetPath(CorridorStart, new Coordinate(5, 0),
-                new QueryOptions(OccupancyRule.Ignore, new[] { wall }, true));
+                1, new QueryOptions(OccupancyRule.Ignore, new[] { wall }, true));
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -139,7 +139,7 @@ namespace Migs.MPath.Tests
 
             // Act
             using var range = pathfinder.GetReachable(CorridorStart, Budget,
-                new QueryOptions(isDestinationAlwaysEnterable: true));
+                1, new QueryOptions(isDestinationAlwaysEnterable: true));
 
             // Assert
             range.Contains(unit).Should().BeFalse();
@@ -160,7 +160,7 @@ namespace Migs.MPath.Tests
 
             // Act
             using var result = pathfinder.GetPath(CorridorStart, new Coordinate(6, 0),
-                new QueryOptions(alwaysEnterable: enterable), 2);
+                2, new QueryOptions(alwaysEnterable: enterable));
 
             // Assert
             result.IsSuccess.Should().Be(expectedReach);
@@ -181,7 +181,7 @@ namespace Migs.MPath.Tests
 
             // Act
             using var result = pathfinder.GetPath(CorridorStart, new Coordinate(1, 1),
-                new QueryOptions(occupancy, enterable));
+                1, new QueryOptions(occupancy, enterable));
 
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -198,7 +198,7 @@ namespace Migs.MPath.Tests
 
             // Act
             using var withOptions = pathfinder.GetPath(CorridorStart, destination,
-                new QueryOptions(OccupancyRule.Ignore));
+                1, new QueryOptions(OccupancyRule.Ignore));
             using var withoutOptions = pathfinder.GetPath(CorridorStart, destination);
 
             // Assert
@@ -217,10 +217,10 @@ namespace Migs.MPath.Tests
             // Act
             using var plainPath = pathfinder.GetPath(CorridorStart, destination);
             var expectedPath = plainPath.Path.ToArray();
-            using var optionsPath = pathfinder.GetPath(CorridorStart, destination, default(QueryOptions));
+            using var optionsPath = pathfinder.GetPath(CorridorStart, destination, 1, default(QueryOptions));
             using var plainRange = pathfinder.GetReachable(CorridorStart, 1200);
             var expectedRange = plainRange.Cells.ToArray();
-            using var optionsRange = pathfinder.GetReachable(CorridorStart, 1200, default(QueryOptions));
+            using var optionsRange = pathfinder.GetReachable(CorridorStart, 1200, 1, default(QueryOptions));
 
             // Assert
             plainPath.IsSuccess.Should().BeTrue();
@@ -260,7 +260,7 @@ namespace Migs.MPath.Tests
         {
             Span<Coordinate> enterable = stackalloc Coordinate[] { unit };
             using var result = pathfinder.GetPath(CorridorStart, destination,
-                new QueryOptions(OccupancyRule.Block, enterable, true));
+                1, new QueryOptions(OccupancyRule.Block, enterable, true));
         }
 
         private static void QueryWithoutOptions(Pathfinder pathfinder, Coordinate destination)
@@ -275,17 +275,17 @@ namespace Migs.MPath.Tests
             {
                 case Query.Path:
                 {
-                    using var result = pathfinder.GetPath(from, to, options);
+                    using var result = pathfinder.GetPath(from, to, 1, options);
                     return result.IsSuccess;
                 }
                 case Query.Reachable:
                 {
-                    using var range = pathfinder.GetReachable(from, Budget, options);
+                    using var range = pathfinder.GetReachable(from, Budget, 1, options);
                     return range.Contains(to);
                 }
                 case Query.Stepwise:
                 {
-                    using var search = pathfinder.BeginStepwiseSearch(from, to, options);
+                    using var search = pathfinder.BeginStepwiseSearch(from, to, 1, options);
                     return search.RunToCompletion().State == SearchState.Success;
                 }
                 default:

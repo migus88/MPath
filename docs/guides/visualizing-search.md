@@ -17,9 +17,7 @@ If you just want the path, keep using `GetPath`. Reach for the stepwise API when
 
 ```csharp
 using var pathfinder = new Pathfinder(cells, width, height);
-var agent = new SimpleAgent { Size = 1 };
-
-using var search = pathfinder.BeginStepwiseSearch(agent, new Coordinate(1, 1), new Coordinate(8, 8));
+using var search = pathfinder.BeginStepwiseSearch(new Coordinate(1, 1), new Coordinate(8, 8));
 
 while (!search.IsComplete)
 {
@@ -40,7 +38,7 @@ if (final.State == SearchState.Success)
 `RunToCompletion()` is a convenience that ticks until the search finishes and returns the final snapshot — handy when you only want the end state plus the full searched area:
 
 ```csharp
-using var search = pathfinder.BeginStepwiseSearch(agent, from, to);
+using var search = pathfinder.BeginStepwiseSearch(from, to);
 var final = search.RunToCompletion();
 ```
 
@@ -73,4 +71,4 @@ The `Searched` list is the accumulated searched area — the cells you typically
 
 - **Origin equals destination** succeeds on the first tick with an empty `Path` (matching `GetPath`).
 - **Unreachable destination** ends in `State == Failure` with an empty `Path`; `Searched` then contains every cell the agent could reach (all `Closed`, `OpenCount == 0`).
-- An origin or destination outside the grid throws `ArgumentException`; a `null` agent throws `ArgumentNullException`.
+- An origin or destination outside the grid throws `ArgumentException`; an `agentSize` below 1 throws `ArgumentOutOfRangeException`.

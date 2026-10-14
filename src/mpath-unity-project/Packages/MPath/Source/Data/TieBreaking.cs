@@ -31,7 +31,7 @@ namespace Migs.MPath.Core.Data
 
         /// <summary>
         /// Among the cheapest routes, the one with the fewest direction changes (exact, not a heuristic).
-        /// <see cref="Pathfinder.GetReachable(Interfaces.IAgent, Coordinate, int)"/> has no route to straighten
+        /// <see cref="Pathfinder.GetReachable(Coordinate, int, int)"/> has no route to straighten
         /// and ranks equal-cost routes like <see cref="FewerDiagonals"/> for its step counts.
         /// </summary>
         FewerTurns = 2

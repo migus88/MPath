@@ -34,7 +34,7 @@ using Migs.MPath.Core.Data;       // Cell, Coordinate, PathResult, RangeResult, 
                                   // PathfinderSettings, CornerBlocking, LineOfSightMode, PathSmoothingMethod,
                                   // QueryOptions, OccupancyRule,
                                   // SearchStep, SearchNode, SearchState, SearchNodeState
-using Migs.MPath.Core.Interfaces; // IAgent, ICellHolder, IPathfinderSettings, IPathCaching
+using Migs.MPath.Core.Interfaces; // ICellHolder, IPathfinderSettings, IPathCaching
 using Migs.MPath.Core.Caching;    // DefaultPathCaching (only if you need it directly)
 ```
 
@@ -60,8 +60,8 @@ openupm add com.migsweb.mpath          # Unity (run in the project folder)
    `Weight`. *You* own the grid data; MPath reads it.
 2. **Agent size** — the thing moving, as an `int agentSize` (in cells; `1` = one tile, the default; `> 1`
    triggers a clearance scan so the agent only fits where a `Size×Size` block is walkable). Every query
-   takes it as a trailing optional parameter; if your units already implement `IAgent` (single member
-   `int Size`), the `IAgent` overloads work the same way.
+   takes it as its **third** argument (optional, default `1`); `QueryOptions` go after it. There is no
+   agent interface: keep your own unit types and pass their size.
 3. **`Pathfinder`** — the engine. Build it once from your grid + settings, reuse it for every query,
    dispose it at the end of its life.
 4. **A result type per query** — `PathResult`, `RangeResult`, or `StepwiseSearch`. All are `IDisposable`
@@ -91,7 +91,7 @@ grid[3, 3].IsWalkable = false; // a wall
 // 2. Create the pathfinder ONCE and reuse it. Settings are optional (sensible defaults).
 using var pathfinder = new Pathfinder(grid);
 
-// 3. Query (single-cell agent by default; pass agentSize: 2 for a 2x2 unit). Dispose every result.
+// 3. Query (single-cell agent by default; pass 2 as the third argument for a 2x2 unit). Dispose every result.
 using var result = pathfinder.GetPath(from: new Coordinate(0, 0), to: new Coordinate(9, 9));
 
 if (result.IsSuccess)
@@ -129,26 +129,21 @@ state lives in the pathfinder and is reset lazily, so a short search costs only 
 
 **Methods:**
 
-Every query comes in two equivalent forms: with a trailing `int agentSize = 1` (no `IAgent` needed) or with
-a leading `IAgent agent` (reads `agent.Size`). Both find the same results and share path cache entries.
+Every query takes `int agentSize` as its **third** argument (default `1`; `< 1` throws
+`ArgumentOutOfRangeException`, so a bare `default` there throws too). The `QueryOptions` overloads take the
+options after it.
 
 | Signature | Returns | Notes |
 |-----------|---------|-------|
-| `GetPath(Coordinate from, Coordinate to, int agentSize = 1)` | `PathResult` | Core A* query (returns a cheapest route) for an `agentSize`×`agentSize` agent. Throws `ArgumentOutOfRangeException` if `agentSize < 1`; otherwise behaves like the `IAgent` overload below. |
-| `GetPath(Coordinate from, Coordinate to, QueryOptions options, int agentSize = 1)` | `PathResult` | Same, with per-query rules. |
-| `GetReachable(Coordinate from, int budget, int agentSize = 1)` | `RangeResult` | Movement range without an `IAgent`. `agentSize < 1` throws. |
-| `GetReachable(Coordinate from, int budget, QueryOptions options, int agentSize = 1)` | `RangeResult` | Same, with per-query rules. |
-| `BeginStepwiseSearch(Coordinate from, Coordinate to, int agentSize = 1)` | `StepwiseSearch` | Stepwise search without an `IAgent`. `agentSize < 1` throws. |
-| `BeginStepwiseSearch(Coordinate from, Coordinate to, QueryOptions options, int agentSize = 1)` | `StepwiseSearch` | Same, with per-query rules. |
-| `GetPath(IAgent agent, Coordinate from, Coordinate to)` | `PathResult` | Core A* query; returns a cheapest route. Throws `ArgumentNullException` if `agent` is null, `ArgumentException` if `from` or `to` is outside the grid. Returns a **failure** result (not an exception) when no path exists; a destination the agent can't enter (unwalkable, occupied while `AreOccupiedCellsBlocking`, or no clearance for its size) fails immediately without searching, unless `from == to`. |
-| `GetPath(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)` | `PathResult` | Same, with per-query rules (see [Per-query options](#per-query-options-units-block-or-not-enter-specific-occupied-cells)). Options that change the rules bypass the path cache. |
-| `GetReachable(IAgent agent, Coordinate from, int budget)` | `RangeResult` | Every cell reachable for total cost `<= budget` ("where can this unit move?"). Uniform-cost flood fill. |
-| `GetReachable(IAgent agent, Coordinate from, int budget, QueryOptions options)` | `RangeResult` | Same, with per-query rules (`IsDestinationAlwaysEnterable` is ignored: no destination). |
+| `GetPath(Coordinate from, Coordinate to, int agentSize = 1)` | `PathResult` | Core A* query; returns a cheapest route for an `agentSize`×`agentSize` agent. Throws `ArgumentException` if `from` or `to` is outside the grid. Returns a **failure** result (not an exception) when no path exists; a destination the agent can't enter (unwalkable, occupied while `AreOccupiedCellsBlocking`, or no clearance for its size) fails immediately without searching, unless `from == to`. |
+| `GetPath(Coordinate from, Coordinate to, int agentSize, QueryOptions options)` | `PathResult` | Same, with per-query rules (see [Per-query options](#per-query-options-units-block-or-not-enter-specific-occupied-cells)). Options that change the rules bypass the path cache. |
+| `GetReachable(Coordinate from, int budget, int agentSize = 1)` | `RangeResult` | Every cell reachable for total cost `<= budget` ("where can this unit move?"). Uniform-cost flood fill. |
+| `GetReachable(Coordinate from, int budget, int agentSize, QueryOptions options)` | `RangeResult` | Same, with per-query rules (`IsDestinationAlwaysEnterable` is ignored: no destination). |
 | `HasLineOfSight(Coordinate from, Coordinate to, LineOfSightMode mode = BlockedByUnwalkableCells)` | `bool` | Single-cell Bresenham ray. Endpoints not tested; agent size ignored. |
 | `static GetManhattanDistance(Coordinate from, Coordinate to)` | `int` | `|dx| + |dy|`. Pure metric, allocation-free. |
 | `static GetChebyshevDistance(Coordinate from, Coordinate to)` | `int` | `max(|dx|, |dy|)`. Pure metric, allocation-free. |
-| `BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to)` | `StepwiseSearch` | Educational/visualization driver running the same A* one expansion at a time. **Pins the grid until disposed** — the pathfinder can't serve other queries meanwhile, and a second concurrent session throws. |
-| `BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)` | `StepwiseSearch` | Same, with per-query rules applied on every tick. |
+| `BeginStepwiseSearch(Coordinate from, Coordinate to, int agentSize = 1)` | `StepwiseSearch` | Educational/visualization driver running the same A* one expansion at a time. **Pins the grid until disposed** — the pathfinder can't serve other queries meanwhile, and a second concurrent session throws. |
+| `BeginStepwiseSearch(Coordinate from, Coordinate to, int agentSize, QueryOptions options)` | `StepwiseSearch` | Same, with per-query rules applied on every tick. |
 | `SetWalkable(Coordinate c, bool isWalkable)` · `SetOccupied(Coordinate c, bool isOccupied)` · `SetWeight(Coordinate c, int weight)` | `void` | Update one cell (`SetWeight`/`SetCell` throw `ArgumentOutOfRangeException` for a negative weight). Writes into your `Cell[]`/`Cell[,]` (any order; O(1), allocation-free once in layout) and clears the path cache when the change can affect cached paths. **Throws `NotSupportedException` in `ICellHolder` modes** (update the holder). `ArgumentException` outside the grid. |
 | `SetCell(Coordinate c, in Cell cell)` | `void` | Same, all three fields at once; `cell.Coordinate` is ignored. |
 | `GetCell(Coordinate c)` | `Cell` | Current cell read from your grid, every mode. |
@@ -175,10 +170,9 @@ One row per type; click through for full members. The load-bearing facts are rep
 | `QueryOptions` | `readonly ref struct` | Per-query rules: `Occupancy` (`OccupancyRule`), `AlwaysEnterable` (`ReadOnlySpan<Coordinate>`), `IsDestinationAlwaysEnterable`; `default` = no override | [api](api/QueryOptions.md) |
 | `Cell` | `struct` | Grid square: `Coordinate`, `IsWalkable`, `IsOccupied`, `Weight` — **all default to zero** | [api](api/Cell.md) |
 | `Coordinate` | `readonly struct` (8 B) | `X`, `Y`, `static Zero` (`== default`); ctor `(x,y)`; `== != + -`; `↔ (int,int)` | [api](api/Coordinate.md) |
-| `IAgent` | interface | `int Size` (cells; `> 1` ⇒ clearance scan). Optional: every query also takes `int agentSize` | [api](api/IAgent.md) |
 | `ICellHolder` | interface | `Cell CellData` — back cells with your own objects | [api](api/ICellHolder.md) |
 | `IPathfinderSettings` · `PathfinderSettings` | settings | See [Settings reference](#settings-reference) below | [api](api/PathfinderSettings.md) |
-| `IPathCaching` · `DefaultPathCaching` | caching | `TryGetCachedPath` / `CachePath` / `ClearCache` | [api](api/IPathCaching.md) |
+| `IPathCaching` · `DefaultPathCaching` | caching | `TryGetCachedPath(int agentSize, from, to, out result)` / `CachePath(int agentSize, from, to, result)` / `ClearCache` | [api](api/IPathCaching.md) |
 
 ### Enums
 
@@ -239,7 +233,7 @@ ones it doesn't care about.
 
 ```csharp
 using var result = pathfinder.GetPath(from, to);                 // single-cell agent
-using var big    = pathfinder.GetPath(from, to, agentSize: 2);   // 2x2 agent (or GetPath(agent, from, to))
+using var big    = pathfinder.GetPath(from, to, 2);              // 2x2 agent: the size is always the third argument
 if (result.IsSuccess)
     foreach (var step in result) { /* ... */ }        // origin excluded; or result.AsSpan() / result[i]
 ```
@@ -416,7 +410,7 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
    disposing the result. `RangeResult` lookups stay valid until the result is disposed, whatever the pathfinder
    does meanwhile (later queries, `Dispose`).
 5. **No path → failure result, not an exception.** Check `IsSuccess`. Only bad arguments throw
-   (`agent == null`; `agentSize < 1`; `from` or `to` outside the grid).
+   (`agentSize < 1`; `from` or `to` outside the grid).
 6. **Direct grid edits aren't seen by the cache.** The pathfinder re-reads your grid each query (with
    `GridSnapshotMode.Manual`, only after `Refresh()`), but cached results are returned verbatim — call `Refresh()` (or `InvalidateCache()`) after writing to your grid or holders
    directly if caching is on. `SetWalkable`/`SetOccupied`/`SetWeight`/`SetCell` invalidate for you. Cache hits are fresh copies owned by the caller: dispose them like any other result.
@@ -431,9 +425,9 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
    whole grid is unwalkable.
 10. **Stepwise search is exclusive.** While a `StepwiseSearch` is alive, the owning pathfinder throws on
     any other query. Dispose it promptly.
-11. **Write `default(QueryOptions)`, not bare `default`, in the third argument.** `GetPath(from, to, default)`
-    binds to the `int agentSize` overload (size 0) and throws `ArgumentOutOfRangeException`. Better still,
-    omit the options.
+11. **The third argument is always the agent size.** Options go fourth:
+    `GetPath(from, to, 1, options)`. A bare `default` in the third position is a size of 0 and throws
+    `ArgumentOutOfRangeException`; to use default rules, omit the options.
 12. **Don't encode tie-breaks in the costs.** Skewing step costs (e.g. 1024 / 1025) to prefer straight lines and
     dividing costs back into steps is fragile and changes which routes are cheapest. Use `TieBreaking` and read `Steps` /
     `DiagonalSteps` instead.
@@ -447,8 +441,6 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
   `CellLayout` to say which).
 - **Many short queries on a big `Cell[,]`/holder grid?** Set `GridSnapshotMode.Manual` and update through
   `Set*` (or call `Refresh()` after direct edits).
-- **`IAgent` or `agentSize`?** Pass `agentSize` (or nothing, for one-cell units). Use the `IAgent` overloads
-  when your unit type already implements it, or for a custom `IPathCaching` that keys on more than size.
 - **Which query?** A route → `GetPath`. All reachable tiles within a budget → `GetReachable`.
   Just visibility/distance → `HasLineOfSight` / `Get*Distance`. A teaching animation → `BeginStepwiseSearch`.
   Different occupancy rules for one query, or a path onto an occupied cell → the same call with `QueryOptions`.

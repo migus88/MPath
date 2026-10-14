@@ -235,16 +235,6 @@ namespace Migs.MPath.Tests
         }
 
         [Test]
-        public void BeginStepwiseSearch_WithNullAgent_ThrowsArgumentNullException()
-        {
-            using var pathfinder = new Pathfinder(CreateEmptyGrid(GridSize, GridSize), GridSize, GridSize);
-
-            var action = () => pathfinder.BeginStepwiseSearch(null!, new Coordinate(0, 0), new Coordinate(5, 5));
-
-            action.Should().Throw<ArgumentNullException>().WithParameterName("agent");
-        }
-
-        [Test]
         public void BeginStepwiseSearch_WithInvalidOrigin_ThrowsArgumentException()
         {
             using var pathfinder = new Pathfinder(CreateEmptyGrid(GridSize, GridSize), GridSize, GridSize);

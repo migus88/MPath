@@ -50,6 +50,6 @@ settings.CornerBlocking = CornerBlocking.AnyWall | CornerBlocking.OccupiedAndOcc
 
 - The rule only gates **diagonal steps**. Whether a cell can be entered is decided separately: walls never, occupied cells not while `AreOccupiedCellsBlocking` is enabled.
 - It applies the same way to `GetPath`, `GetReachable`, the stepwise search and `StringPulling` path smoothing (a pulled shortcut never takes a diagonal step the rule forbids).
-- **Larger agents** (`IAgent.Size > 1`): a flanking "cell" is the agent's whole `Size×Size` footprint at the flanking position. It counts as a wall when any of its cells is a wall or outside the grid, otherwise as occupied when any of its cells is occupied, otherwise as open.
+- **Larger agents** (`agentSize > 1`): a flanking "cell" is the agent's whole `Size×Size` footprint at the flanking position. It counts as a wall when any of its cells is a wall or outside the grid, otherwise as occupied when any of its cells is occupied, otherwise as open.
 - The rule is read once when the `Pathfinder` is constructed, into a 9-bit lookup table, so it adds no per-query cost.
 - `HasLineOfSight` is a visibility query and ignores the corner rule.

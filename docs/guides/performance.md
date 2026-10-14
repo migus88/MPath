@@ -14,7 +14,7 @@ MPath uses `ArrayPool<T>` internally to reuse arrays:
 
 ```csharp
 // Path results must be disposed to return arrays to the pool
-using var result = pathfinder.GetPath(agent, start, end);
+using var result = pathfinder.GetPath(start, end);
 ```
 
 Always dispose of `PathResult` objects when you're done with them. Consider using `using` statements or `using` declarations to ensure proper disposal.
@@ -28,8 +28,8 @@ Creating a new `Pathfinder` instance allocates memory for internal data structur
 var pathfinder = new Pathfinder(cells, width, height, settings);
 
 // Use for multiple path calculations
-var path1 = pathfinder.GetPath(agent, start1, end1);
-var path2 = pathfinder.GetPath(agent, start2, end2);
+var path1 = pathfinder.GetPath(start1, end1);
+var path2 = pathfinder.GetPath(start2, end2);
 
 // Dispose when completely done
 pathfinder.Dispose();
@@ -127,7 +127,7 @@ For static environments where the same paths are requested repeatedly, use the b
 ```csharp
 _pathfinder.EnablePathCaching();
 
-using var path = _pathfinder.GetPath(agent, start, end); // a cache hit is a fresh copy, still yours to dispose
+using var path = _pathfinder.GetPath(start, end); // a cache hit is a fresh copy, still yours to dispose
 ```
 
 The cache is keyed by start, destination and agent size, keeps its own copy of every stored path, and never hands that copy out, so disposing results as usual is safe. Call `InvalidateCache()` after changing the grid. See [Path Caching](path-caching.md).
@@ -147,7 +147,7 @@ public void Update()
     for (int i = 0; i < MaxPathsPerFrame && _pathfindingQueue.Count > 0; i++)
     {
         var agent = _pathfindingQueue.Dequeue();
-        using var path = _pathfinder.GetPath(agent, agent.Position, agent.Destination);
+        using var path = _pathfinder.GetPath(agent.Position, agent.Destination, agent.Size);
         agent.SetPath(path);
     }
 }

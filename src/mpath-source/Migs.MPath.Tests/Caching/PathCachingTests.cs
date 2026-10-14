@@ -407,18 +407,18 @@ namespace Migs.MPath.Tests.Caching
             public int TryGetCachedPathCalls { get; private set; }
             public PathResult? LastCached { get; private set; }
             
-            public bool TryGetCachedPath(IAgent agent, Coordinate from, Coordinate to, out PathResult pathResult)
+            public bool TryGetCachedPath(int agentSize, Coordinate from, Coordinate to, out PathResult pathResult)
             {
                 TryGetCachedPathCalls++;
-                var key = new CacheKey(agent.Size, from, to);
+                var key = new CacheKey(agentSize, from, to);
                 return _cache.TryGetValue(key, out pathResult);
             }
             
-            public void CachePath(IAgent agent, Coordinate from, Coordinate to, PathResult pathResult)
+            public void CachePath(int agentSize, Coordinate from, Coordinate to, PathResult pathResult)
             {
                 CachePathCalls++;
                 LastCached = pathResult;
-                var key = new CacheKey(agent.Size, from, to);
+                var key = new CacheKey(agentSize, from, to);
                 _cache[key] = pathResult;
             }
             

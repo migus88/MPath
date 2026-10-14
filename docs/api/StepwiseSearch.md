@@ -27,7 +27,7 @@ Implements `IDisposable`.
 - **Disposal is required.** The session pins the pathfinder's cell buffer for the lifetime of the search (the open set holds raw pointers into it that must stay valid across ticks). Always wrap it in a `using` statement.
 - **One at a time.** While a session is active, the owning `Pathfinder` must not be used for any other query — including `GetPath`, `GetReachable`, or a second `BeginStepwiseSearch`. Starting a second session before disposing the first throws `InvalidOperationException`.
 - **Not a hot path.** Unlike `GetPath`, the stepwise API favours clarity over the allocation-free design — each `SearchStep` owns plain arrays. It is meant for visualization and teaching, not real-time movement.
-- Started with [`QueryOptions`](QueryOptions.md) (`BeginStepwiseSearch(agent, from, to, options)`), the session copies the options when it begins and applies them to every tick, so it explores exactly as `GetPath` with the same options would.
+- Started with [`QueryOptions`](QueryOptions.md) (`BeginStepwiseSearch(from, to, 1, options)`), the session copies the options when it begins and applies them to every tick, so it explores exactly as `GetPath` with the same options would.
 - `Tick()` after the search completes returns the same final `SearchStep` instance; `Tick()` after `Dispose()` throws `ObjectDisposedException`.
 - Disposing the owning `Pathfinder` disposes an active session first, so its buffer is never returned to the pool while pinned; the session's later `Tick()` throws `ObjectDisposedException`.
 
@@ -35,9 +35,7 @@ Implements `IDisposable`.
 
 ```csharp
 using var pathfinder = new Pathfinder(cells, 10, 10);
-var agent = new SimpleAgent { Size = 1 };
-
-using var search = pathfinder.BeginStepwiseSearch(agent, new Coordinate(0, 0), new Coordinate(9, 9));
+using var search = pathfinder.BeginStepwiseSearch(new Coordinate(0, 0), new Coordinate(9, 9));
 
 while (!search.IsComplete)
 {

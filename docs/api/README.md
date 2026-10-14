@@ -28,7 +28,6 @@ MPath uses a single codebase for both Unity and .NET:
 | [GridSnapshotMode](GridSnapshotMode.md) | When a `Cell[,]`/holder/unordered `Cell[]` pathfinder copies the grid (`PerQuery` / `Manual`) |
 | [CellLayout](CellLayout.md) | Where a `Cell[]` pathfinder finds cell (X, Y) (`Auto` / `ColumnMajor` / `RowMajor` / `Unordered`) |
 | [LineOfSightMode](LineOfSightMode.md) | Controls whether unwalkable cells block `HasLineOfSight` |
-| [IAgent](IAgent.md) | Interface for entities that need pathfinding |
 | [ICellHolder](ICellHolder.md) | Interface for objects that hold cell data |
 | [IPathfinderSettings](IPathfinderSettings.md) | Interface for configuring pathfinding behavior |
 | [PathfinderSettings](PathfinderSettings.md) | Default implementation of IPathfinderSettings |

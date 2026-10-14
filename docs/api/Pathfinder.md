@@ -19,18 +19,12 @@ Every constructor throws `ArgumentOutOfRangeException` when `StraightStepCost` o
 
 | Method | Description |
 |--------|-------------|
-| `PathResult GetPath(Coordinate from, Coordinate to, int agentSize = 1)` | Calculates a path for an `agentSize` x `agentSize` agent (single cell by default), without an `IAgent`. See [agent size](#agent-size). |
-| `PathResult GetPath(Coordinate from, Coordinate to, QueryOptions options, int agentSize = 1)` | `GetPath` with per-query [`QueryOptions`](QueryOptions.md), without an `IAgent`. |
-| `RangeResult GetReachable(Coordinate from, int budget, int agentSize = 1)` | `GetReachable` without an `IAgent`. |
-| `RangeResult GetReachable(Coordinate from, int budget, QueryOptions options, int agentSize = 1)` | `GetReachable` with per-query [`QueryOptions`](QueryOptions.md), without an `IAgent`. |
-| `StepwiseSearch BeginStepwiseSearch(Coordinate from, Coordinate to, int agentSize = 1)` | `BeginStepwiseSearch` without an `IAgent`. |
-| `StepwiseSearch BeginStepwiseSearch(Coordinate from, Coordinate to, QueryOptions options, int agentSize = 1)` | `BeginStepwiseSearch` with per-query [`QueryOptions`](QueryOptions.md), without an `IAgent`. |
-| `PathResult GetPath(IAgent agent, Coordinate from, Coordinate to)` | Calculates a path from starting position to destination. |
-| `PathResult GetPath(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)` | `GetPath` with per-query [`QueryOptions`](QueryOptions.md) (occupancy override, always-enterable cells). |
-| `RangeResult GetReachable(IAgent agent, Coordinate from, int budget)` | Finds every cell whose cheapest path cost from the origin is within the budget. |
-| `RangeResult GetReachable(IAgent agent, Coordinate from, int budget, QueryOptions options)` | `GetReachable` with per-query [`QueryOptions`](QueryOptions.md). |
-| `StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to)` | Begins a tick-by-tick A* search for visualizing the algorithm's progress. |
-| `StepwiseSearch BeginStepwiseSearch(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)` | `BeginStepwiseSearch` with per-query [`QueryOptions`](QueryOptions.md), applied on every tick. |
+| `PathResult GetPath(Coordinate from, Coordinate to, int agentSize = 1)` | Calculates a cheapest path for an `agentSize` x `agentSize` agent (single cell by default). See [agent size](#agent-size). |
+| `PathResult GetPath(Coordinate from, Coordinate to, int agentSize, QueryOptions options)` | `GetPath` with per-query [`QueryOptions`](QueryOptions.md) (occupancy override, always-enterable cells). |
+| `RangeResult GetReachable(Coordinate from, int budget, int agentSize = 1)` | Finds every cell whose cheapest path cost from the origin is within the budget. |
+| `RangeResult GetReachable(Coordinate from, int budget, int agentSize, QueryOptions options)` | `GetReachable` with per-query [`QueryOptions`](QueryOptions.md). |
+| `StepwiseSearch BeginStepwiseSearch(Coordinate from, Coordinate to, int agentSize = 1)` | Begins a tick-by-tick A* search for visualizing the algorithm's progress. |
+| `StepwiseSearch BeginStepwiseSearch(Coordinate from, Coordinate to, int agentSize, QueryOptions options)` | `BeginStepwiseSearch` with per-query [`QueryOptions`](QueryOptions.md), applied on every tick. |
 | `bool HasLineOfSight(Coordinate from, Coordinate to, LineOfSightMode mode = BlockedByUnwalkableCells)` | Returns whether an unobstructed straight line connects two cells. |
 | `static int GetManhattanDistance(Coordinate from, Coordinate to)` | Manhattan (taxicab) distance `\|dx\| + \|dy\|`. |
 | `static int GetChebyshevDistance(Coordinate from, Coordinate to)` | Chebyshev (chessboard) distance `max(\|dx\|, \|dy\|)`. |
@@ -55,24 +49,23 @@ Every constructor throws `ArgumentOutOfRangeException` when `StraightStepCost` o
 - A row- or column-major `Cell[]` is searched in place: a query costs only the cells it searches, and direct writes to the array are seen by the next query. The `Cell[,]` and holder constructors, and an unordered `Cell[]`, search a snapshot of your grid. With the default [`GridSnapshotMode.PerQuery`](GridSnapshotMode.md) every query copies the whole grid first (O(grid size)); with `Manual` the copy happens once and after `Refresh()`, so short queries on a large grid stay cheap.
 - The pathfinding algorithm is optimized for speed and memory efficiency.
 - For larger grids, reuse the same `Pathfinder` instance for multiple path calculations.
-- `GetPath` and `BeginStepwiseSearch` throw `ArgumentException` when `from` or `to` is outside the grid, and the `agentSize` overloads throw `ArgumentOutOfRangeException` when `agentSize < 1`.
+- `GetPath` and `BeginStepwiseSearch` throw `ArgumentException` when `from` or `to` is outside the grid, and every query throws `ArgumentOutOfRangeException` when `agentSize < 1`.
 - A destination the agent cannot enter (not walkable, occupied while `AreOccupiedCellsBlocking` is enabled, or without clearance for the agent's size) fails immediately without searching: `GetPath` returns a failure result and a `StepwiseSearch` starts complete in the `Failure` state. A query from a cell to itself always succeeds with an empty path.
 - Settings are frozen at construction. To vary occupancy per query (units block for movement, not for a threat range) or to enter specific occupied cells (the mover's own cells, an attack target), pass [`QueryOptions`](QueryOptions.md) to the overloads that take it. `default(QueryOptions)` behaves exactly like the overloads without options, and the options never change the grid.
 - Path caching is disabled by default but can be enabled for improved performance when the same paths are requested multiple times.
 
 ## Agent size
 
-Every query takes the agent either as a trailing `int agentSize = 1` or as a leading [`IAgent`](IAgent.md) (whose `Size` is read once per query). The two forms are interchangeable:
+Every query takes the agent's size, the side of the square of cells it occupies, as `int agentSize`. It is always the **third** argument; the `QueryOptions` overloads take the options after it.
 
-- For the same size they return the same path, range or search, and share [path cache](../guides/path-caching.md) entries.
-- `agentSize < 1` throws `ArgumentOutOfRangeException`. (An `IAgent` whose `Size` is below 1 keeps its earlier behaviour and is treated as a single-cell agent.)
-- With the `agentSize` overloads, a custom [`IPathCaching`](IPathCaching.md) receives an internal `IAgent` that carries the size and equals any other such agent of the same size.
-- To pass default options explicitly, write `default(QueryOptions)`: a bare `default` as the third argument of `GetPath(from, to, default)` selects the `int agentSize` overload and throws.
+- `agentSize` defaults to 1 (a single-cell agent) in the overloads without options; the options overloads take it explicitly.
+- `agentSize < 1` throws `ArgumentOutOfRangeException`. A bare `default` as the third argument is a size of 0, so `GetPath(from, to, default)` throws instead of meaning "default options".
+- The [path cache](../guides/path-caching.md) is keyed by `(agentSize, from, to)`; a custom [`IPathCaching`](IPathCaching.md) receives the query's `agentSize`.
 
 ```csharp
 using var path  = pathfinder.GetPath(from, to);                // single-cell agent
 using var large = pathfinder.GetPath(from, to, agentSize: 2);  // 2x2 agent
-using var range = pathfinder.GetReachable(from, 500, new QueryOptions(OccupancyRule.Ignore), agentSize: 2);
+using var range = pathfinder.GetReachable(from, 500, 2, new QueryOptions(OccupancyRule.Ignore));
 ```
 
 ## Cell updates

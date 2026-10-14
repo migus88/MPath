@@ -31,6 +31,46 @@ namespace Migs.MPath.Tests
             obsolete.Should().BeEmpty();
         }
 
+        [Test]
+        public void PublicApi_HasNoParameterOfATypeNamedIAgent()
+        {
+            // Arrange
+            const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static;
+            var publicTypes = typeof(Pathfinder).Assembly.GetExportedTypes();
+
+            // Act
+            var takingAgent = publicTypes
+                .SelectMany(type => type.GetMethods(flags).Cast<MethodBase>().Concat(type.GetConstructors(flags)))
+                .Where(method => method.GetParameters().Any(parameter =>
+                    parameter.ParameterType.GetElementType()?.Name == "IAgent" ||
+                    parameter.ParameterType.Name == "IAgent"))
+                .Select(method => $"{method.DeclaringType!.FullName}.{method.Name}")
+                .ToList();
+
+            // Assert
+            publicTypes.Select(type => type.Name).Should().NotContain("IAgent");
+            takingAgent.Should().BeEmpty();
+        }
+
+        [Test]
+        public void PathfinderQueries_TakeAgentSizeAsTheThirdArgument()
+        {
+            // Arrange
+            var queries = typeof(Pathfinder).GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .Where(method => method.Name is nameof(Pathfinder.GetPath) or nameof(Pathfinder.GetReachable)
+                    or nameof(Pathfinder.BeginStepwiseSearch))
+                .ToList();
+
+            // Act
+            var positions = queries
+                .Select(method => Array.FindIndex(method.GetParameters(), parameter => parameter.Name == "agentSize"))
+                .ToList();
+
+            // Assert
+            queries.Should().HaveCount(6);
+            positions.Should().AllBeEquivalentTo(2);
+        }
+
         /// <summary>
         /// The compiler marks every ref struct (such as <c>QueryOptions</c>) with an error-level
         /// <see cref="ObsoleteAttribute"/> so old compilers refuse it; that one is not an API deprecation.
