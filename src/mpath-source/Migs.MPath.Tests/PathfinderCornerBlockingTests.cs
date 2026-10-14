@@ -178,14 +178,14 @@ namespace Migs.MPath.Tests
         /// shared with the start or destination footprint, (<paramref name="agentSize"/>, 0), and its south
         /// counterpart, (0, <paramref name="agentSize"/>), are set to the requested flank kinds.
         /// </summary>
-        private static Cell[] CreateGrid(int gridSize, Flank east, Flank south, int agentSize)
+        private static PathCell[] CreateGrid(int gridSize, Flank east, Flank south, int agentSize)
         {
-            var cells = new Cell[gridSize * gridSize];
+            var cells = new PathCell[gridSize * gridSize];
             for (var x = 0; x < gridSize; x++)
             {
                 for (var y = 0; y < gridSize; y++)
                 {
-                    cells[x * gridSize + y] = new Cell { IsWalkable = true };
+                    cells[x * gridSize + y] = new PathCell { IsWalkable = true };
                 }
             }
 
@@ -194,7 +194,7 @@ namespace Migs.MPath.Tests
             return cells;
         }
 
-        private static void Apply(Cell[] cells, int index, Flank flank)
+        private static void Apply(PathCell[] cells, int index, Flank flank)
         {
             cells[index].IsWalkable = flank != Flank.Wall;
             cells[index].IsOccupied = flank == Flank.Occupied;

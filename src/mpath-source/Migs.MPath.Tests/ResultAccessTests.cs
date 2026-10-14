@@ -423,16 +423,16 @@ namespace Migs.MPath.Tests
             return sum;
         }
 
-        private static Cell[,] CreateGrid(int seed, double wallChance)
+        private static PathCell[,] CreateGrid(int seed, double wallChance)
         {
             var random = new Random(seed);
-            var cells = new Cell[Width, Height];
+            var cells = new PathCell[Width, Height];
 
             for (var x = 0; x < Width; x++)
             {
                 for (var y = 0; y < Height; y++)
                 {
-                    cells[x, y] = new Cell
+                    cells[x, y] = new PathCell
                     {
                         IsWalkable = random.NextDouble() >= wallChance,
                         Weight = wallChance > 0 ? random.Next(3) * 100 : 0

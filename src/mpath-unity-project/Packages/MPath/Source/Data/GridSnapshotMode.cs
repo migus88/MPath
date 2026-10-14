@@ -1,11 +1,11 @@
 namespace Migs.MPath.Core.Data
 {
     /// <summary>
-    /// Decides when a pathfinder built over a <see cref="Cell"/>[,] matrix or over cell holders copies the caller's
+    /// Decides when a pathfinder built over a <see cref="PathCell"/>[,] matrix or over cell holders copies the caller's
     /// grid into its internal snapshot. Set through <see cref="Interfaces.IPathfinderSettings.GridSnapshotMode"/>.
     /// </summary>
     /// <remarks>
-    /// A <see cref="Cell"/>[] array is searched in place and has no snapshot, so this setting does not affect it.
+    /// A <see cref="PathCell"/>[] array is searched in place and has no snapshot, so this setting does not affect it.
     /// </remarks>
     public enum GridSnapshotMode
     {

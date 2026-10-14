@@ -18,11 +18,11 @@ namespace Migs.MPath.Tools
 
         public Coordinate Start { get; private set; }
         public Coordinate Destination { get; private set; }
-        public Cell[,] Cells => _cells;
+        public PathCell[,] Cells => _cells;
 
         private SKBitmap _bitmap;
-        private Cell[,] _cells;
-        private Cell* _cellsPtr;
+        private PathCell[,] _cells;
+        private PathCell* _cellsPtr;
         
         private readonly int _size;
 
@@ -51,7 +51,7 @@ namespace Migs.MPath.Tools
             }
         }
 
-        public Maze(Cell[,] cells, int width, int height, Coordinate start = default, Coordinate destination = default)
+        public Maze(PathCell[,] cells, int width, int height, Coordinate start = default, Coordinate destination = default)
         {
             _cells = cells;
             Width = width;
@@ -165,7 +165,7 @@ namespace Migs.MPath.Tools
 
         public void CreateCells()
         {
-            _cells = new Cell[Width, Height];
+            _cells = new PathCell[Width, Height];
             
             for (short y = 0; y < Height; y++)
             {

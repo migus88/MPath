@@ -16,8 +16,8 @@ Default implementation of the `IPathfinderSettings` interface.
 | `DiagonalStepCost` | `int` | `141` | The cost of a diagonal step, at least 1 (1.41 straight steps). |
 | `PathSmoothingMethod` | `PathSmoothingMethod` | `None` | The method used to smooth the calculated path. |
 | `TieBreaking` | [`TieBreaking`](TieBreaking.md) | `None` | Which route to return when several cost the same (`FewerDiagonals`, `FewerTurns`). |
-| `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | `PerQuery` | When a `Cell[,]` or cell-holder pathfinder copies the grid: every query, or once and after `Refresh()` (`Manual`). No effect on a `Cell[]`. |
-| `CellLayout` | [`CellLayout`](CellLayout.md) | `ColumnMajor` | Which index of a `Cell[]` or `ICellHolder[]` holds cell (X, Y): `ColumnMajor` (`X * height + Y`) or `RowMajor` (`Y * width + X`). |
+| `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | `PerQuery` | When a `PathCell[,]` or cell-holder pathfinder copies the grid: every query, or once and after `Refresh()` (`Manual`). No effect on a `PathCell[]`. |
+| `CellLayout` | [`CellLayout`](CellLayout.md) | `ColumnMajor` | Which index of a `PathCell[]` or `ICellHolder[]` holds cell (X, Y): `ColumnMajor` (`X * height + Y`) or `RowMajor` (`Y * width + X`). |
 
 ## Example
 

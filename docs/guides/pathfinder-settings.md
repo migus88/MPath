@@ -132,7 +132,7 @@ S = Start, E = End, + = Waypoint
 
 #### GridSnapshotMode
 
-Decides when a pathfinder built over a `Cell[,]` matrix or over `ICellHolder`s copies your grid into its internal snapshot. It has no effect on a `Cell[]`, which is searched in place (see `CellLayout` below).
+Decides when a pathfinder built over a `PathCell[,]` matrix or over `ICellHolder`s copies your grid into its internal snapshot. It has no effect on a `PathCell[]`, which is searched in place (see `CellLayout` below).
 
 ```csharp
 settings.GridSnapshotMode = GridSnapshotMode.PerQuery; // Copy before every query (default)
@@ -163,18 +163,18 @@ settings.TieBreaking = TieBreaking.FewerTurns;     // Fewest direction changes
 
 #### CellLayout
 
-Which index of a `Cell[]` or `ICellHolder[]` array holds the cell at (X, Y). A cell's slot is its position; queries never reorder or write your array.
+Which index of a `PathCell[]` or `ICellHolder[]` array holds the cell at (X, Y). A cell's slot is its position; queries never reorder or write your array.
 
 ```csharp
 settings.CellLayout = CellLayout.ColumnMajor; // cells[x * height + y] (default)
 settings.CellLayout = CellLayout.RowMajor;    // cells[y * width + x]
 ```
 
-- A `Cell[]` is searched in place in either layout: no copy, no sort; a query costs only the cells it searches. An `ICellHolder[]` is copied in the same layout, as `GridSnapshotMode` says.
+- A `PathCell[]` is searched in place in either layout: no copy, no sort; a query costs only the cells it searches. An `ICellHolder[]` is copied in the same layout, as `GridSnapshotMode` says.
 - `pathfinder.GetIndex(c)` and `RangeResult.CopyCostsTo` use the same layout.
 - Any other value throws `ArgumentOutOfRangeException` when the pathfinder is created.
 
-No effect on the `Cell[,]` and `ICellHolder[,]` constructors (the cell at (X, Y) is `[X, Y]`). See [CellLayout](../api/CellLayout.md).
+No effect on the `PathCell[,]` and `ICellHolder[,]` constructors (the cell at (X, Y) is `[X, Y]`). See [CellLayout](../api/CellLayout.md).
 
 ### Cell Handling Settings
 
@@ -230,7 +230,7 @@ settings.DiagonalStepCost = 141; // Default value (1.41 straight steps, approxim
 - Each step cost must be at least 1; the pathfinder constructor throws `ArgumentOutOfRangeException` otherwise.
 - `(width + height) * the larger step cost in use` must not exceed 1,073,741,823 (`int.MaxValue / 2`, the overflow headroom), or the constructor throws `ArgumentOutOfRangeException`. The diagonal cost counts only with diagonal movement enabled.
 - A route whose cost would pass that headroom is never taken: cells behind it are unreachable, and nothing wraps around. Weights above it count as that value.
-- `Cell.Weight` must not be negative: `SetWeight` and `SetCell` throw `ArgumentOutOfRangeException`, and a negative weight written straight into your grid counts as 0.
+- `PathCell.Weight` must not be negative: `SetWeight` and `SetCell` throw `ArgumentOutOfRangeException`, and a negative weight written straight into your grid counts as 0.
 
 ## Recommended Settings for Common Scenarios
 

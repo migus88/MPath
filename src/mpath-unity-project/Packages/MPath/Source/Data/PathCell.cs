@@ -7,7 +7,7 @@ namespace Migs.MPath.Core.Data
     /// a matrix, the index under <see cref="IPathfinderSettings.CellLayout"/> in an array). Searches only read cells;
     /// their state lives in the pathfinder.
     /// </summary>
-    public struct Cell
+    public struct PathCell
     {
         /// <summary>
         /// Gets or sets a value indicating whether an agent can traverse this cell.

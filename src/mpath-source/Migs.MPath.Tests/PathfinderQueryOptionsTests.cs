@@ -293,20 +293,20 @@ namespace Migs.MPath.Tests
             }
         }
 
-        private static Cell[,] CreateCorridor(int length, params Coordinate[] occupied)
+        private static PathCell[,] CreateCorridor(int length, params Coordinate[] occupied)
         {
             return CreateGrid(length, 1, occupied);
         }
 
-        private static Cell[,] CreateGrid(int width, int height, params Coordinate[] occupied)
+        private static PathCell[,] CreateGrid(int width, int height, params Coordinate[] occupied)
         {
-            var cells = new Cell[width, height];
+            var cells = new PathCell[width, height];
 
             for (var x = 0; x < width; x++)
             {
                 for (var y = 0; y < height; y++)
                 {
-                    cells[x, y] = new Cell { IsWalkable = true };
+                    cells[x, y] = new PathCell { IsWalkable = true };
                 }
             }
 
@@ -318,7 +318,7 @@ namespace Migs.MPath.Tests
             return cells;
         }
 
-        private static Cell[,] CreateScatteredGrid(int size)
+        private static PathCell[,] CreateScatteredGrid(int size)
         {
             var cells = CreateGrid(size, size);
 

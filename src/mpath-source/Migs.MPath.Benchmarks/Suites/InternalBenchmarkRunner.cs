@@ -17,13 +17,13 @@ public class InternalBenchmarkRunner : IDisposable
 
     private readonly Maze _maze = new(BenchmarkScenario.MazePath);
     private readonly Pathfinder _pathfinder;
-    private readonly Cell[] _cellsArray;
+    private readonly PathCell[] _cellsArray;
     private readonly Coordinate _wallDestination;
 
     public InternalBenchmarkRunner()
     {
         _pathfinder = new Pathfinder(_maze.Cells);
-        _cellsArray = _maze.Cells.Cast<Cell>().ToArray();
+        _cellsArray = _maze.Cells.Cast<PathCell>().ToArray();
         var wall = Array.FindIndex(_cellsArray, cell => !cell.IsWalkable);
         _wallDestination = new Coordinate(wall / _maze.Height, wall % _maze.Height);
     }

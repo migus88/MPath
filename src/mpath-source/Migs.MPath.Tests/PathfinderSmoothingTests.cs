@@ -256,7 +256,7 @@ namespace Migs.MPath.Tests
 
         // A segment is walkable in a straight line when the unsmoothed search, under the same settings and
         // agent, connects its ends in the minimum number of moves (Chebyshev with diagonals, else Manhattan).
-        private static void AssertEverySegmentIsStraightlyWalkable(Cell[] cells, int width, int height,
+        private static void AssertEverySegmentIsStraightlyWalkable(PathCell[] cells, int width, int height,
             PathfinderSettings settings, int agentSize, Coordinate from, PathResult result)
         {
             var rawSettings = new PathfinderSettings
@@ -291,12 +291,12 @@ namespace Migs.MPath.Tests
             return new PathfinderSettings { PathSmoothingMethod = method };
         }
 
-        private static void SetWall(Cell[] cells, int height, int x, int y)
+        private static void SetWall(PathCell[] cells, int height, int x, int y)
         {
             cells[x * height + y].IsWalkable = false;
         }
 
-        private static Cell[] CreateRandomGrid(int width, int height, Random random, double wallChance)
+        private static PathCell[] CreateRandomGrid(int width, int height, Random random, double wallChance)
         {
             var cells = CreateEmptyGrid(width, height);
 
@@ -310,15 +310,15 @@ namespace Migs.MPath.Tests
             return cells;
         }
 
-        private static Cell[] CreateEmptyGrid(int width, int height)
+        private static PathCell[] CreateEmptyGrid(int width, int height)
         {
-            var cells = new Cell[width * height];
+            var cells = new PathCell[width * height];
 
             for (var x = 0; x < width; x++)
             {
                 for (var y = 0; y < height; y++)
                 {
-                    cells[x * height + y] = new Cell { IsWalkable = true };
+                    cells[x * height + y] = new PathCell { IsWalkable = true };
                 }
             }
 

@@ -10,14 +10,14 @@ Below is a comprehensive example showing how to implement MPath in a Unity proje
 // Define a cell holder for Unity objects
 public class GridCell : MonoBehaviour, ICellHolder
 {
-    public Cell CellData { get; private set; }
+    public PathCell CellData { get; private set; }
     
     [SerializeField] private bool _isWalkable = true;
     [SerializeField, Range(0, 10)] private float _weight = 1.0f; // in straight steps
     
     private void Awake()
     {
-        CellData = new Cell
+        CellData = new PathCell
         {
             IsWalkable = _isWalkable,
             Weight = Mathf.RoundToInt(_weight * 100) // costs are ints: 100 per straight step by default

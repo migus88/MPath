@@ -18,10 +18,10 @@ namespace Migs.MPath.Tests
         public void Constructor_WithCellArray_ShouldInitializePathfinder()
         {
             // Arrange
-            var cells = new Cell[TestWidth * TestHeight];
+            var cells = new PathCell[TestWidth * TestHeight];
             for (var i = 0; i < cells.Length; i++)
             {
-                cells[i] = new Cell
+                cells[i] = new PathCell
                 {
                     IsWalkable = true
                 };
@@ -40,7 +40,7 @@ namespace Migs.MPath.Tests
         public void Constructor_WithNullCellArray_ShouldThrowArgumentNullException()
         {
             // Act & Assert
-            var action = () => new Pathfinder((Cell[])null!, TestWidth, TestHeight);
+            var action = () => new Pathfinder((PathCell[])null!, TestWidth, TestHeight);
             action.Should().Throw<ArgumentNullException>()
                   .WithParameterName("cells");
         }
@@ -49,7 +49,7 @@ namespace Migs.MPath.Tests
         public void Constructor_WithNegativeWidth_ShouldThrowArgumentException()
         {
             // Arrange
-            var cells = new Cell[TestWidth * TestHeight];
+            var cells = new PathCell[TestWidth * TestHeight];
 
             // Act & Assert
             var action = () => new Pathfinder(cells, -1, TestHeight);
@@ -61,7 +61,7 @@ namespace Migs.MPath.Tests
         public void Constructor_WithNegativeHeight_ShouldThrowArgumentException()
         {
             // Arrange
-            var cells = new Cell[TestWidth * TestHeight];
+            var cells = new PathCell[TestWidth * TestHeight];
 
             // Act & Assert
             var action = () => new Pathfinder(cells, TestWidth, -1);
@@ -76,7 +76,7 @@ namespace Migs.MPath.Tests
             var cellHolders = new ICellHolder[TestWidth * TestHeight];
             for (var i = 0; i < cellHolders.Length; i++)
             {
-                var cell = new Cell
+                var cell = new PathCell
                 {
                     IsWalkable = true
                 };
@@ -108,12 +108,12 @@ namespace Migs.MPath.Tests
         public void Constructor_WithCellsMatrix_ShouldInitializePathfinder()
         {
             // Arrange
-            var cellsMatrix = new Cell[TestWidth, TestHeight];
+            var cellsMatrix = new PathCell[TestWidth, TestHeight];
             for (var x = 0; x < TestWidth; x++)
             {
                 for (var y = 0; y < TestHeight; y++)
                 {
-                    cellsMatrix[x, y] = new Cell
+                    cellsMatrix[x, y] = new PathCell
                     {
                         IsWalkable = true
                     };
@@ -133,7 +133,7 @@ namespace Migs.MPath.Tests
         public void Constructor_WithNullCellsMatrix_ShouldThrowArgumentNullException()
         {
             // Act & Assert
-            var action = () => new Pathfinder((Cell[,])null!);
+            var action = () => new Pathfinder((PathCell[,])null!);
             action.Should().Throw<ArgumentNullException>()
                   .WithParameterName("cellsMatrix");
         }
@@ -147,7 +147,7 @@ namespace Migs.MPath.Tests
             {
                 for (var y = 0; y < TestHeight; y++)
                 {
-                    var cell = new Cell
+                    var cell = new PathCell
                     {
                         IsWalkable = true
                     };
@@ -180,10 +180,10 @@ namespace Migs.MPath.Tests
         public void Dispose_ShouldNotThrow()
         {
             // Arrange
-            var cells = new Cell[TestWidth * TestHeight];
+            var cells = new PathCell[TestWidth * TestHeight];
             for (var i = 0; i < cells.Length; i++)
             {
-                cells[i] = new Cell
+                cells[i] = new PathCell
                 {
                     IsWalkable = true
                 };

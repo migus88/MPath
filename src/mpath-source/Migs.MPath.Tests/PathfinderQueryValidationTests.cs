@@ -93,7 +93,7 @@ namespace Migs.MPath.Tests
             result.Length.Should().Be(0);
         }
 
-        private static (Cell[] Cells, int AgentSize) CreateBlockedScenario(Blocker blocker)
+        private static (PathCell[] Cells, int AgentSize) CreateBlockedScenario(Blocker blocker)
         {
             var cells = CreateEmptyGrid();
 
@@ -123,14 +123,14 @@ namespace Migs.MPath.Tests
             return coordinate.X * GridSize + coordinate.Y;
         }
 
-        private static Cell[] CreateEmptyGrid()
+        private static PathCell[] CreateEmptyGrid()
         {
-            var cells = new Cell[GridSize * GridSize];
+            var cells = new PathCell[GridSize * GridSize];
             for (var x = 0; x < GridSize; x++)
             {
                 for (var y = 0; y < GridSize; y++)
                 {
-                    cells[x * GridSize + y] = new Cell
+                    cells[x * GridSize + y] = new PathCell
                     {
                         IsWalkable = true,
                     };

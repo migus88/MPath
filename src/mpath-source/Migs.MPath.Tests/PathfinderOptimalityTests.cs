@@ -422,13 +422,13 @@ namespace Migs.MPath.Tests
                 return grid;
             }
 
-            public Cell[] ToCells()
+            public PathCell[] ToCells()
             {
                 return ToCells(isRowMajor: false);
             }
 
             /// <summary>The cells of <see cref="ToCells"/> in row-major order (<c>y * width + x</c>).</summary>
-            public Cell[] ToRowMajorCells()
+            public PathCell[] ToRowMajorCells()
             {
                 return ToCells(isRowMajor: true);
             }
@@ -451,14 +451,14 @@ namespace Migs.MPath.Tests
                 };
             }
 
-            private Cell[] ToCells(bool isRowMajor)
+            private PathCell[] ToCells(bool isRowMajor)
             {
-                var cells = new Cell[GridWidth * GridHeight];
+                var cells = new PathCell[GridWidth * GridHeight];
                 for (var x = 0; x < GridWidth; x++)
                 {
                     for (var y = 0; y < GridHeight; y++)
                     {
-                        cells[isRowMajor ? y * GridWidth + x : x * GridHeight + y] = new Cell
+                        cells[isRowMajor ? y * GridWidth + x : x * GridHeight + y] = new PathCell
                         {
                             IsWalkable = !Walls[x, y],
                             IsOccupied = Occupied[x, y],

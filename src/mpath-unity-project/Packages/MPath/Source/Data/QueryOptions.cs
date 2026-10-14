@@ -36,7 +36,7 @@ namespace Migs.MPath.Core.Data
         public OccupancyRule Occupancy { get; }
 
         /// <summary>
-        /// Cells whose <see cref="Cell.IsOccupied"/> flag is ignored in this query: they can be entered, count as
+        /// Cells whose <see cref="PathCell.IsOccupied"/> flag is ignored in this query: they can be entered, count as
         /// clear for a multi-cell agent's footprint and as open for the corner rule. Walls (not walkable) stay
         /// walls. Typical entries are the mover's own cell and the unit it moves to attack. Scanned linearly, and
         /// only when an occupied cell is met, so keep it short.

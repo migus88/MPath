@@ -17,7 +17,7 @@ The first step is to create a grid of cells:
 // Create a 10x10 grid of cells
 int width = 10;
 int height = 10;
-Cell[] cells = new Cell[width * height];
+PathCell[] cells = new PathCell[width * height];
 
 // Initialize each cell
 for (int y = 0; y < height; y++)
@@ -25,7 +25,7 @@ for (int y = 0; y < height; y++)
     for (int x = 0; x < width; x++)
     {
         int index = y * width + x; // row-major: the slot is the position
-        cells[index] = new Cell
+        cells[index] = new PathCell
         {
             IsWalkable = true,  // All cells are walkable by default
             IsOccupied = false, // No cells are occupied by default

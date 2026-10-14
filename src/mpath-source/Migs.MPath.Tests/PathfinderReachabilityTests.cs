@@ -190,15 +190,15 @@ namespace Migs.MPath.Tests
         [Test]
         public void GetReachable_WithDefaultZeroWeightAndWeightingEnabled_StaysWithinBudget()
         {
-            // Regression: Cell.Weight defaults to 0 and IsCellWeightEnabled defaults to true.
+            // Regression: PathCell.Weight defaults to 0 and IsCellWeightEnabled defaults to true.
             // A multiplicative weight model would make every step cost travel * 0 = 0, so the budget
             // would never bite and the flood fill would return the entire walkable board.
-            var cells = new Cell[GridSize * GridSize];
+            var cells = new PathCell[GridSize * GridSize];
             for (var x = 0; x < GridSize; x++)
             {
                 for (var y = 0; y < GridSize; y++)
                 {
-                    cells[x * GridSize + y] = new Cell
+                    cells[x * GridSize + y] = new PathCell
                     {
                         IsWalkable = true,
                         IsOccupied = false
@@ -280,20 +280,20 @@ namespace Migs.MPath.Tests
             second.Contains(origin).Should().BeTrue();
         }
 
-        private static void SetWalkable(Cell[] cells, int x, int y, bool walkable)
+        private static void SetWalkable(PathCell[] cells, int x, int y, bool walkable)
         {
             cells[x * GridSize + y].IsWalkable = walkable;
         }
 
-        private static Cell[] CreateEmptyGrid(int width, int height)
+        private static PathCell[] CreateEmptyGrid(int width, int height)
         {
-            var cells = new Cell[width * height];
+            var cells = new PathCell[width * height];
             for (var x = 0; x < width; x++)
             {
                 for (var y = 0; y < height; y++)
                 {
                     var index = x * height + y;
-                    cells[index] = new Cell
+                    cells[index] = new PathCell
                     {
                         IsWalkable = true,
                         IsOccupied = false,

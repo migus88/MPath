@@ -15,8 +15,8 @@ A Unity ScriptableObject implementation of the `IPathfinderSettings` interface. 
 | `StraightStepCost` | `int` | `100` | The cost of a horizontal/vertical step (at least 1). |
 | `DiagonalStepCost` | `int` | `141` | The cost of a diagonal step (at least 1). Assets saved before 2.0 do not carry the old float multipliers over: enter both step costs again. |
 | `TieBreaking` | [`TieBreaking`](TieBreaking.md) | `None` | Which route wins among equal-cost routes. |
-| `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | `PerQuery` | When a `Cell[,]` or cell-holder pathfinder copies the grid: every query, or once and after `Refresh()` (`Manual`). |
-| `CellLayout` | [`CellLayout`](CellLayout.md) | `ColumnMajor` | Which index of a `Cell[]` or `ICellHolder[]` holds cell (X, Y): `ColumnMajor` (`X * height + Y`) or `RowMajor` (`Y * width + X`). |
+| `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | `PerQuery` | When a `PathCell[,]` or cell-holder pathfinder copies the grid: every query, or once and after `Refresh()` (`Manual`). |
+| `CellLayout` | [`CellLayout`](CellLayout.md) | `ColumnMajor` | Which index of a `PathCell[]` or `ICellHolder[]` holds cell (X, Y): `ColumnMajor` (`X * height + Y`) or `RowMajor` (`Y * width + X`). |
 
 ## Creation
 

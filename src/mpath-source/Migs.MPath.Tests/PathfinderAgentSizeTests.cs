@@ -239,15 +239,15 @@ namespace Migs.MPath.Tests
 
         // A wall row at y = 2 with a one-cell gap at x = 3 and a two-cell gap at x = 7..8: only a single-cell agent
         // fits the narrow gap. The occupied cell behind it blocks that way unless the options ignore occupancy.
-        private static Cell[,] CreateGrid()
+        private static PathCell[,] CreateGrid()
         {
-            var cells = new Cell[GridSize, GridSize];
+            var cells = new PathCell[GridSize, GridSize];
 
             for (var x = 0; x < GridSize; x++)
             {
                 for (var y = 0; y < GridSize; y++)
                 {
-                    cells[x, y] = new Cell
+                    cells[x, y] = new PathCell
                     {
                         IsWalkable = y != WallRow || x == NarrowGapX || x == WideGapX || x == WideGapX + 1
                     };

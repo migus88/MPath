@@ -2,16 +2,16 @@
 
 **Namespace:** `Migs.MPath.Core.Data`
 
-Which index of a `Cell[]` or [`ICellHolder`](ICellHolder.md)`[]` array holds the cell at (X, Y). Set it through [`IPathfinderSettings.CellLayout`](IPathfinderSettings.md). A cell's slot is its position: only the first `fieldWidth * fieldHeight` elements of the array are the grid, and nothing is sorted, checked or placed by anything but the index. Queries never reorder or otherwise write your array, and the pathfinder keeps a reference to it. No effect on the `Cell[,]` and `ICellHolder[,]` constructors, where the cell at (X, Y) is `[X, Y]`.
+Which index of a `PathCell[]` or [`ICellHolder`](ICellHolder.md)`[]` array holds the cell at (X, Y). Set it through [`IPathfinderSettings.CellLayout`](IPathfinderSettings.md). A cell's slot is its position: only the first `fieldWidth * fieldHeight` elements of the array are the grid, and nothing is sorted, checked or placed by anything but the index. Queries never reorder or otherwise write your array, and the pathfinder keeps a reference to it. No effect on the `PathCell[,]` and `ICellHolder[,]` constructors, where the cell at (X, Y) is `[X, Y]`.
 
 ## Values
 
 | Value | Description |
 |-------|-------------|
-| `ColumnMajor` (1) | **Default.** Cell (X, Y) is at `X * fieldHeight + Y`, the order of a `Cell[,]` in memory. |
+| `ColumnMajor` (1) | **Default.** Cell (X, Y) is at `X * fieldHeight + Y`, the order of a `PathCell[,]` in memory. |
 | `RowMajor` (2) | Cell (X, Y) is at `Y * fieldWidth + X`, the usual `y * width + x`. |
 
-Any other value throws `ArgumentOutOfRangeException` when the pathfinder is created. A `Cell[]` is searched in place in either layout: a query costs only the cells it searches, and direct writes to the array are seen by the next query. An `ICellHolder[]` is copied into a pooled buffer in the same layout (see [`GridSnapshotMode`](GridSnapshotMode.md)).
+Any other value throws `ArgumentOutOfRangeException` when the pathfinder is created. A `PathCell[]` is searched in place in either layout: a query costs only the cells it searches, and direct writes to the array are seen by the next query. An `ICellHolder[]` is copied into a pooled buffer in the same layout (see [`GridSnapshotMode`](GridSnapshotMode.md)).
 
 ## `GetIndex`, `CopyCostsTo` and the cell-update methods
 
@@ -20,10 +20,10 @@ Any other value throws `ArgumentOutOfRangeException` when the pathfinder is crea
 ## Example
 
 ```csharp
-var cells = new Cell[width * height];
+var cells = new PathCell[width * height];
 for (var y = 0; y < height; y++)
     for (var x = 0; x < width; x++)
-        cells[y * width + x] = new Cell { IsWalkable = true };
+        cells[y * width + x] = new PathCell { IsWalkable = true };
 
 var settings = new PathfinderSettings { CellLayout = CellLayout.RowMajor };
 using var pathfinder = new Pathfinder(cells, width, height, settings);

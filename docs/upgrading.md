@@ -281,18 +281,36 @@ cells[x, y] = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true };
 rowMajor[y * width + x] = new Cell { Coordinate = new Coordinate(x, y), IsWalkable = true };
 class Tile : ICellHolder { public Cell CellData => new Cell { Coordinate = _position, IsWalkable = _isOpen }; }
 
-// 2.0: the slot is the position
-cells[x, y] = new Cell { IsWalkable = true };
-rowMajor[y * width + x] = new Cell { IsWalkable = true };
+// 2.0: the slot is the position (and Cell is PathCell; see #62)
+cells[x, y] = new PathCell { IsWalkable = true };
+rowMajor[y * width + x] = new PathCell { IsWalkable = true };
 var pathfinder = new Pathfinder(rowMajor, width, height, new PathfinderSettings { CellLayout = CellLayout.RowMajor });
-class Tile : ICellHolder { public Cell CellData => new Cell { IsWalkable = _isOpen }; } // its array slot is its position
+class Tile : ICellHolder { public PathCell CellData => new PathCell { IsWalkable = _isOpen }; } // its array slot is its position
 ```
 
 #### #62 Rename Cell to PathCell
 
-Rename Cell to PathCell.
+- **What changed:**
+  - `Migs.MPath.Core.Data.Cell` is renamed `PathCell`, so it no longer clashes with the `Cell` type most games already have (`CS0104` when both namespaces are imported). Same members (`IsWalkable`, `IsOccupied`, `Weight`), same 8-byte layout, same behaviour.
+  - Every public signature that took or returned `Cell` takes or returns `PathCell`: the `Pathfinder(PathCell[] cells, int fieldWidth, int fieldHeight, ...)` and `Pathfinder(PathCell[,] cellsMatrix, ...)` constructors, `GetCell`, `SetCell(Coordinate, in PathCell)` and `ICellHolder.CellData`.
+  - Names that use "cell" as a concept do not change: `GetCell`, `SetCell`, `ReachableCell`, `ICellHolder`, `CellData`, `CellLayout`, `IsCellWeightEnabled`.
+  - The other entries on this page name the type `Cell`, as 1.2.1 code does; their 2.0 snippets use `PathCell`.
+- **Who notices:** every caller that names the type: grids built as `Cell[]` or `Cell[,]`, `ICellHolder` implementations, code that reads `GetCell` into a typed variable, and the `using GridCell = Migs.MPath.Core.Data.Cell;` alias workaround.
+- **What to do:** replace the type name `Cell` with `PathCell` (a whole-word search and replace, in files that import `Migs.MPath.Core.Data`). The alias is no longer needed; to keep it, point it at `PathCell`. In Unity, the script keeps its `.meta` GUID, so nothing in scenes or prefabs needs re-linking.
 
-Pending: filled by #62.
+```csharp
+// 1.2.1
+using Migs.MPath.Core.Data;
+var grid = new Cell[width, height];
+class Tile : ICellHolder { public Cell CellData => ...; }
+using GridCell = Migs.MPath.Core.Data.Cell; // alias workaround
+
+// 2.0
+using Migs.MPath.Core.Data;
+var grid = new PathCell[width, height];
+class Tile : ICellHolder { public PathCell CellData => ...; }
+// the alias is no longer needed; to keep it: using GridCell = Migs.MPath.Core.Data.PathCell;
+```
 
 ### Checklist
 
@@ -305,5 +323,4 @@ Pending: filled by #62.
 7. Replace every `IAgent` argument with its size as the third argument (`GetPath(from, to, agent.Size)`), drop `: IAgent` from your types, and key a custom `IPathCaching` on `int agentSize`.
 8. Rename `IsCalculatingOccupiedCells` to `AreOccupiedCellsBlocking`, including in custom `IPathfinderSettings` implementations.
 9. Delete `Cell.Coordinate` from cell initializers and reads; put every cell (and holder) in its slot: `[x, y]` in a matrix, column-major in an array, or row-major with `CellLayout = RowMajor`.
-
-Steps for the breaking changes are added as their entries are filled.
+10. Rename the type `Cell` to `PathCell` (whole word, in files that import `Migs.MPath.Core.Data`), and drop or retarget a `using GridCell = Migs.MPath.Core.Data.Cell;` alias.

@@ -14,7 +14,7 @@ namespace Benchmarks.Editor.Helpers
         public int Height { get; private set; }
         public Coordinate Start { get; private set; }
         public Coordinate Destination { get; private set; }
-        public Cell[,] Cells { get; private set; }
+        public PathCell[,] Cells { get; private set; }
 
         private Texture2D _texture;
         private Color32[] _pixelData;
@@ -65,7 +65,7 @@ namespace Benchmarks.Editor.Helpers
         /// </summary>
         private void CreateCells()
         {
-            Cells = new Cell[Width, Height];
+            Cells = new PathCell[Width, Height];
             
             for (short y = 0; y < Height; y++)
             {

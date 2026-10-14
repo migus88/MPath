@@ -9,8 +9,8 @@ using Migs.MPath.Core.Interfaces;
 namespace Migs.MPath.Tests
 {
     /// <summary>
-    /// Pins that a cell's slot is its position: every grid representation (a column- or row-major <see cref="Cell"/>[]
-    /// or <see cref="ICellHolder"/>[] under <see cref="CellLayout"/>, a <see cref="Cell"/>[,] or
+    /// Pins that a cell's slot is its position: every grid representation (a column- or row-major <see cref="PathCell"/>[]
+    /// or <see cref="ICellHolder"/>[] under <see cref="CellLayout"/>, a <see cref="PathCell"/>[,] or
     /// <see cref="ICellHolder"/>[,] at <c>[x, y]</c>) gives the same results, every coordinate a query reports is the
     /// slot it came from, a <c>null</c> holder is a wall whatever the pooled buffer held, queries never write the
     /// caller's array, and <see cref="Pathfinder.GetIndex"/> and <see cref="RangeResult.CopyCostsTo"/> share one index
@@ -71,7 +71,7 @@ namespace Migs.MPath.Tests
         public void Queries_ReportTheCoordinatesOfTheSlotsTheyCameFrom(Representation representation)
         {
             // Arrange: only a cross is walkable (row y = 2 and column x = 3), so a transposed slot would be off it.
-            var matrix = new Cell[Width, Height];
+            var matrix = new PathCell[Width, Height];
             var cross = new HashSet<Coordinate>();
 
             for (var x = 0; x < Width; x++)
@@ -143,7 +143,7 @@ namespace Migs.MPath.Tests
         {
             // Arrange
             var cells = ToArray(CreateRandomMatrix(), layout);
-            var before = (Cell[])cells.Clone();
+            var before = (PathCell[])cells.Clone();
             using var pathfinder = new Pathfinder(cells, Width, Height, Settings(layout));
             var from = new Coordinate(0, 0);
             var to = new Coordinate(Width - 1, Height - 1);
@@ -232,8 +232,8 @@ namespace Migs.MPath.Tests
             var settings = Settings((CellLayout)layout);
 
             // Act
-            var array = () => new Pathfinder(new Cell[Width * Height], Width, Height, settings);
-            var matrix = () => new Pathfinder(new Cell[Width, Height], settings);
+            var array = () => new Pathfinder(new PathCell[Width * Height], Width, Height, settings);
+            var matrix = () => new Pathfinder(new PathCell[Width, Height], settings);
 
             // Assert
             array.Should().Throw<ArgumentOutOfRangeException>();
@@ -244,7 +244,7 @@ namespace Migs.MPath.Tests
         public void Constructor_ArrayShorterThanTheField_ThrowsArgumentException()
         {
             // Act
-            var cells = () => new Pathfinder(new Cell[Width * Height - 1], Width, Height);
+            var cells = () => new Pathfinder(new PathCell[Width * Height - 1], Width, Height);
             var holders = () => new Pathfinder(new ICellHolder[Width * Height - 1], Width, Height);
 
             // Assert
@@ -282,7 +282,7 @@ namespace Migs.MPath.Tests
             allocated.Should().BeLessThan(100 * 64);
         }
 
-        private static Pathfinder Create(Cell[,] matrix, Representation representation)
+        private static Pathfinder Create(PathCell[,] matrix, Representation representation)
         {
             switch (representation)
             {
@@ -326,9 +326,9 @@ namespace Migs.MPath.Tests
             return layout == CellLayout.RowMajor ? y * Width + x : x * Height + y;
         }
 
-        private static Cell[] ToArray(Cell[,] matrix, CellLayout layout)
+        private static PathCell[] ToArray(PathCell[,] matrix, CellLayout layout)
         {
-            var cells = new Cell[Width * Height];
+            var cells = new PathCell[Width * Height];
 
             for (var x = 0; x < Width; x++)
             {
@@ -341,7 +341,7 @@ namespace Migs.MPath.Tests
             return cells;
         }
 
-        private static ICellHolder[,] ToHolderMatrix(Cell[,] matrix)
+        private static ICellHolder[,] ToHolderMatrix(PathCell[,] matrix)
         {
             var holders = new ICellHolder[Width, Height];
 
@@ -371,22 +371,22 @@ namespace Migs.MPath.Tests
             return holders;
         }
 
-        private static Cell[,] CreateOpenMatrix()
+        private static PathCell[,] CreateOpenMatrix()
         {
-            var matrix = new Cell[Width, Height];
+            var matrix = new PathCell[Width, Height];
 
             for (var x = 0; x < Width; x++)
             {
                 for (var y = 0; y < Height; y++)
                 {
-                    matrix[x, y] = new Cell { IsWalkable = true };
+                    matrix[x, y] = new PathCell { IsWalkable = true };
                 }
             }
 
             return matrix;
         }
 
-        private static Cell[,] CreateRandomMatrix()
+        private static PathCell[,] CreateRandomMatrix()
         {
             var random = new Random(Seed);
             var matrix = CreateOpenMatrix();
@@ -408,7 +408,7 @@ namespace Migs.MPath.Tests
 
         private sealed class Holder : ICellHolder
         {
-            public Cell CellData { get; set; }
+            public PathCell CellData { get; set; }
         }
     }
 }

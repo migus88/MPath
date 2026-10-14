@@ -11,7 +11,7 @@ namespace Migs.MPath.Core
     {
         private const float RadToDeg = 57.2958f; // 180/π ≈ 57.2958
 
-        private PathResult SmoothPath(Coordinate[] originalPath, int originalLength, Cell* cells, int agentSize)
+        private PathResult SmoothPath(Coordinate[] originalPath, int originalLength, PathCell* cells, int agentSize)
         {
             if (originalLength <= 2)
             {
@@ -28,7 +28,7 @@ namespace Migs.MPath.Core
             };
         }
 
-        private PathResult ApplyStringPulling(Coordinate[] originalPath, int originalLength, Cell* cells, int agentSize)
+        private PathResult ApplyStringPulling(Coordinate[] originalPath, int originalLength, PathCell* cells, int agentSize)
         {
             var smoothedPath = ArrayPool<Coordinate>.Shared.Rent(originalLength);
             Array.Clear(smoothedPath, 0, smoothedPath.Length);
@@ -111,7 +111,7 @@ namespace Migs.MPath.Core
         /// footprint must fit at the entered cell, and a diagonal step must obey the corner rule.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool IsSegmentTraversable(Coordinate from, Coordinate to, Cell* cells, int agentSize)
+        private bool IsSegmentTraversable(Coordinate from, Coordinate to, PathCell* cells, int agentSize)
         {
             var x = from.X;
             var y = from.Y;
@@ -163,7 +163,7 @@ namespace Migs.MPath.Core
         /// could only have made it as two cardinal moves.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool IsDiagonalStepAllowed(Cell* cells, int x, int y, int nextX, int nextY, int agentSize)
+        private bool IsDiagonalStepAllowed(PathCell* cells, int x, int y, int nextX, int nextY, int agentSize)
         {
             var first = GetFootprintBlocker(cells, nextX, y, agentSize);
             var second = GetFootprintBlocker(cells, x, nextY, agentSize);
@@ -177,7 +177,7 @@ namespace Migs.MPath.Core
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool HasLineOfSight(Coordinate from, Coordinate to, Cell* cells, LineOfSightMode mode)
+        private bool HasLineOfSight(Coordinate from, Coordinate to, PathCell* cells, LineOfSightMode mode)
         {
             (int X, int Y) p0 = new Coordinate(from.X, from.Y);
             (int X, int Y) p1 = new Coordinate(to.X, to.Y);
@@ -242,7 +242,7 @@ namespace Migs.MPath.Core
         /// occupied cell blocks when <see cref="IPathfinderSettings.AreOccupiedCellsBlocking"/> is enabled.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool IsLineOfSightBlocked(Cell* cells, int x, int y, LineOfSightMode mode)
+        private bool IsLineOfSightBlocked(PathCell* cells, int x, int y, LineOfSightMode mode)
         {
             var cell = GetCell(cells, x, y);
 
