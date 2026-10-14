@@ -2,7 +2,6 @@ using System;
 using FluentAssertions;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
-using Migs.MPath.Tests.Implementations;
 
 namespace Migs.MPath.Tests
 {
@@ -33,7 +32,7 @@ namespace Migs.MPath.Tests
         {
             using var pathfinder = new Pathfinder(CreateEmptyGrid(), GridSize, GridSize);
 
-            var action = () => pathfinder.GetPath(new Agent { Size = 1 }, new Coordinate(x, y), Destination);
+            var action = () => pathfinder.GetPath(new Coordinate(x, y), Destination);
 
             action.Should().Throw<ArgumentException>().WithParameterName("from");
         }
@@ -43,10 +42,10 @@ namespace Migs.MPath.Tests
         [TestCase(Blocker.NoClearanceForSize2)]
         public void GetPath_WithNonEnterableDestination_ReturnsFailure(Blocker blocker)
         {
-            var (cells, agent) = CreateBlockedScenario(blocker);
+            var (cells, agentSize) = CreateBlockedScenario(blocker);
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize, OccupiedCellsBlock());
 
-            using var result = pathfinder.GetPath(agent, Origin, Destination);
+            using var result = pathfinder.GetPath(Origin, Destination, agentSize);
 
             result.IsSuccess.Should().BeFalse();
         }
@@ -56,10 +55,10 @@ namespace Migs.MPath.Tests
         [TestCase(Blocker.NoClearanceForSize2)]
         public void BeginStepwiseSearch_WithNonEnterableDestination_FailsWithoutExpanding(Blocker blocker)
         {
-            var (cells, agent) = CreateBlockedScenario(blocker);
+            var (cells, agentSize) = CreateBlockedScenario(blocker);
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize, OccupiedCellsBlock());
 
-            using var search = pathfinder.BeginStepwiseSearch(agent, Origin, Destination);
+            using var search = pathfinder.BeginStepwiseSearch(Origin, Destination, agentSize);
             var final = search.Tick();
 
             search.IsComplete.Should().BeTrue();
@@ -71,11 +70,11 @@ namespace Migs.MPath.Tests
         [Test]
         public void GetPath_WithOccupiedDestinationAndOccupancyIgnored_FindsPath()
         {
-            var (cells, agent) = CreateBlockedScenario(Blocker.Occupied);
+            var (cells, agentSize) = CreateBlockedScenario(Blocker.Occupied);
             var settings = new PathfinderSettings { IsCalculatingOccupiedCells = false };
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
 
-            using var result = pathfinder.GetPath(agent, Origin, Destination);
+            using var result = pathfinder.GetPath(Origin, Destination, agentSize);
 
             result.IsSuccess.Should().BeTrue();
             result.Get(result.Length - 1).Should().Be(Destination);
@@ -88,13 +87,13 @@ namespace Migs.MPath.Tests
             cells[Index(Origin)].IsOccupied = true;
             using var pathfinder = new Pathfinder(cells, GridSize, GridSize, OccupiedCellsBlock());
 
-            using var result = pathfinder.GetPath(new Agent { Size = 1 }, Origin, Origin);
+            using var result = pathfinder.GetPath(Origin, Origin);
 
             result.IsSuccess.Should().BeTrue();
             result.Length.Should().Be(0);
         }
 
-        private static (Cell[] Cells, Agent Agent) CreateBlockedScenario(Blocker blocker)
+        private static (Cell[] Cells, int AgentSize) CreateBlockedScenario(Blocker blocker)
         {
             var cells = CreateEmptyGrid();
 
@@ -102,13 +101,13 @@ namespace Migs.MPath.Tests
             {
                 case Blocker.Wall:
                     cells[Index(Destination)].IsWalkable = false;
-                    return (cells, new Agent { Size = 1 });
+                    return (cells, 1);
                 case Blocker.Occupied:
                     cells[Index(Destination)].IsOccupied = true;
-                    return (cells, new Agent { Size = 1 });
+                    return (cells, 1);
                 case Blocker.NoClearanceForSize2:
                     cells[Index(new Coordinate(Destination.X + 1, Destination.Y + 1))].IsWalkable = false;
-                    return (cells, new Agent { Size = 2 });
+                    return (cells, 2);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(blocker), blocker, null);
             }

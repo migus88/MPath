@@ -17,6 +17,7 @@ Interface for path caching functionality that allows storing and retrieving calc
 
 - **Ownership:** the `PathResult` passed to `CachePath` is owned by the cache, which disposes it when it evicts or clears the entry. The instance returned by `TryGetCachedPath` also stays owned by the cache: `Pathfinder` copies it before returning a result to its caller, so callers may dispose every result they receive.
 
+- **Agent:** queries made with the `IAgent` overloads pass the caller's agent. Queries made with the `int agentSize` overloads pass an internal `IAgent` whose `Size` is the query's size and which equals any other such agent of the same size. Key on `agent.Size` (as `DefaultPathCaching` does) so both kinds of query share entries.
 - Implements `IDisposable` and should be disposed when no longer needed.
 - Implementations should efficiently store and retrieve paths based on agent properties and start/end coordinates.
 - Custom implementations can be provided to the `Pathfinder.EnablePathCaching()` method.

@@ -27,7 +27,7 @@ dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchm
 Commands/      Spectre.Console.Cli command classes (one per CLI verb)
 Suites/        The BenchmarkDotNet [Benchmark] classes
 Competitors/   Adapters for rival A* libraries compared in the maze suite
-Common/        Shared BenchmarkAgent + BenchmarkScenario (maze + fixed coordinates)
+Common/        Shared BenchmarkScenario (maze + fixed coordinates)
 Mazes/         Maze image(s) used as benchmark input
 Program.cs     Thin entry point that wires up the commands
 ```

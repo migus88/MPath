@@ -210,6 +210,38 @@ namespace Migs.MPath.Core
                 throw new ArgumentNullException(nameof(agent));
             }
 
+            return FindPath(agent, agent.Size, from, to);
+        }
+
+        /// <summary>
+        /// Calculates a path from the specified starting position to the destination for an agent that occupies an
+        /// <paramref name="agentSize"/> x <paramref name="agentSize"/> square of cells, without an <see cref="IAgent"/>.
+        /// </summary>
+        /// <param name="from">The starting coordinate.</param>
+        /// <param name="to">The destination coordinate.</param>
+        /// <param name="agentSize">The agent's square size in cells. Defaults to a single-cell agent.</param>
+        /// <returns>A <see cref="PathResult"/> containing the calculated path or a failure result.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="agentSize"/> is less than 1.</exception>
+        /// <exception cref="ArgumentException">Thrown when the origin or the destination is outside the valid field.</exception>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
+        /// <remarks>
+        /// Finds the same path as <see cref="GetPath(IAgent, Coordinate, Coordinate)"/> with an agent of the same
+        /// <see cref="IAgent.Size"/>, and shares its path cache entries.
+        /// </remarks>
+        public PathResult GetPath(Coordinate from, Coordinate to, int agentSize = SingleCellAgentSize)
+        {
+            ThrowIfDisposed();
+            ThrowIfInvalidAgentSize(agentSize);
+
+            return FindPath(null, agentSize, from, to);
+        }
+
+        /// <summary>
+        /// The shared body of the <c>GetPath</c> overloads. <paramref name="agent"/> is the caller's agent, or
+        /// <c>null</c> for the <c>agentSize</c> overloads; it is only handed to the path cache.
+        /// </summary>
+        private PathResult FindPath(IAgent agent, int agentSize, Coordinate from, Coordinate to)
+        {
             if (!IsPositionValid(from.X, from.Y))
             {
                 throw new ArgumentException("Origin is outside the valid field range", nameof(from));
@@ -220,7 +252,7 @@ namespace Migs.MPath.Core
                 throw new ArgumentException("Destination is outside the valid field range", nameof(to));
             }
             
-            if (TryGetCachedPath(agent, from, to, out var cachedPath))
+            if (TryGetCachedPath(agent, agentSize, from, to, out var cachedPath))
             {
                 return cachedPath;
             }
@@ -231,7 +263,7 @@ namespace Migs.MPath.Core
 
             fixed (Cell* ptr = &MemoryMarshal.GetReference(cells))
             {
-                if (!IsDestinationEnterable(ptr, from, to, agent.Size))
+                if (!IsDestinationEnterable(ptr, from, to, agentSize))
                 {
                     return PathResult.Failure();
                 }
@@ -239,9 +271,9 @@ namespace Migs.MPath.Core
                 ResetCells(ptr);
                 _openSet.Clear();
 
-                var result = CalculatePath(agent, from, to, ptr);
+                var result = CalculatePath(agentSize, from, to, ptr);
                 
-                CachePath(agent, from, to, result);
+                CachePath(agent, agentSize, from, to, result);
                 
                 return result;
             }
@@ -256,9 +288,11 @@ namespace Migs.MPath.Core
         /// share entries with plain <c>(agent, from, to)</c> queries (for example one with non-default per-query
         /// options) skips both.
         /// </remarks>
-        private bool TryGetCachedPath(IAgent agent, Coordinate from, Coordinate to, out PathResult pathResult)
+        private bool TryGetCachedPath(IAgent agent, int agentSize, Coordinate from, Coordinate to,
+            out PathResult pathResult)
         {
-            if (IsCachingQuery() && _pathCaching.TryGetCachedPath(agent, from, to, out var cachedPath))
+            if (IsCachingQuery() &&
+                _pathCaching.TryGetCachedPath(agent ?? SizedAgent.Of(agentSize), from, to, out var cachedPath))
             {
                 pathResult = cachedPath.Copy();
                 return true;
@@ -272,11 +306,11 @@ namespace Migs.MPath.Core
         /// Stores a successful result in the path cache as a private copy that the cache owns, so the caller keeps
         /// sole ownership of <paramref name="result"/>.
         /// </summary>
-        private void CachePath(IAgent agent, Coordinate from, Coordinate to, PathResult result)
+        private void CachePath(IAgent agent, int agentSize, Coordinate from, Coordinate to, PathResult result)
         {
             if (result.IsSuccess && IsCachingQuery())
             {
-                _pathCaching.CachePath(agent, from, to, result.Copy());
+                _pathCaching.CachePath(agent ?? SizedAgent.Of(agentSize), from, to, result.Copy());
             }
         }
 
@@ -311,6 +345,45 @@ namespace Migs.MPath.Core
         /// </remarks>
         public PathResult GetPath(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)
         {
+            ThrowIfDisposed();
+
+            if (agent == null)
+            {
+                throw new ArgumentNullException(nameof(agent));
+            }
+
+            return FindPath(agent, agent.Size, from, to, options);
+        }
+
+        /// <summary>
+        /// Calculates a path like <see cref="GetPath(Coordinate, Coordinate, int)"/>, with movement rules
+        /// overridden for this query only by <paramref name="options"/>. The grid and the settings are not modified.
+        /// </summary>
+        /// <param name="from">The starting coordinate.</param>
+        /// <param name="to">The destination coordinate.</param>
+        /// <param name="options">
+        /// The per-query rules. <c>default</c> behaves exactly like the overload without options. With
+        /// <see cref="QueryOptions.IsDestinationAlwaysEnterable"/>, a path to an occupied destination can succeed.
+        /// </param>
+        /// <param name="agentSize">The agent's square size in cells. Defaults to a single-cell agent.</param>
+        /// <returns>A <see cref="PathResult"/> containing the calculated path or a failure result.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="agentSize"/> is less than 1.</exception>
+        /// <exception cref="ArgumentException">Thrown when the origin or the destination is outside the valid field.</exception>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
+        /// <remarks>
+        /// When the options change the rules, path caching is bypassed: the cache is neither read nor filled.
+        /// </remarks>
+        public PathResult GetPath(Coordinate from, Coordinate to, QueryOptions options,
+            int agentSize = SingleCellAgentSize)
+        {
+            ThrowIfDisposed();
+            ThrowIfInvalidAgentSize(agentSize);
+
+            return FindPath(null, agentSize, from, to, options);
+        }
+
+        private PathResult FindPath(IAgent agent, int agentSize, Coordinate from, Coordinate to, QueryOptions options)
+        {
             var enterableCells = options.AlwaysEnterable;
 
             fixed (Coordinate* enterable = enterableCells)
@@ -320,7 +393,7 @@ namespace Migs.MPath.Core
 
                 try
                 {
-                    return GetPath(agent, from, to);
+                    return FindPath(agent, agentSize, from, to);
                 }
                 finally
                 {
@@ -332,7 +405,7 @@ namespace Migs.MPath.Core
         /// <summary>
         /// Calculates the path using A* algorithm.
         /// </summary>
-        private PathResult CalculatePath(IAgent agent, Coordinate from, Coordinate to, Cell* ptr)
+        private PathResult CalculatePath(int agentSize, Coordinate from, Coordinate to, Cell* ptr)
         {
             var scoreH = GetH(from.X, from.Y, to.X, to.Y);
             var start = GetCell(ptr, from.X, from.Y);
@@ -340,7 +413,6 @@ namespace Migs.MPath.Core
             _openSet.Enqueue(start, scoreH);
 
             var neighbors = stackalloc Cell*[MaxNeighbors];
-            var agentSize = agent.Size;
 
             // A* algorithm main loop. Each iteration expands one cell; ExpandNext is the single
             // source of truth for that step, shared with the stepwise (tick-by-tick) search.
@@ -786,6 +858,21 @@ namespace Migs.MPath.Core
         private static void ThrowObjectDisposed()
         {
             throw new ObjectDisposedException(nameof(Pathfinder));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void ThrowIfInvalidAgentSize(int agentSize)
+        {
+            if (agentSize < SingleCellAgentSize)
+            {
+                ThrowInvalidAgentSize(agentSize);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowInvalidAgentSize(int agentSize)
+        {
+            throw new ArgumentOutOfRangeException(nameof(agentSize), agentSize, "The agent size must be at least 1.");
         }
 
         /// <summary>

@@ -3,14 +3,13 @@ using System.Linq;
 using FluentAssertions;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
-using Migs.MPath.Tests.Implementations;
 
 namespace Migs.MPath.Tests
 {
     /// <summary>
     /// Pins the per-query <see cref="QueryOptions"/>: the occupancy override and the always-enterable cells apply to
-    /// <see cref="Pathfinder.GetPath(Migs.MPath.Core.Interfaces.IAgent, Coordinate, Coordinate)"/>,
-    /// <see cref="Pathfinder.GetReachable(Migs.MPath.Core.Interfaces.IAgent, Coordinate, float)"/> and the stepwise
+    /// <see cref="Pathfinder.GetPath(Coordinate, Coordinate, int)"/>,
+    /// <see cref="Pathfinder.GetReachable(Coordinate, float, int)"/> and the stepwise
     /// search alike, for that query only, and default options reproduce the queries without options.
     /// </summary>
     [TestFixture]
@@ -44,7 +43,7 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(cells, settings);
 
             // Act
-            var isReached = CanReach(query, pathfinder, new Agent(), CorridorStart, new Coordinate(5, 0),
+            var isReached = CanReach(query, pathfinder, CorridorStart, new Coordinate(5, 0),
                 new QueryOptions(occupancy));
 
             // Assert
@@ -63,9 +62,9 @@ namespace Migs.MPath.Tests
             var options = new QueryOptions(alwaysEnterable: enterable);
 
             // Act
-            var isBeforeSecondUnitReached = CanReach(query, pathfinder, new Agent(), CorridorStart,
+            var isBeforeSecondUnitReached = CanReach(query, pathfinder, CorridorStart,
                 new Coordinate(3, 0), options);
-            var isBehindSecondUnitReached = CanReach(query, pathfinder, new Agent(), CorridorStart,
+            var isBehindSecondUnitReached = CanReach(query, pathfinder, CorridorStart,
                 new Coordinate(5, 0), options);
 
             // Assert
@@ -80,16 +79,15 @@ namespace Migs.MPath.Tests
             var unit = new Coordinate(2, 0);
             var cells = CreateCorridor(6, unit);
             using var pathfinder = new Pathfinder(cells);
-            var agent = new Agent();
             var destination = new Coordinate(5, 0);
 
             // Act
-            using (pathfinder.GetPath(agent, CorridorStart, destination,
+            using (pathfinder.GetPath(CorridorStart, destination,
                        new QueryOptions(alwaysEnterable: new[] { unit })))
             {
             }
 
-            using var later = pathfinder.GetPath(agent, CorridorStart, destination);
+            using var later = pathfinder.GetPath(CorridorStart, destination);
 
             // Assert
             cells[unit.X, unit.Y].IsOccupied.Should().BeTrue();
@@ -106,7 +104,7 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(cells);
 
             // Act
-            using var result = pathfinder.GetPath(new Agent(), CorridorStart, new Coordinate(5, 0),
+            using var result = pathfinder.GetPath(CorridorStart, new Coordinate(5, 0),
                 new QueryOptions(OccupancyRule.Ignore, new[] { wall }, true));
 
             // Assert
@@ -125,7 +123,7 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(CreateCorridor(6, target));
 
             // Act
-            var isReached = CanReach(query, pathfinder, new Agent(), CorridorStart, target,
+            var isReached = CanReach(query, pathfinder, CorridorStart, target,
                 new QueryOptions(isDestinationAlwaysEnterable: isDestinationAlwaysEnterable));
 
             // Assert
@@ -140,7 +138,7 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(CreateCorridor(6, unit));
 
             // Act
-            using var range = pathfinder.GetReachable(new Agent(), CorridorStart, Budget,
+            using var range = pathfinder.GetReachable(CorridorStart, Budget,
                 new QueryOptions(isDestinationAlwaysEnterable: true));
 
             // Assert
@@ -161,8 +159,8 @@ namespace Migs.MPath.Tests
             var enterable = isOwnFootprintEnterable ? ownFootprint : Array.Empty<Coordinate>();
 
             // Act
-            using var result = pathfinder.GetPath(new Agent { Size = 2 }, CorridorStart, new Coordinate(6, 0),
-                new QueryOptions(alwaysEnterable: enterable));
+            using var result = pathfinder.GetPath(CorridorStart, new Coordinate(6, 0),
+                new QueryOptions(alwaysEnterable: enterable), 2);
 
             // Assert
             result.IsSuccess.Should().Be(expectedReach);
@@ -182,7 +180,7 @@ namespace Migs.MPath.Tests
             var enterable = isFlankEnterable ? new[] { flank } : Array.Empty<Coordinate>();
 
             // Act
-            using var result = pathfinder.GetPath(new Agent(), CorridorStart, new Coordinate(1, 1),
+            using var result = pathfinder.GetPath(CorridorStart, new Coordinate(1, 1),
                 new QueryOptions(occupancy, enterable));
 
             // Assert
@@ -196,13 +194,12 @@ namespace Migs.MPath.Tests
             // Arrange
             var cells = CreateCorridor(6, new Coordinate(2, 0));
             using var pathfinder = new Pathfinder(cells).EnablePathCaching();
-            var agent = new Agent();
             var destination = new Coordinate(5, 0);
 
             // Act
-            using var withOptions = pathfinder.GetPath(agent, CorridorStart, destination,
+            using var withOptions = pathfinder.GetPath(CorridorStart, destination,
                 new QueryOptions(OccupancyRule.Ignore));
-            using var withoutOptions = pathfinder.GetPath(agent, CorridorStart, destination);
+            using var withoutOptions = pathfinder.GetPath(CorridorStart, destination);
 
             // Assert
             withOptions.IsSuccess.Should().BeTrue();
@@ -215,16 +212,15 @@ namespace Migs.MPath.Tests
             // Arrange
             var cells = CreateScatteredGrid(24);
             using var pathfinder = new Pathfinder(cells);
-            var agent = new Agent();
             var destination = new Coordinate(23, 23);
 
             // Act
-            using var plainPath = pathfinder.GetPath(agent, CorridorStart, destination);
+            using var plainPath = pathfinder.GetPath(CorridorStart, destination);
             var expectedPath = plainPath.Path.ToArray();
-            using var optionsPath = pathfinder.GetPath(agent, CorridorStart, destination, default);
-            using var plainRange = pathfinder.GetReachable(agent, CorridorStart, 12f);
+            using var optionsPath = pathfinder.GetPath(CorridorStart, destination, default(QueryOptions));
+            using var plainRange = pathfinder.GetReachable(CorridorStart, 12f);
             var expectedRange = plainRange.Cells.ToArray();
-            using var optionsRange = pathfinder.GetReachable(agent, CorridorStart, 12f, default);
+            using var optionsRange = pathfinder.GetReachable(CorridorStart, 12f, default(QueryOptions));
 
             // Assert
             plainPath.IsSuccess.Should().BeTrue();
@@ -238,59 +234,58 @@ namespace Migs.MPath.Tests
             // Arrange
             var unit = new Coordinate(2, 1);
             using var pathfinder = new Pathfinder(CreateGrid(6, 2, unit));
-            var agent = new Agent();
             var destination = new Coordinate(5, 0);
 
             for (var i = 0; i < 3; i++)
             {
-                QueryWithOptions(pathfinder, agent, destination, unit);
-                QueryWithoutOptions(pathfinder, agent, destination);
+                QueryWithOptions(pathfinder, destination, unit);
+                QueryWithoutOptions(pathfinder, destination);
             }
 
             // Act
             var before = GC.GetAllocatedBytesForCurrentThread();
-            QueryWithOptions(pathfinder, agent, destination, unit);
+            QueryWithOptions(pathfinder, destination, unit);
             var withOptions = GC.GetAllocatedBytesForCurrentThread() - before;
 
             before = GC.GetAllocatedBytesForCurrentThread();
-            QueryWithoutOptions(pathfinder, agent, destination);
+            QueryWithoutOptions(pathfinder, destination);
             var withoutOptions = GC.GetAllocatedBytesForCurrentThread() - before;
 
             // Assert
             withOptions.Should().BeLessOrEqualTo(withoutOptions);
         }
 
-        private static void QueryWithOptions(Pathfinder pathfinder, Agent agent, Coordinate destination,
+        private static void QueryWithOptions(Pathfinder pathfinder, Coordinate destination,
             Coordinate unit)
         {
             Span<Coordinate> enterable = stackalloc Coordinate[] { unit };
-            using var result = pathfinder.GetPath(agent, CorridorStart, destination,
+            using var result = pathfinder.GetPath(CorridorStart, destination,
                 new QueryOptions(OccupancyRule.Block, enterable, true));
         }
 
-        private static void QueryWithoutOptions(Pathfinder pathfinder, Agent agent, Coordinate destination)
+        private static void QueryWithoutOptions(Pathfinder pathfinder, Coordinate destination)
         {
-            using var result = pathfinder.GetPath(agent, CorridorStart, destination);
+            using var result = pathfinder.GetPath(CorridorStart, destination);
         }
 
-        private static bool CanReach(Query query, Pathfinder pathfinder, Agent agent, Coordinate from,
+        private static bool CanReach(Query query, Pathfinder pathfinder, Coordinate from,
             Coordinate to, QueryOptions options)
         {
             switch (query)
             {
                 case Query.Path:
                 {
-                    using var result = pathfinder.GetPath(agent, from, to, options);
+                    using var result = pathfinder.GetPath(from, to, options);
                     return result.IsSuccess;
                 }
                 case Query.Reachable:
                 {
-                    using var range = pathfinder.GetReachable(agent, from, Budget, options);
+                    using var range = pathfinder.GetReachable(from, Budget, options);
                     return range.Contains(to);
                 }
                 case Query.Stepwise:
                 {
-                    using var search = pathfinder.BeginStepwiseSearch(agent, from, to, options);
+                    using var search = pathfinder.BeginStepwiseSearch(from, to, options);
                     return search.RunToCompletion().State == SearchState.Success;
                 }
                 default:

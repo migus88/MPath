@@ -5,7 +5,6 @@ using FluentAssertions;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
-using Migs.MPath.Tests.Implementations;
 
 namespace Migs.MPath.Tests
 {
@@ -96,7 +95,7 @@ namespace Migs.MPath.Tests
 
             var cells = CreateGrid(2, Flank.Occupied, Flank.Occupied, 1);
             using var pathfinder = new Pathfinder(cells, 2, 2, settings);
-            using var toUnit = pathfinder.GetPath(new Agent { Size = 1 }, new Coordinate(0, 0), new Coordinate(1, 0));
+            using var toUnit = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(1, 0));
             toUnit.IsSuccess.Should().BeFalse();
         }
 
@@ -127,7 +126,7 @@ namespace Migs.MPath.Tests
                 new PathfinderSettings { CornerBlocking = cornerBlocking, IsCellWeightEnabled = false });
 
             // Act
-            using var range = pathfinder.GetReachable(new Agent { Size = 1 }, new Coordinate(0, 0), 10f);
+            using var range = pathfinder.GetReachable(new Coordinate(0, 0), 10f);
 
             // Assert
             var reached = Enumerable.Range(0, range.Length).Select(i => range.Get(i).Coordinate).ToList();
@@ -144,7 +143,7 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(cells, 2, 2, new PathfinderSettings { CornerBlocking = cornerBlocking });
 
             // Act
-            using var search = pathfinder.BeginStepwiseSearch(new Agent { Size = 1 }, new Coordinate(0, 0), new Coordinate(1, 1));
+            using var search = pathfinder.BeginStepwiseSearch(new Coordinate(0, 0), new Coordinate(1, 1));
             var final = search.RunToCompletion();
 
             // Assert
@@ -173,7 +172,7 @@ namespace Migs.MPath.Tests
             var cells = CreateGrid(gridSize, east, south, agentSize);
 
             using var pathfinder = new Pathfinder(cells, gridSize, gridSize, settings);
-            using var result = pathfinder.GetPath(new Agent { Size = agentSize }, new Coordinate(0, 0), new Coordinate(1, 1));
+            using var result = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(1, 1), agentSize);
 
             return result.IsSuccess && result.Length == 1;
         }

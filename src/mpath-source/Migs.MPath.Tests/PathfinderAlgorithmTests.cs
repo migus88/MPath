@@ -1,7 +1,6 @@
 using FluentAssertions;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
-using Migs.MPath.Tests.Implementations;
 
 namespace Migs.MPath.Tests
 {
@@ -24,12 +23,11 @@ namespace Migs.MPath.Tests
             };
             
             var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
-            var agent = new Agent { Size = 1 };
             var start = new Coordinate(0, 0);
             var destination = new Coordinate(GridSize - 1, GridSize - 1);
             
             // Act
-            var result = pathfinder.GetPath(agent, start, destination);
+            var result = pathfinder.GetPath(start, destination);
             
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -56,12 +54,11 @@ namespace Migs.MPath.Tests
             // Arrange
             var cells = CreateEmptyGrid(GridSize, GridSize);
             var pathfinder = new Pathfinder(cells, GridSize, GridSize);
-            var agent = new Agent { Size = 1 };
             var start = new Coordinate(0, 0);
             var destination = new Coordinate(GridSize - 1, GridSize - 1);
             
             // Act
-            var result = pathfinder.GetPath(agent, start, destination);
+            var result = pathfinder.GetPath(start, destination);
             
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -90,12 +87,11 @@ namespace Migs.MPath.Tests
             };
             
             var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
-            var agent = new Agent { Size = 1 };
             var start = new Coordinate(GridSize / 4, GridSize / 4); // Top left quadrant
             var destination = new Coordinate(3 * GridSize / 4, 3 * GridSize / 4); // Bottom right quadrant
             
             // Act
-            var result = pathfinder.GetPath(agent, start, destination);
+            var result = pathfinder.GetPath(start, destination);
             
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -120,12 +116,11 @@ namespace Migs.MPath.Tests
             };
             
             var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
-            var agent = new Agent { Size = 1 };
             var start = new Coordinate(GridSize / 4, GridSize / 4); // Top left quadrant
             var destination = new Coordinate(3 * GridSize / 4, 3 * GridSize / 4); // Bottom right quadrant
             
             // Act
-            var result = pathfinder.GetPath(agent, start, destination);
+            var result = pathfinder.GetPath(start, destination);
             
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -148,12 +143,11 @@ namespace Migs.MPath.Tests
             }
             
             var pathfinder = new Pathfinder(cells, GridSize, GridSize);
-            var agent = new Agent { Size = 1 };
             var start = new Coordinate(GridSize / 4, GridSize / 4); // Top left quadrant
             var destination = new Coordinate(3 * GridSize / 4, 3 * GridSize / 4); // Bottom right quadrant
             
             // Act
-            var result = pathfinder.GetPath(agent, start, destination);
+            var result = pathfinder.GetPath(start, destination);
             
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -180,10 +174,9 @@ namespace Migs.MPath.Tests
             cells[destination.X * GridSize + destination.Y].IsWalkable = true;
             
             var pathfinder = new Pathfinder(cells, GridSize, GridSize);
-            var agent = new Agent { Size = 1 };
             
             // Act
-            var result = pathfinder.GetPath(agent, start, destination);
+            var result = pathfinder.GetPath(start, destination);
             
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -212,12 +205,11 @@ namespace Migs.MPath.Tests
             };
             
             var pathfinder = new Pathfinder(cells, GridSize, GridSize, settings);
-            var agent = new Agent { Size = 1 };
             var start = new Coordinate(0, 0);
             var destination = new Coordinate(GridSize - 1, GridSize - 1);
             
             // Act
-            var result = pathfinder.GetPath(agent, start, destination);
+            var result = pathfinder.GetPath(start, destination);
             
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -245,17 +237,16 @@ namespace Migs.MPath.Tests
             var pathfinder = new Pathfinder(cells, GridSize, GridSize);
             
             // Test with a 1x1 agent (should pass through the gap)
-            var smallAgent = new Agent { Size = 1 };
             var start = new Coordinate(0, GridSize / 2);
             var destination = new Coordinate(GridSize - 1, GridSize / 2);
             
             // Act & Assert
-            var smallAgentResult = pathfinder.GetPath(smallAgent, start, destination);
+            var smallAgentResult = pathfinder.GetPath(start, destination);
             smallAgentResult.IsSuccess.Should().BeTrue();
             
             // Test with a 2x2 agent (shouldn't fit through the gap)
-            var largeAgent = new Agent { Size = 2 };
-            var largeAgentResult = pathfinder.GetPath(largeAgent, start, destination);
+            var largeAgentSize = 2;
+            var largeAgentResult = pathfinder.GetPath(start, destination, largeAgentSize);
             largeAgentResult.IsSuccess.Should().BeFalse();
         }
         
@@ -265,11 +256,10 @@ namespace Migs.MPath.Tests
             // Arrange
             var cells = CreateEmptyGrid(GridSize, GridSize);
             var pathfinder = new Pathfinder(cells, GridSize, GridSize);
-            var agent = new Agent { Size = 1 };
             var position = new Coordinate(GridSize / 2, GridSize / 2);
             
             // Act
-            var result = pathfinder.GetPath(agent, position, position);
+            var result = pathfinder.GetPath(position, position);
             
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -312,14 +302,13 @@ namespace Migs.MPath.Tests
 
             var from = new Coordinate(1, 5);
             var to = new Coordinate(8, 5);
-            var agent = new Agent { Size = 1 };
 
             // Get both smoothed and unsmoothed paths for comparison
             using var noSmoothingPathfinder = new Pathfinder(cells, width, height, noSmoothingSettings);
-            var noSmoothingResult = noSmoothingPathfinder.GetPath(agent, from, to);
+            var noSmoothingResult = noSmoothingPathfinder.GetPath(from, to);
             
             using var smoothingPathfinder = new Pathfinder(cells, width, height, smoothingSettings);
-            var smoothingResult = smoothingPathfinder.GetPath(agent, from, to);
+            var smoothingResult = smoothingPathfinder.GetPath(from, to);
 
             // Assert
             noSmoothingResult.IsSuccess.Should().BeTrue();
@@ -365,14 +354,13 @@ namespace Migs.MPath.Tests
 
             var from = new Coordinate(1, 5);
             var to = new Coordinate(8, 5);
-            var agent = new Agent { Size = 1 };
 
             // Get both smoothed and unsmoothed paths for comparison
             using var noSmoothingPathfinder = new Pathfinder(cells, width, height, noSmoothingSettings);
-            var noSmoothingResult = noSmoothingPathfinder.GetPath(agent, from, to);
+            var noSmoothingResult = noSmoothingPathfinder.GetPath(from, to);
             
             using var smoothingPathfinder = new Pathfinder(cells, width, height, smoothingSettings);
-            var smoothingResult = smoothingPathfinder.GetPath(agent, from, to);
+            var smoothingResult = smoothingPathfinder.GetPath(from, to);
 
             // Assert
             noSmoothingResult.IsSuccess.Should().BeTrue();
@@ -408,7 +396,6 @@ namespace Migs.MPath.Tests
 
             var from = new Coordinate(5, 5);
             var to = new Coordinate(15, 15);
-            var agent = new Agent { Size = 1 };
 
             // Create a pathfinder without smoothing
             var settingsWithoutSmoothing = new PathfinderSettings
@@ -424,10 +411,10 @@ namespace Migs.MPath.Tests
 
             // Act
             using var pathfinderWithoutSmoothing = new Pathfinder(cells, width, height, settingsWithoutSmoothing);
-            var resultWithoutSmoothing = pathfinderWithoutSmoothing.GetPath(agent, from, to);
+            var resultWithoutSmoothing = pathfinderWithoutSmoothing.GetPath(from, to);
             
             using var pathfinderWithSmoothing = new Pathfinder(cells, width, height, settingsWithSmoothing);
-            var resultWithSmoothing = pathfinderWithSmoothing.GetPath(agent, from, to);
+            var resultWithSmoothing = pathfinderWithSmoothing.GetPath(from, to);
 
             // Assert
             resultWithoutSmoothing.IsSuccess.Should().BeTrue();
@@ -462,7 +449,6 @@ namespace Migs.MPath.Tests
 
             var from = new Coordinate(5, 5);
             var to = new Coordinate(15, 15);
-            var agent = new Agent { Size = 1 };
 
             // Create pathfinders with different smoothing methods
             var settingsNoSmoothing = new PathfinderSettings
@@ -482,13 +468,13 @@ namespace Migs.MPath.Tests
 
             // Act
             using var pathfinderNoSmoothing = new Pathfinder(cells, width, height, settingsNoSmoothing);
-            var resultNoSmoothing = pathfinderNoSmoothing.GetPath(agent, from, to);
+            var resultNoSmoothing = pathfinderNoSmoothing.GetPath(from, to);
             
             using var pathfinderSimpleSmoothing = new Pathfinder(cells, width, height, settingsSimpleSmoothing);
-            var resultSimpleSmoothing = pathfinderSimpleSmoothing.GetPath(agent, from, to);
+            var resultSimpleSmoothing = pathfinderSimpleSmoothing.GetPath(from, to);
             
             using var pathfinderStringPulling = new Pathfinder(cells, width, height, settingsStringPulling);
-            var resultStringPulling = pathfinderStringPulling.GetPath(agent, from, to);
+            var resultStringPulling = pathfinderStringPulling.GetPath(from, to);
 
             // Assert
             resultNoSmoothing.IsSuccess.Should().BeTrue();

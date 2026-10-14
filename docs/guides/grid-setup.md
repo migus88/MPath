@@ -11,6 +11,20 @@ MPath provides several options for representing your grid, each with different b
 3. **Cell Holder Array**: Array of objects implementing ICellHolder
 4. **Cell Holder Matrix**: 2D array of objects implementing ICellHolder
 
+## When Your Game Already Has a `Cell` Type
+
+MPath's grid square is `Migs.MPath.Core.Data.Cell`, and many games already have a `Cell` of their own. Importing both namespaces makes `Cell` ambiguous (`CS0104`). Alias MPath's type in the files that build the grid:
+
+```csharp
+using Migs.MPath.Core.Data;
+using GridCell = Migs.MPath.Core.Data.Cell;
+
+var grid = new GridCell[width, height];
+grid[x, y] = new GridCell { Coordinate = new Coordinate(x, y), IsWalkable = true };
+```
+
+Or alias your own type (`using GameCell = MyGame.Board.Cell;`) and keep `Cell` for MPath. A distinct name for MPath's type is planned for the next major version; until then the alias is the supported way.
+
 ## Option 1: Cell Array
 
 The most straightforward approach is to use a flat array of `Cell` objects. Note that this option is most suitable for static or rarely changing environments, as it's the most performant but least flexible for dynamic grid updates.
@@ -267,7 +281,7 @@ pathfinder.SetOccupied(unit.Position, true);
 pathfinder.SetWeight(new Coordinate(7, 3), 2.5f);
 
 // The next query sees the change
-using var path = pathfinder.GetPath(agent, start, end);
+using var path = pathfinder.GetPath(start, end);
 ```
 
 The setters find the cell by its coordinate, so they work whatever order your `Cell[]` is in. Writing into the array yourself also works, but then mind the layout: queries expect `cells[X * height + Y]` (column-major, see `pathfinder.GetIndex(coordinate)`) and **sort your array into that order** on every query, so an array you index in another order (for example row-major `y * width + x`) gets reordered under you. After direct writes, call `InvalidateCache()` if path caching is enabled.

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using FluentAssertions;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
-using Migs.MPath.Tests.Implementations;
 
 namespace Migs.MPath.Tests
 {
@@ -98,7 +97,7 @@ namespace Migs.MPath.Tests
         [TestCaseSource(nameof(GetPathScenarios))]
         public void GetPath_OnRandomGrids_ReturnsLegalCheapestRoute(Scenario scenario)
         {
-            var agent = new Agent { Size = scenario.AgentSize };
+            var agentSize = scenario.AgentSize;
             var foundPaths = 0;
             var failedSearches = 0;
 
@@ -121,7 +120,7 @@ namespace Migs.MPath.Tests
                     var expected = grid.GetCheapestCosts(from);
                     var context = $"seed {seed}, {from} -> {to}, {grid}";
 
-                    using var path = pathfinder.GetPath(agent, from, to);
+                    using var path = pathfinder.GetPath(from, to, agentSize);
 
                     if (!expected.TryGetValue(to, out var cheapest))
                     {
@@ -144,7 +143,7 @@ namespace Migs.MPath.Tests
         [TestCaseSource(nameof(GetReachableScenarios))]
         public void GetReachable_OnRandomGrids_ReturnsCheapestCostOfEveryCell(Scenario scenario)
         {
-            var agent = new Agent { Size = scenario.AgentSize };
+            var agentSize = scenario.AgentSize;
 
             for (var seed = 0; seed < GridsPerCase; seed++)
             {
@@ -155,7 +154,7 @@ namespace Migs.MPath.Tests
                 var context = $"seed {seed}, from {from}, {grid}";
 
                 var expected = grid.GetCheapestCosts(from);
-                using var reachable = pathfinder.GetReachable(agent, from, Unbounded);
+                using var reachable = pathfinder.GetReachable(from, Unbounded, agentSize);
 
                 reachable.Length.Should().Be(expected.Count, context);
 
@@ -185,7 +184,7 @@ namespace Migs.MPath.Tests
             var from = new Coordinate(2, 4);
             var to = new Coordinate(from.X + toX, from.Y + toY);
 
-            using var path = pathfinder.GetPath(new Agent(), from, to);
+            using var path = pathfinder.GetPath(from, to);
 
             path.IsSuccess.Should().BeTrue();
             grid.GetRouteCost(from, path).Should().BeApproximately(expectedCost, 0.0001f);
@@ -205,7 +204,7 @@ namespace Migs.MPath.Tests
             var from = new Coordinate(1, 5);
             var to = new Coordinate(9, 5);
 
-            using var path = pathfinder.GetPath(new Agent(), from, to);
+            using var path = pathfinder.GetPath(from, to);
 
             path.IsSuccess.Should().BeTrue();
             grid.GetRouteCost(from, path).Should().BeApproximately(10f, 0.0001f, "two side steps beat five weight-10 cells");

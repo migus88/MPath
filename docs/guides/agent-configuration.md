@@ -4,7 +4,24 @@ This guide explains how to configure and use agents with MPath for pathfinding.
 
 ## What is an Agent?
 
-In MPath, an agent is any entity that needs to find a path through the grid. Agents are defined by the `IAgent` interface, which specifies the agent's size and any other properties that affect pathfinding.
+In MPath, an agent is any entity that needs to find a path through the grid. The only property that affects pathfinding is its **size**: the side of the square of cells it occupies. You pass it to a query either as a number or through the `IAgent` interface.
+
+## Agent Size Without an IAgent
+
+Every query takes a trailing `int agentSize` that defaults to `1`, so single-cell units need no agent type at all:
+
+```csharp
+using var path  = pathfinder.GetPath(start, end);                  // 1x1 agent
+using var truck = pathfinder.GetPath(start, end, agentSize: 2);    // 2x2 agent
+using var range = pathfinder.GetReachable(start, 5f, agentSize: 2);
+using var search = pathfinder.BeginStepwiseSearch(start, end, agentSize: 2);
+
+// With per-query options, the size comes last
+using var attack = pathfinder.GetPath(start, target,
+    new QueryOptions(isDestinationAlwaysEnterable: true), agentSize: 2);
+```
+
+`agentSize` must be at least `1` (`ArgumentOutOfRangeException` otherwise). The rest of this guide uses `IAgent`, which is handy when your unit types already know their size; both forms find the same paths and share path cache entries.
 
 ## Basic Agent Implementation
 

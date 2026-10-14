@@ -3,7 +3,6 @@ using System.Reflection;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
-using Migs.MPath.Tests.Implementations;
 using Migs.MPath.Tools;
 using FluentAssertions;
 
@@ -32,12 +31,12 @@ namespace Migs.MPath.Tests
             
             var start = maze.Start;
             var destination = maze.Destination;
-            var agent = new Agent { Size = 2 };
+            var agentSize = 2;
 
             var pathfinder = new Pathfinder(maze.Cells);
             
             // Act
-            var result = pathfinder.GetPath(agent, start, destination);
+            var result = pathfinder.GetPath(start, destination, agentSize);
             
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -58,12 +57,11 @@ namespace Migs.MPath.Tests
             
             maze.SetStart(start);
             maze.SetDestination(destination);
-            var agent = new Agent { Size = 1 };
             
             var pathfinder = new Pathfinder(maze.Cells);
             
             // Act
-            var result = pathfinder.GetPath(agent, start, destination);
+            var result = pathfinder.GetPath(start, destination);
             
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -85,12 +83,11 @@ namespace Migs.MPath.Tests
             var maze = new Maze("Maze/Conditions/001.png");
             var start = maze.Start;
             var invalidDestination = new Coordinate(maze.Width + 10, maze.Height + 10); // Outside maze bounds
-            var agent = new Agent { Size = 1 };
             
             var pathfinder = new Pathfinder(maze.Cells);
             
             // Act & Assert
-            var action = () => pathfinder.GetPath(agent, start, invalidDestination);
+            var action = () => pathfinder.GetPath(start, invalidDestination);
             action.Should().Throw<ArgumentException>()
                   .WithMessage("*outside the valid field range*");
         }

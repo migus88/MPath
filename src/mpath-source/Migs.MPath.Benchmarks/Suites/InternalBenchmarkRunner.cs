@@ -2,7 +2,6 @@ using BenchmarkDotNet.Attributes;
 using Migs.MPath.Benchmarks.Common;
 using Migs.MPath.Core;
 using Migs.MPath.Core.Data;
-using Migs.MPath.Core.Interfaces;
 using Migs.MPath.Tools;
 
 namespace Migs.MPath.Benchmarks.Suites;
@@ -17,7 +16,6 @@ public class InternalBenchmarkRunner : IDisposable
     private static readonly (int x, int y) ShortPathDestination = (10, 11);
 
     private readonly Maze _maze = new(BenchmarkScenario.MazePath);
-    private readonly IAgent _agent = new BenchmarkAgent();
     private readonly Pathfinder _pathfinder;
     private readonly Cell[] _cellsArray;
     private readonly Coordinate _wallDestination;
@@ -74,7 +72,7 @@ public class InternalBenchmarkRunner : IDisposable
     [Benchmark]
     public void FindPath_ToUnwalkableDestination()
     {
-        using var result = _pathfinder.GetPath(_agent, BenchmarkScenario.Start, _wallDestination);
+        using var result = _pathfinder.GetPath(BenchmarkScenario.Start, _wallDestination);
 
         if (result.IsSuccess)
         {
@@ -89,7 +87,7 @@ public class InternalBenchmarkRunner : IDisposable
             throw new Exception("Pathfinder is not initialized");
         }
 
-        var result = _pathfinder.GetPath(_agent, (Coordinate)start, (Coordinate)destination);
+        var result = _pathfinder.GetPath((Coordinate)start, (Coordinate)destination);
 
         if (!result.IsSuccess)
         {

@@ -58,7 +58,7 @@ dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- render
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- info smoothing            # print smoothed path lengths
 ```
 
-Project layout: `Suites/` holds the BenchmarkDotNet `[Benchmark]` classes, `Competitors/` holds the rival-library adapters (`IMazeBenchmarkRunner`) compared in the maze suite, `Commands/` holds the CLI commands, and `Common/` holds the shared `BenchmarkAgent` and `BenchmarkScenario` (maze path + canonical start/destination, all resolved against the assembly base directory so commands work from any working directory). `Migs.MPath.Tools` (uses SkiaSharp) provides the maze loading/rendering used by tests and benchmarks.
+Project layout: `Suites/` holds the BenchmarkDotNet `[Benchmark]` classes, `Competitors/` holds the rival-library adapters (`IMazeBenchmarkRunner`) compared in the maze suite, `Commands/` holds the CLI commands, and `Common/` holds the shared `BenchmarkScenario` (maze path + canonical start/destination, all resolved against the assembly base directory so commands work from any working directory). `Migs.MPath.Tools` (uses SkiaSharp) provides the maze loading/rendering used by tests and benchmarks.
 
 ## Release pipeline
 
@@ -106,6 +106,10 @@ A custom binary-heap min-priority-queue over `Cell*`. Each `Cell` stores its own
 Public `IPathfinderSettings` / `PathfinderSettings` (or Unity's `ScriptablePathfinderSettings` ScriptableObject) is converted **once** in the constructor into the internal readonly struct `FastPathfinderSettings` (`FromSettings`). The algorithm reads only the fast struct in the hot loop — when adding a setting, thread it through `IPathfinderSettings` → `FastPathfinderSettings` → the relevant `Pathfinder` method.
 
 Per-query overrides (`QueryOptions`, a public `readonly ref struct`: `OccupancyRule` + `AlwaysEnterable` span + `IsDestinationAlwaysEnterable`) never touch `_settings` or the grid. The options overloads resolve them into the internal `QueryRules` struct held in the mutable `_query` field (the constructor sets it from the settings; an options query pins the span with `fixed`, sets `_query`, runs the plain query and restores the defaults in `finally`; `StepwiseSearch` copies the span and re-applies its rules around every tick). `GetBlocker` is the only reader: it takes occupancy from `_query` and scans the always-enterable cells only for an occupied cell, so the default path costs nothing extra. The corner table is unchanged, since options only reclassify a cell from Occupied to Open. Queries whose rules differ from the settings skip the path cache (`IsCachingQuery`, used by the private `TryGetCachedPath`/`CachePath`). Keep the options independent of where search state lives (it is not stored in `Cell`).
+
+### Agent size
+
+Each query (`GetPath`, `GetReachable`, `BeginStepwiseSearch`, each with and without `QueryOptions`) has an `IAgent` overload and an `int agentSize = 1` overload (size last, after the options). Both validate (`ArgumentNullException` / `ArgumentOutOfRangeException` for `agentSize < 1` via `ThrowIfInvalidAgentSize`; an `IAgent.Size < 1` is deliberately not validated, for compatibility) and forward to one private body (`FindPath`, `FindReachable`, the private `BeginStepwiseSearch`) that works on the `int` only. The algorithm never sees `IAgent`. The only consumer of the agent object is the path cache: `FindPath` carries the caller's agent (or `null`) and the cache helpers substitute `Internal/SizedAgent.Of(size)` (shared per size, equal by size) only when caching is on, so neither form allocates.
 
 ### Caching — `Source/Caching/` + `Source/Interfaces/IPathCaching.cs`
 
