@@ -30,10 +30,12 @@ A high-performance A* implementation for 2D grid navigation, designed primarily 
 
 | Method    | Mean      | Allocated   |
 |---------- |----------:|------------:|
-| MPath     |  4.802 ms |        42 B |
-| [AStarLite](https://github.com/valantonini/AStar) |  7.623 ms |  8.75 MB |
-| [RoyTAStar](https://github.com/roy-t/AStar) | 62.006 ms | 12.30 MB |
-| [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,809.5 ms | 108.13 MB |
+| MPath     |  4.223 ms |       178 B |
+| [AStarLite](https://github.com/valantonini/AStar) |  8.042 ms |  8.75 MB |
+| [RoyTAStar](https://github.com/roy-t/AStar) | 62.412 ms | 12.30 MB |
+| [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,884.7 ms | 108.13 MB |
+
+Compared with 1.2.1 on the same machine, 2.0 finds the maze path about 21% faster. On grids with 20% random walls it is 6–7x faster. Short queries and small movement ranges are 25–90x faster, and up to 25,000x with `GridSnapshotMode.Manual`. A query still allocates only its result object, a few dozen bytes.
 
 For detailed information about MPath's performance benchmarks, including implementation comparisons and path smoothing options, see the [benchmarks documentation](docs/benchmarks/README.md).
 
