@@ -92,7 +92,7 @@ Each entry says what changed, who notices it, and what to do, if anything. Entri
 
 - **What changed:**
   - Searches never write into the caller's cells.
-  - `Cell` shrank from 56 to 20 bytes and lost its internal search fields.
+  - `Cell` shrank from 56 to 20 bytes and lost its internal search fields (16 bytes in 2.0; see [Coordinate cleanup](#58-coordinate-cleanup)).
   - The pathfinder rents 24 bytes per cell of search state when it is created.
   - The new `GridSnapshotMode` setting decides when a matrix, holder or unordered-array pathfinder copies the grid. The default, `PerQuery`, copies it before every query, as in 1.2.1; `Manual` copies it once and again only after the new `Refresh()`.
   - `Cell.Reset()` does nothing.
@@ -145,9 +145,23 @@ Pending: filled by #57.
 
 #### #58 Coordinate cleanup
 
-Coordinate: readonly 8-byte struct without IsInitialized and Reset.
+- **What changed:**
+  - `Coordinate` is a `readonly struct`: `X` and `Y` are get-only and set only by the constructor.
+  - `IsInitialized` and `Reset()` are removed. `default(Coordinate)` is `(0,0)` and is the same value as `Coordinate.Zero` (they were already `==` in 1.2.1, but their `IsInitialized` differed).
+  - `Coordinate` is 8 bytes instead of 12, so `Cell` is 16 bytes and `PathResult` waypoint arrays are a third smaller.
+- **Who notices:** code that reads `IsInitialized` or calls `Reset()` (it no longer compiles), and code that assumes the size of `Coordinate` or `Cell` (unsafe code, binary serializers).
+- **What to do:** to mean "no coordinate", use `Coordinate?` or your own sentinel; to clear a coordinate, assign a new value.
 
-Pending: filled by #58.
+```csharp
+// 1.2.1
+if (!target.IsInitialized) { ... }
+target.Reset();
+
+// 2.0
+Coordinate? target = null;
+if (target is null) { ... }
+target = null;
+```
 
 #### #59 Remove IAgent
 
@@ -178,5 +192,6 @@ Pending: filled by #62.
 1. Dispose every `PathResult`, `RangeResult` and `StepwiseSearch`, including path-cache hits.
 2. If you index a `Cell[]` grid yourself, declare its order with `CellLayout` or use `pathfinder.GetIndex`.
 3. Regenerate any stored or asserted routes, smoothed paths or stepwise scores.
+4. Replace `Coordinate.IsInitialized` and `Coordinate.Reset()` with a `Coordinate?` (or your own sentinel).
 
 Steps for the breaking changes are added as their entries are filled.
