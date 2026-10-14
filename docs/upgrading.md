@@ -133,9 +133,34 @@ Each entry has a description and a before → after migration snippet.
 
 #### #56 Int costs everywhere
 
-Int costs everywhere: step costs, Cell.Weight, budgets, result costs and the search math.
+- **What changed:**
+  - Costs are `int` everywhere: there are no floats left in the cost API, and no hidden fixed-point scale. You pick the resolution (10/14, 100/141, 1000/1414, ...) and every cost uses it: step costs, cell weights, budgets and every reported cost.
+  - `IPathfinderSettings.StraightMovementMultiplier` / `DiagonalMovementMultiplier` (`float`) are renamed `StraightStepCost` / `DiagonalStepCost` (`int`) on `IPathfinderSettings`, `PathfinderSettings` and `ScriptablePathfinderSettings`. They were never multipliers: the cell's weight is added to them. The defaults are **100** and **141**, the same 1 : 1.41 ratio as 1.2.1, so default routes do not change and costs read ×100.
+  - `Cell.Weight`, `Pathfinder.SetWeight`'s `weight`, every `GetReachable` `budget`, `ReachableCell.Cost`, `RangeResult.TryGetCost`'s `out` value, `RangeResult.CopyCostsTo` (`Span<int>`, `int unreached = -1`) and `SearchNode.ScoreG` / `ScoreH` / `ScoreF` are `int`.
+  - The `ReachableCell(Coordinate, float cost)` constructor is removed; use `ReachableCell(Coordinate, int cost, int steps, int diagonalSteps)`.
+  - Validation: the pathfinder constructor throws `ArgumentOutOfRangeException` when a step cost is below 1, or when `(width + height) * the larger step cost in use` exceeds 1,073,741,823 (`int.MaxValue / 2`). `SetWeight` and `SetCell` throw `ArgumentOutOfRangeException` for a negative weight; a negative weight written straight into your grid counts as 0.
+  - Overflow headroom: a route whose cost would pass 1,073,741,823 is never taken, so the cells behind it are unreachable; weights above it count as that value. Nothing wraps around, and `GetReachable(from, int.MaxValue)` is an unbounded budget.
+  - A budget equal to a route's cost admits it and one below excludes it, with no tolerance. With `TieBreaking.None`, routes of equal cost now tie exactly (float sums used to split them by summation order), so the search may return a different one of several equally cheap routes. Under `FewerDiagonals` and `FewerTurns` routes are unchanged at the same ratio.
+- **Who notices:** every caller that sets step costs or weights, passes a budget, or reads a cost; custom `IPathfinderSettings` implementations; `ScriptablePathfinderSettings` assets.
+- **What to do:** pick a resolution and scale every cost by it. `ScriptablePathfinderSettings` assets do not carry the old float fields over: enter the step costs again at your resolution (the library cannot know your scale). Callers that used 1/1 costs with `FewerDiagonals` to count steps can keep `StraightStepCost = DiagonalStepCost = 1`.
 
-Pending: filled by #56.
+```csharp
+// 1.2.1
+var settings = new PathfinderSettings { StraightMovementMultiplier = 1f, DiagonalMovementMultiplier = 1.41f };
+cell.Weight = 0.5f;
+using var range = pathfinder.GetReachable(from, 4.23f);
+range.TryGetCost(c, out float cost);
+var costs = new float[width * height];
+range.CopyCostsTo(costs);
+
+// 2.0: pick a resolution (here x100) and scale every cost by it
+var settings = new PathfinderSettings { StraightStepCost = 100, DiagonalStepCost = 141 };
+cell.Weight = 50;
+using var range = pathfinder.GetReachable(from, 423);
+range.TryGetCost(c, out int cost);
+var costs = new int[width * height];
+range.CopyCostsTo(costs);
+```
 
 #### #57 Remove compatibility shims
 
@@ -218,5 +243,6 @@ Pending: filled by #62.
 3. Regenerate any stored or asserted routes, smoothed paths or stepwise scores.
 4. Replace `IsMovementBetweenCornersEnabled` with `CornerBlocking`, including in `ScriptablePathfinderSettings` assets that had it ticked; delete `InitialBufferSize` and `Cell.Reset()` calls; pass step counts to `PathResult.Success`; add the four settings members to a custom `IPathfinderSettings`.
 5. Replace `Coordinate.IsInitialized` and `Coordinate.Reset()` with a `Coordinate?` (or your own sentinel).
+6. Pick a cost resolution and scale every cost to `int`: `StraightStepCost`/`DiagonalStepCost` (renamed from the multipliers), `Cell.Weight`, budgets, and the costs you read back. Re-enter the step costs on `ScriptablePathfinderSettings` assets.
 
 Steps for the breaking changes are added as their entries are filled.

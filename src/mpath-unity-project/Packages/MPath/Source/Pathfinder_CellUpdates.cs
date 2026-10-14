@@ -72,11 +72,14 @@ namespace Migs.MPath.Core
         /// <paramref name="cell"/>. The cell keeps its coordinate: <c>cell.Coordinate</c> is ignored.
         /// </summary>
         /// <param name="coordinate">A coordinate inside the grid.</param>
-        /// <param name="cell">The new cell values.</param>
+        /// <param name="cell">The new cell values. Its <see cref="Cell.Weight"/> must not be negative.</param>
         /// <inheritdoc cref="SetWalkable" path="/remarks"/>
         /// <inheritdoc cref="SetWalkable" path="/exception"/>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the cell's weight is negative.</exception>
         public void SetCell(Coordinate coordinate, in Cell cell)
         {
+            ThrowIfNegativeWeight(cell.Weight, nameof(cell));
+
             ref var target = ref GetWritableCell(coordinate);
 
             UpdateCell(ref target, coordinate, cell.IsWalkable, cell.IsOccupied, cell.Weight);
@@ -130,11 +133,14 @@ namespace Migs.MPath.Core
         /// <see cref="IPathfinderSettings.IsCellWeightEnabled"/> is set.
         /// </summary>
         /// <param name="coordinate">A coordinate inside the grid.</param>
-        /// <param name="weight">The new weight.</param>
+        /// <param name="weight">The new weight: 0 or more, in the same units as the step costs.</param>
         /// <inheritdoc cref="SetWalkable" path="/remarks"/>
         /// <inheritdoc cref="SetWalkable" path="/exception"/>
-        public void SetWeight(Coordinate coordinate, float weight)
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="weight"/> is negative.</exception>
+        public void SetWeight(Coordinate coordinate, int weight)
         {
+            ThrowIfNegativeWeight(weight, nameof(weight));
+
             ref var target = ref GetWritableCell(coordinate);
 
             UpdateCell(ref target, coordinate, target.IsWalkable, target.IsOccupied, weight);
@@ -146,11 +152,11 @@ namespace Migs.MPath.Core
         /// weight only matter to cached paths when the settings enable them, since cached queries always run under
         /// the settings' own rules.
         /// </summary>
-        private void UpdateCell(ref Cell target, Coordinate coordinate, bool isWalkable, bool isOccupied, float weight)
+        private void UpdateCell(ref Cell target, Coordinate coordinate, bool isWalkable, bool isOccupied, int weight)
         {
             var isCacheAffected = target.IsWalkable != isWalkable
                 || (_settings.IsCalculatingOccupiedCells && target.IsOccupied != isOccupied)
-                || (_settings.IsCellWeightEnabled && !target.Weight.Equals(weight));
+                || (_settings.IsCellWeightEnabled && target.Weight != weight);
 
             WriteUserFields(ref target, isWalkable, isOccupied, weight);
 
@@ -165,8 +171,16 @@ namespace Migs.MPath.Core
             }
         }
 
+        private static void ThrowIfNegativeWeight(int weight, string paramName)
+        {
+            if (weight < 0)
+            {
+                throw new ArgumentOutOfRangeException(paramName, weight, "A cell weight must not be negative.");
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteUserFields(ref Cell cell, bool isWalkable, bool isOccupied, float weight)
+        private static void WriteUserFields(ref Cell cell, bool isWalkable, bool isOccupied, int weight)
         {
             cell.IsWalkable = isWalkable;
             cell.IsOccupied = isOccupied;

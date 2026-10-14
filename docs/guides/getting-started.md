@@ -30,7 +30,7 @@ for (int y = 0; y < height; y++)
             Coordinate = new Coordinate(x, y),
             IsWalkable = true,  // All cells are walkable by default
             IsOccupied = false, // No cells are occupied by default
-            Weight = 1.0f       // Default movement cost
+            Weight = 100        // Extra cost to enter, in step-cost units (100 = one straight step by default)
         };
     }
 }

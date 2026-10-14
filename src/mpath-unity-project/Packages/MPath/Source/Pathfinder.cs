@@ -184,6 +184,7 @@ namespace Migs.MPath.Core
             Size = Width * Height;
 
             _settings = FastPathfinderSettings.FromSettings(settings ?? new PathfinderSettings());
+            _settings.Validate(fieldWidth, fieldHeight);
             SetLayout(CellLayout.ColumnMajor);
             _query = QueryRules.FromSettings(_settings);
             _openSet = new UnsafePriorityQueue(Size);
@@ -518,16 +519,16 @@ namespace Migs.MPath.Core
         /// </summary>
         private PathResult CalculatePath(int agentSize, Coordinate from, Coordinate to, Cell* cells, PathNode* nodes)
         {
-            OpenNode(nodes, GetLayoutIndex(from.X, from.Y), PathNode.NoParent, 0, 0f,
+            OpenNode(nodes, GetLayoutIndex(from.X, from.Y), PathNode.NoParent, 0, 0,
                 GetH(from.X, from.Y, to.X, to.Y));
 
             var neighbors = stackalloc Cell*[MaxNeighbors];
 
-            // A* algorithm main loop. Each iteration expands one cell; ExpandNextFloat (behind ExpandNext) is the
+            // A* algorithm main loop. Each iteration expands one cell; ExpandNextPlain (behind ExpandNext) is the
             // single source of truth for that step, shared with the stepwise (tick-by-tick) search.
             while (_openSet.Count > 0)
             {
-                if (ExpandNextFloat(cells, nodes, to, agentSize, neighbors, out var current))
+                if (ExpandNextPlain(cells, nodes, to, agentSize, neighbors, out var current))
                 {
                     // Destination dequeued — search is done.
                     return ReconstructPath(current, cells, nodes, agentSize);
@@ -568,7 +569,7 @@ namespace Migs.MPath.Core
         /// <paramref name="scoreG"/> + <paramref name="scoreH"/>. The node must be untouched in this search.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void OpenNode(PathNode* nodes, int index, int parentIndex, int depth, float scoreG, float scoreH)
+        private void OpenNode(PathNode* nodes, int index, int parentIndex, int depth, int scoreG, int scoreH)
         {
             var node = nodes + index;
             node->Generation = _generation;
@@ -595,15 +596,15 @@ namespace Migs.MPath.Core
         {
             return _settings.IsTieBreaking
                 ? ExpandNextKeyed(cells, nodes, to, agentSize, neighbors, out current)
-                : ExpandNextFloat(cells, nodes, to, agentSize, neighbors, out current);
+                : ExpandNextPlain(cells, nodes, to, agentSize, neighbors, out current);
         }
 
         /// <summary>
-        /// One expansion of the float search (<see cref="TieBreaking.None"/>); <see cref="CalculatePath"/> calls it
+        /// One expansion of the plain search (<see cref="TieBreaking.None"/>); <see cref="CalculatePath"/> calls it
         /// directly so its loop has no mode check.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool ExpandNextFloat(Cell* cells, PathNode* nodes, Coordinate to, int agentSize, Cell** neighbors,
+        private bool ExpandNextPlain(Cell* cells, PathNode* nodes, Coordinate to, int agentSize, Cell** neighbors,
             out int current)
         {
             current = _openSet.Dequeue();
@@ -626,11 +627,13 @@ namespace Migs.MPath.Core
         /// <summary>
         /// Processes each neighbor of the current cell in the pathfinding algorithm. A node this search has not
         /// touched yet is opened; a touched one is either closed (skipped) or open (decrease-key when cheaper).
+        /// A step whose route would cost more than <see cref="FastPathfinderSettings.MaxCost"/> is not taken.
         /// </summary>
         private void ProcessNeighbors(Cell* cells, PathNode* nodes, int current, Cell** neighbors, Coordinate to)
         {
-            var currentCell = cells + current;
             var currentNode = nodes + current;
+            var currentG = currentNode->ScoreG;
+            var headroom = FastPathfinderSettings.MaxCost - currentG;
             var generation = _generation;
 
             for (var n = 0; n < MaxNeighbors; n++)
@@ -643,22 +646,29 @@ namespace Migs.MPath.Core
 
                 var index = (int)(neighbor - cells);
                 var node = nodes + index;
+                var isTouched = node->Generation == generation;
 
-                if (node->Generation != generation)
+                if (isTouched && node->IsClosed)
+                {
+                    continue;
+                }
+
+                var stepCost = GetStepCost(n, neighbor);
+
+                if (stepCost > headroom)
+                {
+                    continue;
+                }
+
+                var scoreG = currentG + stepCost;
+
+                if (!isTouched)
                 {
                     var neighborCoord = neighbor->Coordinate;
-                    OpenNode(nodes, index, current, currentNode->Depth + 1,
-                        currentNode->ScoreG + GetStepCost(currentCell, neighbor),
+                    OpenNode(nodes, index, current, currentNode->Depth + 1, scoreG,
                         GetH(neighborCoord.X, neighborCoord.Y, to.X, to.Y));
                     continue;
                 }
-
-                if (node->IsClosed)
-                {
-                    continue;
-                }
-
-                var scoreG = currentNode->ScoreG + GetStepCost(currentCell, neighbor);
 
                 if (scoreG < node->ScoreG)
                 {
@@ -974,37 +984,23 @@ namespace Migs.MPath.Core
         }
 
         /// <summary>
-        /// The cost of stepping from <paramref name="current"/> into the adjacent <paramref name="neighbor"/>: the
-        /// straight or diagonal travel multiplier plus the entered cell's <see cref="Cell.Weight"/> (when cell
-        /// weighting is enabled). The single step-cost function of both <see cref="GetPath"/> and
-        /// <see cref="GetReachable"/>, so a route's cost means the same in both. The weight is added, not
-        /// multiplied: <see cref="Cell.Weight"/> defaults to 0, and a multiplier would make every step free.
+        /// The cost of a step in <paramref name="direction"/> (a <see cref="DirectionIndexes"/> slot) into
+        /// <paramref name="neighbor"/>: the straight or diagonal step cost plus the entered cell's
+        /// <see cref="Cell.Weight"/> (when cell weighting is enabled). The single step-cost function of both searches
+        /// and of <see cref="GetPath"/> and <see cref="GetReachable"/>, so a route's cost means the same everywhere.
+        /// The weight is added, not multiplied: <see cref="Cell.Weight"/> defaults to 0, and a multiplier would make
+        /// every step free. A negative weight counts as 0 and one above <see cref="FastPathfinderSettings.MaxCost"/>
+        /// as that, so the sum never overflows (a step cost is at most half of it after
+        /// <see cref="FastPathfinderSettings.Validate"/>).
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private float GetStepCost(Cell* current, Cell* neighbor)
+        private int GetStepCost(int direction, Cell* neighbor)
         {
-            var travel = GetNeighborTravelWeightMultiplier(
-                current->Coordinate.X, current->Coordinate.Y,
-                neighbor->Coordinate.X, neighbor->Coordinate.Y);
+            var travel = direction >= DiagonalStart ? _settings.DiagonalStepCost : _settings.StraightStepCost;
 
-            return travel + GetCellWeightMultiplier(neighbor);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private float GetNeighborTravelWeightMultiplier(int startX, int startY, int destX, int destY)
-        {
-            return IsDiagonalMovement(startX, startY, destX, destY)
-                ? _settings.DiagonalMovementMultiplier
-                : _settings.StraightMovementMultiplier;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private float GetCellWeightMultiplier(Cell* cell)
-        {
-            if (cell == null)
-                return 0;
-                
-            return _settings.IsCellWeightEnabled ? cell->Weight : 0;
+            return _settings.IsCellWeightEnabled
+                ? travel + Math.Min(Math.Max(neighbor->Weight, 0), FastPathfinderSettings.MaxCost)
+                : travel;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1158,12 +1154,12 @@ namespace Migs.MPath.Core
 
         /// <summary>
         /// The A* heuristic: the cheapest cost of reaching the destination over an empty grid with the configured
-        /// step costs (octile distance with diagonals, Manhattan without, scaled by the multipliers; see
+        /// step costs (octile distance with diagonals, Manhattan without, scaled by the step costs; see
         /// <see cref="FastPathfinderSettings"/>). It never overestimates, so <see cref="GetPath"/> returns a
         /// cheapest route.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private float GetH(int startX, int startY, int destX, int destY)
+        private int GetH(int startX, int startY, int destX, int destY)
         {
             var dx = Math.Abs(destX - startX);
             var dy = Math.Abs(destY - startY);

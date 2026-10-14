@@ -12,8 +12,8 @@ A Unity ScriptableObject implementation of the `IPathfinderSettings` interface. 
 | `IsCalculatingOccupiedCells` | `bool` | `true` | Whether occupied cells are considered as blocked. |
 | `CornerBlocking` | [`CornerBlocking`](CornerBlocking.md) | `BetweenBlockedCells` | Which flanking cells (walls, occupied cells) block a diagonal step. |
 | `IsCellWeightEnabled` | `bool` | `true` | Whether cell weight calculation is enabled. |
-| `StraightMovementMultiplier` | `float` | `1.0f` | The cost multiplier for horizontal/vertical movement. |
-| `DiagonalMovementMultiplier` | `float` | `1.41f` | The cost multiplier for diagonal movement. |
+| `StraightStepCost` | `int` | `100` | The cost of a horizontal/vertical step (at least 1). |
+| `DiagonalStepCost` | `int` | `141` | The cost of a diagonal step (at least 1). Assets saved before 2.0 do not carry the old float multipliers over: enter both step costs again. |
 | `TieBreaking` | [`TieBreaking`](TieBreaking.md) | `None` | Which route wins among equal-cost routes. |
 | `GridSnapshotMode` | [`GridSnapshotMode`](GridSnapshotMode.md) | `PerQuery` | When a `Cell[,]`, cell-holder or unordered `Cell[]` pathfinder copies the grid: every query, or once and after `Refresh()` (`Manual`). |
 | `CellLayout` | [`CellLayout`](CellLayout.md) | `Auto` | Where a `Cell[]` pathfinder finds cell (X, Y): `ColumnMajor`, `RowMajor`, `Unordered`, or `Auto` (detected at the first query). |

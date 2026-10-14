@@ -20,7 +20,7 @@ namespace Migs.MPath.Tests
             // Check the actual defaults from the implementation
             cell.IsWalkable.Should().BeFalse();
             cell.IsOccupied.Should().BeFalse();
-            cell.Weight.Should().Be(0f);
+            cell.Weight.Should().Be(0);
         }
 
         [Test]
@@ -30,7 +30,7 @@ namespace Migs.MPath.Tests
             var coordinate = new Coordinate(5, 10);
             var isWalkable = true;
             var isOccupied = true;
-            var weight = 2.5f;
+            var weight = 250;
 
             // Act
             var cell = new Cell

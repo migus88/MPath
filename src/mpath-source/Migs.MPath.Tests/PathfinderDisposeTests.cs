@@ -27,7 +27,7 @@ namespace Migs.MPath.Tests
 
             yield return new TestCaseData((Action<Pathfinder>)(p => p.GetPath(Origin, Destination)))
                 .SetName("GetPath_AfterDispose_ThrowsObjectDisposedException");
-            yield return new TestCaseData((Action<Pathfinder>)(p => p.GetReachable(Origin, 5f)))
+            yield return new TestCaseData((Action<Pathfinder>)(p => p.GetReachable(Origin, 500)))
                 .SetName("GetReachable_AfterDispose_ThrowsObjectDisposedException");
             yield return new TestCaseData((Action<Pathfinder>)(p => p.HasLineOfSight(Origin, Destination)))
                 .SetName("HasLineOfSight_AfterDispose_ThrowsObjectDisposedException");
@@ -49,7 +49,7 @@ namespace Migs.MPath.Tests
                 .SetName("SetWalkable_AfterDispose_ThrowsObjectDisposedException");
             yield return new TestCaseData((Action<Pathfinder>)(p => p.SetOccupied(Origin, true)))
                 .SetName("SetOccupied_AfterDispose_ThrowsObjectDisposedException");
-            yield return new TestCaseData((Action<Pathfinder>)(p => p.SetWeight(Origin, 1f)))
+            yield return new TestCaseData((Action<Pathfinder>)(p => p.SetWeight(Origin, 100)))
                 .SetName("SetWeight_AfterDispose_ThrowsObjectDisposedException");
         }
 

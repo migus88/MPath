@@ -56,8 +56,8 @@ namespace Migs.MPath.Tests
                 // Act
                 using var expectedPath = reference.GetPath(from, to);
                 using var path = pathfinder.GetPath(from, to);
-                using var expectedRange = reference.GetReachable(from, 6f);
-                using var range = pathfinder.GetReachable(from, 6f);
+                using var expectedRange = reference.GetReachable(from, 600);
+                using var range = pathfinder.GetReachable(from, 600);
 
                 // Assert
                 path.IsSuccess.Should().Be(expectedPath.IsSuccess);
@@ -79,7 +79,7 @@ namespace Migs.MPath.Tests
 
             // Act
             using (pathfinder.GetPath(from, to))
-            using (pathfinder.GetReachable(from, 8f))
+            using (pathfinder.GetReachable(from, 800))
             using (var search = pathfinder.BeginStepwiseSearch(from, to))
             {
                 pathfinder.HasLineOfSight(from, to);
@@ -283,7 +283,7 @@ namespace Migs.MPath.Tests
             using var pathfinder = new Pathfinder(cells, Width, Height);
 
             // Act
-            using var result = pathfinder.GetReachable(new Coordinate(0, 0), 100f);
+            using var result = pathfinder.GetReachable(new Coordinate(0, 0), 10000);
 
             // Assert
             result.Contains(missing).Should().BeFalse();
@@ -424,7 +424,7 @@ namespace Migs.MPath.Tests
                 for (var y = 0; y < Height; y++)
                 {
                     matrix[x, y].IsWalkable = random.NextDouble() >= WallRatio;
-                    matrix[x, y].Weight = random.Next(3);
+                    matrix[x, y].Weight = random.Next(3) * 100;
                 }
             }
 

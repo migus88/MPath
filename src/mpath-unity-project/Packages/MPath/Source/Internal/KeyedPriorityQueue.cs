@@ -7,13 +7,13 @@ namespace Migs.MPath.Core.Internal
 {
     /// <summary>
     /// The open set of the keyed search used with a <see cref="Data.TieBreaking"/>: the same fixed-array binary
-    /// min-heap as <see cref="UnsafePriorityQueue"/>, ordered lexicographically by an integer priority key, then the
-    /// tie key, then the cost key (each entry carries all three, so a sift never touches the nodes it passes).
+    /// min-heap as <see cref="UnsafePriorityQueue"/>, ordered lexicographically by the priority (f = g + h), then the
+    /// tie key, then the cost g (each entry carries all three, so a sift never touches the nodes it passes).
     /// </summary>
     /// <remarks>
     /// The last key (cost ascending) makes every node on a route leave the queue before the nodes after it whenever
     /// their first two keys tie, which the tie-break relies on. Only a tie-breaking pathfinder creates one, so the
-    /// float search keeps its own queue untouched. Rented from <see cref="ArrayPool{T}.Shared"/> and returned by
+    /// plain search keeps its own queue untouched. Rented from <see cref="ArrayPool{T}.Shared"/> and returned by
     /// <see cref="Dispose"/>; after construction no operation allocates.
     /// </remarks>
     internal sealed unsafe class KeyedPriorityQueue : IDisposable
@@ -50,13 +50,13 @@ namespace Migs.MPath.Core.Internal
         /// Adds a node with its keys. The node must not already be in the queue.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Enqueue(int index, long priorityKey, int tieKey, long costKey)
+        public void Enqueue(int index, int priority, int tieKey, int cost)
         {
             Debug.Assert(!Contains(index), "The node is already queued.");
 
             fixed (Entry* heap = _heap)
             {
-                CascadeUp(heap, ++Count, new Entry(priorityKey, costKey, tieKey, index));
+                CascadeUp(heap, ++Count, new Entry(priority, cost, tieKey, index));
             }
         }
 
@@ -90,14 +90,14 @@ namespace Migs.MPath.Core.Internal
         /// Lowers the keys of a node already in the queue (a decrease-key) and restores the heap property.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdatePriority(int index, long priorityKey, int tieKey, long costKey)
+        public void UpdatePriority(int index, int priority, int tieKey, int cost)
         {
             Debug.Assert(Contains(index), "The node is not queued.");
 
             fixed (Entry* heap = _heap)
             {
                 var slot = _nodes[index].QueueIndex;
-                var entry = new Entry(priorityKey, costKey, tieKey, index);
+                var entry = new Entry(priority, cost, tieKey, index);
 
                 if (slot > 1 && entry.IsBefore(heap[slot >> 1]))
                 {
@@ -198,20 +198,20 @@ namespace Migs.MPath.Core.Internal
         }
 
         /// <summary>
-        /// One slot of the heap: the three keys it is ordered by and the index of its node (and cell).
+        /// One slot of the heap (16 bytes): the three keys it is ordered by and the index of its node (and cell).
         /// </summary>
         private readonly struct Entry
         {
-            public readonly long PriorityKey;
-            public readonly long CostKey;
+            public readonly int Priority;
+            public readonly int Cost;
             public readonly int TieKey;
             public readonly int Index;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public Entry(long priorityKey, long costKey, int tieKey, int index)
+            public Entry(int priority, int cost, int tieKey, int index)
             {
-                PriorityKey = priorityKey;
-                CostKey = costKey;
+                Priority = priority;
+                Cost = cost;
                 TieKey = tieKey;
                 Index = index;
             }
@@ -222,9 +222,9 @@ namespace Migs.MPath.Core.Internal
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool IsBefore(in Entry other)
             {
-                if (PriorityKey != other.PriorityKey)
+                if (Priority != other.Priority)
                 {
-                    return PriorityKey < other.PriorityKey;
+                    return Priority < other.Priority;
                 }
 
                 if (TieKey != other.TieKey)
@@ -232,7 +232,7 @@ namespace Migs.MPath.Core.Internal
                     return TieKey < other.TieKey;
                 }
 
-                return CostKey < other.CostKey;
+                return Cost < other.Cost;
             }
         }
     }

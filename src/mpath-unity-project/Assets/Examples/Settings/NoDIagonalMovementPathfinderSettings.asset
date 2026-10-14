@@ -16,5 +16,5 @@ MonoBehaviour:
   <IsCalculatingOccupiedCells>k__BackingField: 1
   <CornerBlocking>k__BackingField: 7
   <IsCellWeightEnabled>k__BackingField: 1
-  <StraightMovementMultiplier>k__BackingField: 1
-  <DiagonalMovementMultiplier>k__BackingField: 1.41
+  <StraightStepCost>k__BackingField: 100
+  <DiagonalStepCost>k__BackingField: 141

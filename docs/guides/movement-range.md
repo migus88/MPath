@@ -14,12 +14,12 @@ In addition to finding a path between two points, MPath can answer "where can th
 
 Each step's cost is:
 
-- `StraightMovementMultiplier` for a cardinal (horizontal/vertical) move
-- `DiagonalMovementMultiplier` for a diagonal move
+- `StraightStepCost` for a cardinal (horizontal/vertical) move (100 by default)
+- `DiagonalStepCost` for a diagonal move (141 by default)
 
-When `IsCellWeightEnabled` is set, the destination cell's `Weight` is **added** to the step cost (so a cell with `Weight = 2` costs an extra 2 to enter, on top of the travel cost). Weight is added rather than multiplied — consistent with the main pathfinder, and so that the default `Weight` of 0 leaves the step cost equal to the travel cost instead of zeroing it out. The origin cell is always included with a cost of `0`.
+When `IsCellWeightEnabled` is set, the destination cell's `Weight` is **added** to the step cost (so a cell with `Weight = 200` costs an extra 200 to enter, on top of the travel cost). Weight is added rather than multiplied — consistent with the main pathfinder, and so that the default `Weight` of 0 leaves the step cost equal to the travel cost instead of zeroing it out. The origin cell is always included with a cost of `0`.
 
-A cell is reachable when the cheapest accumulated cost to it is **less than or equal to** the budget.
+A cell is reachable when the cheapest accumulated cost to it is **less than or equal to** the budget. Costs and budgets are `int`s in the unit of the step costs, so the comparison is exact: a budget equal to a route's cost admits it, and one less excludes it. Routes costing more than 1,073,741,823 (`int.MaxValue / 2`) are never reached, so `int.MaxValue` is an unbounded budget. A negative weight written into the grid counts as 0 (`SetWeight`/`SetCell` reject one).
 
 ## Basic usage
 
@@ -27,8 +27,8 @@ A cell is reachable when the cheapest accumulated cost to it is **less than or e
 using var pathfinder = new Pathfinder(cells, width, height);
 var agent = new SimpleAgent { Size = 1 };
 
-// Find every cell reachable from (4, 4) for a budget of 5 movement points.
-using var range = pathfinder.GetReachable(agent, new Coordinate(4, 4), 5f);
+// Find every cell reachable from (4, 4) for a budget of 5 straight steps (default step costs 100/141).
+using var range = pathfinder.GetReachable(agent, new Coordinate(4, 4), 500);
 
 Console.WriteLine($"{range.Length} cells reachable");
 
@@ -54,7 +54,7 @@ if (range.TryGetCost(new Coordinate(6, 4), out var cost))
 }
 
 // A dense per-cell cost field in the pathfinder's layout (costs[pathfinder.GetIndex(c)]), -1 where unreached
-var costs = new float[width * height];
+var costs = new int[width * height];
 range.CopyCostsTo(costs);
 ```
 
@@ -62,18 +62,18 @@ range.CopyCostsTo(costs);
 
 ## Counting moves instead of costs
 
-Board games often count moves: every step costs one movement point, diagonals included, and straight lines should win ties. Use equal multipliers, a [`TieBreaking`](../api/TieBreaking.md), and read the step counts directly:
+Board games often count moves: every step costs one movement point, diagonals included, and straight lines should win ties. Use equal step costs of 1, a [`TieBreaking`](../api/TieBreaking.md), and read the step counts directly:
 
 ```csharp
 var settings = new PathfinderSettings
 {
-    StraightMovementMultiplier = 1f,
-    DiagonalMovementMultiplier = 1f,
+    StraightStepCost = 1,
+    DiagonalStepCost = 1,
     IsCellWeightEnabled = false,
     TieBreaking = TieBreaking.FewerDiagonals
 };
 using var pathfinder = new Pathfinder(cells, settings);
-using var range = pathfinder.GetReachable(origin, budget: 4f);
+using var range = pathfinder.GetReachable(origin, budget: 4);
 
 if (range.TryGetCell(target, out var cell))
 {
@@ -81,19 +81,19 @@ if (range.TryGetCell(target, out var cell))
 }
 ```
 
-With a tie-break the costs are exact (multipliers, weights and budgets rounded to four decimal places), so the counts and the budget never drift with float rounding. Without one, `Steps` / `DiagonalSteps` still describe the cheapest route the search kept.
+Costs are integers, so the counts and the budget never drift. With a tie-break the counts describe the route with the fewest diagonals, then the fewest steps; without one, `Steps` / `DiagonalSteps` still describe the cheapest route the search kept.
 
 ## Per-query occupancy
 
 The same pathfinder can answer "where can this unit move?" (units block) and "what can this unit threaten?" (units ignored) on one grid. Pass [`QueryOptions`](../api/QueryOptions.md):
 
 ```csharp
-using var move   = pathfinder.GetReachable(agent, origin, 5f);
-using var threat = pathfinder.GetReachable(agent, origin, 5f, new QueryOptions(OccupancyRule.Ignore));
+using var move   = pathfinder.GetReachable(agent, origin, 500);
+using var threat = pathfinder.GetReachable(agent, origin, 500, new QueryOptions(OccupancyRule.Ignore));
 
 // Units block, except the ones listed (e.g. allies this unit may pass through):
 ReadOnlySpan<Coordinate> passable = stackalloc Coordinate[] { ally1, ally2 };
-using var pass = pathfinder.GetReachable(agent, origin, 5f, new QueryOptions(alwaysEnterable: passable));
+using var pass = pathfinder.GetReachable(agent, origin, 500, new QueryOptions(alwaysEnterable: passable));
 ```
 
 The options apply to that call only and never modify the grid. `default(QueryOptions)` behaves exactly like the overload without options.

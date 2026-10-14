@@ -14,7 +14,7 @@ public class GridCell : MonoBehaviour, ICellHolder
     
     [SerializeField] private bool _isWalkable = true;
     [SerializeField] private Vector2Int _position;
-    [SerializeField] private float _weight = 1.0f;
+    [SerializeField, Range(0, 10)] private float _weight = 1.0f; // in straight steps
     
     private void Awake()
     {
@@ -22,7 +22,7 @@ public class GridCell : MonoBehaviour, ICellHolder
         {
             Coordinate = new Coordinate(_position.x, _position.y),
             IsWalkable = _isWalkable,
-            Weight = _weight
+            Weight = Mathf.RoundToInt(_weight * 100) // costs are ints: 100 per straight step by default
         };
     }
 }

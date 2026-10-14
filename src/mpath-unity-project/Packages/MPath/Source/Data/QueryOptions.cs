@@ -4,7 +4,7 @@ namespace Migs.MPath.Core.Data
 {
     /// <summary>
     /// Movement rules that override the pathfinder's settings for a single query (<see cref="Pathfinder.GetPath(Interfaces.IAgent, Coordinate, Coordinate, QueryOptions)"/>,
-    /// <see cref="Pathfinder.GetReachable(Interfaces.IAgent, Coordinate, float, QueryOptions)"/> and
+    /// <see cref="Pathfinder.GetReachable(Interfaces.IAgent, Coordinate, int, QueryOptions)"/> and
     /// <see cref="Pathfinder.BeginStepwiseSearch(Interfaces.IAgent, Coordinate, Coordinate, QueryOptions)"/>).
     /// The grid and the settings are left untouched.
     /// </summary>

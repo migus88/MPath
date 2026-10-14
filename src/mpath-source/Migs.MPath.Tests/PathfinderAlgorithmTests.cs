@@ -193,7 +193,7 @@ namespace Migs.MPath.Tests
             for (var i = 1; i < GridSize - 1; i++)
             {
                 var cellIndex = i * GridSize + i; // Diagonal line
-                cells[cellIndex].Weight = 10f; // High weight
+                cells[cellIndex].Weight = 1000; // High weight
             }
             
             var settings = new PathfinderSettings
@@ -499,7 +499,7 @@ namespace Migs.MPath.Tests
                         Coordinate = new Coordinate(x, y),
                         IsWalkable = true,
                         IsOccupied = false,
-                        Weight = 1.0f
+                        Weight = 100
                     };
                 }
             }

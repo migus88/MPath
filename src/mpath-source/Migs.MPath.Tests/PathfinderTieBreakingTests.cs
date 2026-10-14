@@ -23,9 +23,9 @@ namespace Migs.MPath.Tests
         [Test]
         public void GetPath_OnOpenGroundWithEqualStepCosts_ReturnsTheStraightColumn(
             [ValueSource(nameof(TieBreakingModes))] TieBreaking tieBreaking,
-            [Values(1f, 1.41f)] float diagonal)
+            [Values(100, 141)] int diagonal)
         {
-            using var pathfinder = CreatePathfinder(tieBreaking, 1f, diagonal);
+            using var pathfinder = CreatePathfinder(tieBreaking, 100, diagonal);
 
             using var path = pathfinder.GetPath(new Coordinate(3, 2), new Coordinate(3, 7));
 
@@ -37,7 +37,7 @@ namespace Migs.MPath.Tests
         [Test]
         public void GetPath_WithFewerDiagonals_UsesTheFewestDiagonalsAndKeepsItsDirection()
         {
-            using var pathfinder = CreatePathfinder(TieBreaking.FewerDiagonals, 1f, 1f);
+            using var pathfinder = CreatePathfinder(TieBreaking.FewerDiagonals, 1, 1);
 
             using var path = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(5, 3));
 
@@ -49,7 +49,7 @@ namespace Migs.MPath.Tests
         [Test]
         public void GetPath_WithFewerTurns_OnOpenGround_TurnsOnce()
         {
-            using var pathfinder = CreatePathfinder(TieBreaking.FewerTurns, 1f, 1.41f);
+            using var pathfinder = CreatePathfinder(TieBreaking.FewerTurns, 100, 141);
 
             using var path = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(10, 5));
 
@@ -66,7 +66,7 @@ namespace Migs.MPath.Tests
             SetWall(cells, 5, 1);
             SetWall(cells, 5, 2);
             using var pathfinder = new Pathfinder(cells, Width, Height,
-                CreateSettings(TieBreaking.FewerTurns, 1f, 1f));
+                CreateSettings(TieBreaking.FewerTurns, 1, 1));
 
             using var path = pathfinder.GetPath(new Coordinate(0, 1), new Coordinate(10, 1));
 
@@ -77,7 +77,7 @@ namespace Migs.MPath.Tests
         [Test]
         public void GetPath_WithoutTieBreaking_ReturnsTheRouteOfEarlierVersions()
         {
-            using var pathfinder = CreatePathfinder(TieBreaking.None, 1f, 1.41f);
+            using var pathfinder = CreatePathfinder(TieBreaking.None, 100, 141);
 
             using var path = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(10, 5));
 
@@ -91,7 +91,7 @@ namespace Migs.MPath.Tests
         {
             var from = new Coordinate(0, 0);
             var to = new Coordinate(10, 5);
-            var settings = CreateSettings(tieBreaking, 1f, 1.41f);
+            var settings = CreateSettings(tieBreaking, 100, 141);
             using var pathfinder = new Pathfinder(CreateCells(), Width, Height, settings);
             using var expected = pathfinder.GetPath(from, to);
 
@@ -113,7 +113,7 @@ namespace Migs.MPath.Tests
         public void GetPath_WithTieBreaking_ReturnsTheSameRouteForEveryGridRepresentation(
             [ValueSource(nameof(TieBreakingModes))] TieBreaking tieBreaking)
         {
-            var settings = CreateSettings(tieBreaking, 1f, 1f);
+            var settings = CreateSettings(tieBreaking, 1, 1);
             var cells = CreateCells();
             foreach (var wall in new[] { C(4, 2), C(4, 3), C(4, 4), C(8, 6), C(9, 6), C(10, 6) })
             {
@@ -147,7 +147,7 @@ namespace Migs.MPath.Tests
         public void GetPath_WithTieBreaking_WhenThePathfinderIsReused_MatchesAFreshPathfinder(
             [ValueSource(nameof(TieBreakingModes))] TieBreaking tieBreaking)
         {
-            var settings = CreateSettings(tieBreaking, 1f, 1.41f);
+            var settings = CreateSettings(tieBreaking, 100, 141);
             var cells = CreateCells();
             foreach (var wall in new[] { C(4, 2), C(4, 3), C(4, 4), C(8, 6), C(9, 6), C(10, 6) })
             {
@@ -165,8 +165,8 @@ namespace Migs.MPath.Tests
 
                 using var expected = fresh.GetPath(from, to);
                 using var path = reused.GetPath(from, to);
-                using var expectedRange = fresh.GetReachable(from, 6f);
-                using var range = reused.GetReachable(from, 6f);
+                using var expectedRange = fresh.GetReachable(from, 600);
+                using var range = reused.GetReachable(from, 600);
 
                 path.Path.Should().Equal(expected.Path, $"{from} -> {to}");
                 range.Cells.Should().Equal(expectedRange.Cells, $"from {from}");
@@ -174,18 +174,17 @@ namespace Migs.MPath.Tests
         }
 
         [Test]
-        public void GetPath_WithTieBreaking_WhenFractionalCostsSumInDifferentOrders_StillTies()
+        public void GetPath_WithTieBreaking_WhenWeightedCostsSumInDifferentOrders_StillTies()
         {
-            // 0.1 is not exact in binary: float sums of the same steps in different orders differ in the last bit,
-            // which used to pick an arbitrary route. Exact keys tie them, so the fewest turns win.
+            // Integer costs add up exactly in any order, so every route of equal cost ties and the fewest turns win.
             var cells = CreateCells();
             for (var i = 0; i < cells.Length; i++)
             {
-                cells[i].Weight = 0.1f;
+                cells[i].Weight = 1;
             }
 
-            using var pathfinder = new Pathfinder(cells, Width, Height, CreateSettings(TieBreaking.FewerTurns, 0.3f,
-                0.7f, isCellWeightEnabled: true));
+            using var pathfinder = new Pathfinder(cells, Width, Height, CreateSettings(TieBreaking.FewerTurns, 3,
+                7, isCellWeightEnabled: true));
 
             using var path = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(9, 3));
 
@@ -193,28 +192,46 @@ namespace Migs.MPath.Tests
         }
 
         [Test]
-        public void GetPath_WithTieBreaking_WhenACellIsInfinitelyHeavy_ClampsItsCost()
+        public void GetPath_WhenACellWeighsMoreThanTheCostHeadroom_TreatsWhatLiesBehindItAsUnreachable(
+            [Values(TieBreaking.None, TieBreaking.FewerDiagonals)] TieBreaking tieBreaking)
         {
-            var cells = CreateCells(width: 3, height: 1);
-            cells[1].Weight = float.PositiveInfinity;
-            using var pathfinder = new Pathfinder(cells, 3, 1, CreateSettings(TieBreaking.FewerDiagonals, 1f, 1f,
+            var cells = CreateCells(width: 4, height: 1);
+            cells[2].Weight = int.MaxValue;
+            using var pathfinder = new Pathfinder(cells, 4, 1, CreateSettings(tieBreaking, 1, 1,
                 isCellWeightEnabled: true));
 
-            using var path = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(2, 0));
-            using var reachable = pathfinder.GetReachable(new Coordinate(0, 0), float.MaxValue);
+            using var path = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(3, 0));
+            using var reachable = pathfinder.GetReachable(new Coordinate(0, 0), int.MaxValue);
 
-            path.Path.Should().Equal(C(1, 0), C(2, 0));
-            reachable.TryGetCell(new Coordinate(2, 0), out var cell).Should().BeTrue();
-            cell.Cost.Should().Be(16777216f + 2f, "a step costs at most 2^24");
+            path.IsSuccess.Should().BeFalse("a route past int.MaxValue / 2 is never taken");
+            reachable.Cells.Select(cell => cell.Coordinate).Should().Equal(C(0, 0), C(1, 0));
+            reachable.Cells.Should().OnlyContain(cell => cell.Cost >= 0, "no cost wraps around");
+        }
+
+        [Test]
+        public void GetReachable_WhenRoutesCostUpToTheHeadroom_ReachesThemWithoutWrapping(
+            [Values(TieBreaking.None, TieBreaking.FewerDiagonals)] TieBreaking tieBreaking)
+        {
+            const int headroom = int.MaxValue / 2;
+            var cells = CreateCells(width: 4, height: 1);
+            cells[1].Weight = headroom - 2;
+            using var pathfinder = new Pathfinder(cells, 4, 1, CreateSettings(tieBreaking, 1, 1,
+                isCellWeightEnabled: true));
+
+            using var reachable = pathfinder.GetReachable(new Coordinate(0, 0), int.MaxValue);
+
+            reachable.TryGetCost(new Coordinate(2, 0), out var cost).Should().BeTrue();
+            cost.Should().Be(headroom, "the route costs exactly the headroom");
+            reachable.Contains(new Coordinate(3, 0)).Should().BeFalse("one more step would pass it");
         }
 
         [Test]
         public void GetReachable_WithFewerDiagonalsAndEqualStepCosts_CountsKingMoves()
         {
             var origin = new Coordinate(6, 5);
-            using var pathfinder = CreatePathfinder(TieBreaking.FewerDiagonals, 1f, 1f);
+            using var pathfinder = CreatePathfinder(TieBreaking.FewerDiagonals, 1, 1);
 
-            using var reachable = pathfinder.GetReachable(origin, 3f);
+            using var reachable = pathfinder.GetReachable(origin, 3);
 
             reachable.Length.Should().Be(7 * 7);
             foreach (var cell in reachable.Cells)
@@ -228,26 +245,39 @@ namespace Migs.MPath.Tests
         }
 
         [Test]
-        public void GetReachable_WithTieBreaking_WhenTheBudgetEqualsARouteCost_IncludesTheCell()
+        public void GetReachable_WhenTheBudgetEqualsARouteCost_IncludesTheCell(
+            [Values(TieBreaking.None, TieBreaking.FewerDiagonals)] TieBreaking tieBreaking)
         {
-            using var pathfinder = CreatePathfinder(TieBreaking.FewerDiagonals, 1f, 1.41f);
+            using var pathfinder = CreatePathfinder(tieBreaking, 100, 141);
 
-            using var reachable = pathfinder.GetReachable(new Coordinate(2, 2), 3 * 1.41f);
+            using var reachable = pathfinder.GetReachable(new Coordinate(2, 2), 3 * 141);
 
             reachable.TryGetCell(new Coordinate(5, 5), out var cell).Should().BeTrue();
             cell.Steps.Should().Be(3);
             cell.DiagonalSteps.Should().Be(3);
-            cell.Cost.Should().Be(4.23f);
+            cell.Cost.Should().Be(423);
             reachable.Contains(new Coordinate(6, 5)).Should().BeFalse();
+        }
+
+        [Test]
+        public void GetReachable_WhenTheBudgetIsOneBelowARouteCost_ExcludesTheCell(
+            [Values(TieBreaking.None, TieBreaking.FewerDiagonals)] TieBreaking tieBreaking)
+        {
+            using var pathfinder = CreatePathfinder(tieBreaking, 100, 141);
+
+            using var reachable = pathfinder.GetReachable(new Coordinate(2, 2), 3 * 141 - 1);
+
+            reachable.Contains(new Coordinate(5, 5)).Should().BeFalse();
+            reachable.Contains(new Coordinate(4, 4)).Should().BeTrue();
         }
 
         [Test]
         public void GetReachable_WithoutTieBreaking_ReportsTheStepCountsOfTheCheapestRoute()
         {
             var origin = new Coordinate(6, 5);
-            using var pathfinder = CreatePathfinder(TieBreaking.None, 1f, 1.41f);
+            using var pathfinder = CreatePathfinder(TieBreaking.None, 100, 141);
 
-            using var reachable = pathfinder.GetReachable(origin, 5f);
+            using var reachable = pathfinder.GetReachable(origin, 500);
 
             reachable.TryGetCell(new Coordinate(9, 6), out var cell).Should().BeTrue();
             cell.Steps.Should().Be(3);
@@ -262,7 +292,7 @@ namespace Migs.MPath.Tests
         {
             var from = new Coordinate(1, 1);
             var to = new Coordinate(11, 7);
-            using var pathfinder = CreatePathfinder(tieBreaking, 1f, 1.41f);
+            using var pathfinder = CreatePathfinder(tieBreaking, 100, 141);
             List<Coordinate> expected;
             using (var path = pathfinder.GetPath(from, to))
             {
@@ -276,14 +306,14 @@ namespace Migs.MPath.Tests
             final.Path.Should().Equal(expected);
             foreach (var node in final.Searched)
             {
-                node.ScoreF.Should().BeApproximately(node.ScoreG + node.ScoreH, 0.0001f, node.ToString());
+                node.ScoreF.Should().Be(node.ScoreG + node.ScoreH, node.ToString());
             }
         }
 
         [Test]
         public void GetPath_WithSmoothing_ReportsTheStepsOfTheUnsmoothedRoute()
         {
-            var settings = CreateSettings(TieBreaking.FewerTurns, 1f, 1.41f);
+            var settings = CreateSettings(TieBreaking.FewerTurns, 100, 141);
             settings.PathSmoothingMethod = PathSmoothingMethod.Simple;
             using var pathfinder = new Pathfinder(CreateCells(), Width, Height, settings);
 
@@ -297,7 +327,7 @@ namespace Migs.MPath.Tests
         [Test]
         public void GetPath_FromThePathCache_KeepsTheStepCounts()
         {
-            using var pathfinder = CreatePathfinder(TieBreaking.FewerDiagonals, 1f, 1f).EnablePathCaching();
+            using var pathfinder = CreatePathfinder(TieBreaking.FewerDiagonals, 1, 1).EnablePathCaching();
             using var first = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(5, 3));
 
             using var cached = pathfinder.GetPath(new Coordinate(0, 0), new Coordinate(5, 3));
@@ -327,19 +357,19 @@ namespace Migs.MPath.Tests
                 .Should().Throw<ArgumentOutOfRangeException>();
         }
 
-        private static Pathfinder CreatePathfinder(TieBreaking tieBreaking, float straight, float diagonal)
+        private static Pathfinder CreatePathfinder(TieBreaking tieBreaking, int straight, int diagonal)
         {
             return new Pathfinder(CreateCells(), Width, Height, CreateSettings(tieBreaking, straight, diagonal));
         }
 
-        private static PathfinderSettings CreateSettings(TieBreaking tieBreaking, float straight, float diagonal,
+        private static PathfinderSettings CreateSettings(TieBreaking tieBreaking, int straight, int diagonal,
             bool isCellWeightEnabled = false)
         {
             return new PathfinderSettings
             {
                 TieBreaking = tieBreaking,
-                StraightMovementMultiplier = straight,
-                DiagonalMovementMultiplier = diagonal,
+                StraightStepCost = straight,
+                DiagonalStepCost = diagonal,
                 IsCellWeightEnabled = isCellWeightEnabled
             };
         }

@@ -11,10 +11,10 @@ namespace Migs.MPath.Core.Internal
     /// one; any other node is untouched and its other fields are stale. A search therefore never resets the array:
     /// it bumps the generation and initialises each node on first touch, so its cost is O(cells searched), not
     /// O(grid).<br/>
-    /// The layout is explicit so the two cost modes share the same 24 bytes: the float search
-    /// (<see cref="Data.TieBreaking.None"/>) uses <see cref="ScoreG"/>, <see cref="ScoreH"/> and
-    /// <see cref="ParentIndex"/>; the keyed search (any tie-break) uses <see cref="CostKey"/> and
-    /// <see cref="TieKey"/> over the same bytes. A pathfinder only ever runs one of them.
+    /// The layout is explicit so the two searches share the same 24 bytes: both keep the cost in
+    /// <see cref="ScoreG"/>; the plain search (<see cref="Data.TieBreaking.None"/>) also uses <see cref="ScoreH"/>
+    /// and <see cref="ParentIndex"/>, the keyed search (any tie-break) <see cref="TieKey"/> over the parent's bytes.
+    /// A pathfinder only ever runs one of them.
     /// </remarks>
     [StructLayout(LayoutKind.Explicit)]
     internal struct PathNode
@@ -30,14 +30,14 @@ namespace Migs.MPath.Core.Internal
         public const int NoParent = -1;
 
         /// <summary>
-        /// The cheapest known cost from the origin.
+        /// The cheapest known cost from the origin, in both searches.
         /// </summary>
-        [FieldOffset(0)] public float ScoreG;
+        [FieldOffset(0)] public int ScoreG;
 
         /// <summary>
         /// The heuristic estimate to the destination (0 in the reachability search).
         /// </summary>
-        [FieldOffset(4)] public float ScoreH;
+        [FieldOffset(4)] public int ScoreH;
 
         /// <summary>
         /// The cell index of the node this one is reached from, or <see cref="NoParent"/>.
@@ -61,17 +61,10 @@ namespace Migs.MPath.Core.Internal
         [FieldOffset(20)] public uint Generation;
 
         /// <summary>
-        /// The number of diagonal steps of the route the float reachability search keeps for the node. Overlays
+        /// The number of diagonal steps of the route the plain reachability search keeps for the node. Overlays
         /// <see cref="ScoreH"/>, which that search never uses.
         /// </summary>
         [FieldOffset(4)] public int DiagonalSteps;
-
-        /// <summary>
-        /// Keyed search: the exact cost from the origin in fixed-point units
-        /// (see <see cref="FastPathfinderSettings.CostKeyScale"/>). Overlays <see cref="ScoreG"/> and
-        /// <see cref="ScoreH"/>.
-        /// </summary>
-        [FieldOffset(0)] public long CostKey;
 
         /// <summary>
         /// Keyed search: the tie-break key of the node's label (diagonal steps or turns). Overlays

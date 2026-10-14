@@ -11,9 +11,9 @@ namespace Migs.MPath.Tests
     /// the cheapest one, and <see cref="Pathfinder.GetReachable"/> reports the cheapest cost of every cell. Both are
     /// checked against <see cref="ReferenceGrid"/>, an independent, deliberately naive Dijkstra over the documented
     /// movement rules (walls, occupied cells, agent footprint, corner blocking, step cost = travel + weight).
-    /// With a <see cref="TieBreaking"/> the reference compares exact fixed-point costs (every multiplier and weight
-    /// rounded to 4 decimal places, as documented) and also finds the best tie-break key: a lexicographic Dijkstra for
-    /// (cost, diagonals, steps), and one over (cell, arrival direction) states for (cost, turns).
+    /// Costs are integers, so every comparison is exact. With a <see cref="TieBreaking"/> the reference also finds
+    /// the best tie-break key: a lexicographic Dijkstra for (cost, diagonals, steps), and one over
+    /// (cell, arrival direction) states for (cost, turns).
     /// </summary>
     [TestFixture]
     public class PathfinderOptimalityTests
@@ -22,16 +22,16 @@ namespace Migs.MPath.Tests
         private const int GridHeight = 16;
         private const int GridsPerCase = 40;
         private const int QueriesPerGrid = 4;
-        private const float Unbounded = 1_000_000f;
+        private const int Unbounded = int.MaxValue;
 
-        private static readonly (float Straight, float Diagonal)[] Multipliers =
+        private static readonly (int Straight, int Diagonal)[] StepCosts =
         {
-            (1f, 1.41f),
-            (1f, 1f),
-            (2f, 3f),
-            (1f, 2.5f),
-            (1f, 0.6f),
-            (0.5f, 0.75f)
+            (100, 141),
+            (100, 100),
+            (200, 300),
+            (100, 250),
+            (100, 60),
+            (50, 75)
         };
 
         private static readonly CornerBlocking[] CornerBlockingPresets =
@@ -42,8 +42,6 @@ namespace Migs.MPath.Tests
             CornerBlocking.AnyWall,
             CornerBlocking.All
         };
-
-        private const double CostKeyScale = 10000.0;
 
         public sealed class Scenario
         {
@@ -162,7 +160,7 @@ namespace Migs.MPath.Tests
 
                     path.IsSuccess.Should().BeTrue($"the destination is reachable ({context})");
                     path.Get(path.Length - 1).Should().Be(to, context);
-                    grid.GetRouteCost(from, path).Should().BeApproximately(cheapest, Tolerance(cheapest), context);
+                    grid.GetRouteCost(from, path).Should().Be(cheapest, context);
                     path.Steps.Should().Be(path.Length, context);
                     path.DiagonalSteps.Should().Be(ReferenceGrid.GetRouteShape(from, path).Diagonals, context);
                     foundPaths++;
@@ -195,14 +193,14 @@ namespace Migs.MPath.Tests
                 {
                     expected.Should().ContainKey(cell.Coordinate, context);
                     var cheapest = expected[cell.Coordinate];
-                    cell.Cost.Should().BeApproximately(cheapest, Tolerance(cheapest), $"{cell.Coordinate}, {context}");
+                    ((long)cell.Cost).Should().Be(cheapest, $"{cell.Coordinate}, {context}");
 
                     if (!scenario.IsCellWeightEnabled)
                     {
                         var settings = grid.Settings;
-                        var routeCost = (cell.Steps - cell.DiagonalSteps) * settings.StraightMovementMultiplier +
-                                        cell.DiagonalSteps * settings.DiagonalMovementMultiplier;
-                        routeCost.Should().BeApproximately(cheapest, Tolerance(cheapest),
+                        var routeCost = (cell.Steps - cell.DiagonalSteps) * (long)settings.StraightStepCost +
+                                        cell.DiagonalSteps * settings.DiagonalStepCost;
+                        routeCost.Should().Be(cheapest,
                             $"the step counts describe a cheapest route to {cell.Coordinate}, {context}");
                     }
                 }
@@ -252,9 +250,9 @@ namespace Migs.MPath.Tests
                     path.IsSuccess.Should().BeTrue($"the destination is reachable ({context})");
                     path.Get(path.Length - 1).Should().Be(to, context);
 
-                    var routeKey = grid.GetRouteCostKey(from, path);
+                    var routeCost = grid.GetRouteCost(from, path);
                     var shape = ReferenceGrid.GetRouteShape(from, path);
-                    routeKey.Should().Be(best.CostKey, $"the route is a cheapest one ({context})");
+                    routeCost.Should().Be(best.Cost, $"the route is a cheapest one ({context})");
                     path.Steps.Should().Be(shape.Steps, context);
                     path.DiagonalSteps.Should().Be(shape.Diagonals, context);
 
@@ -298,23 +296,23 @@ namespace Migs.MPath.Tests
                     expected.Should().ContainKey(cell.Coordinate, context);
                     var best = expected[cell.Coordinate];
                     var cellContext = $"{cell.Coordinate}, {context}";
-                    cell.Cost.Should().Be((float)(best.CostKey / CostKeyScale), cellContext);
+                    ((long)cell.Cost).Should().Be(best.Cost, cellContext);
                     cell.DiagonalSteps.Should().Be(best.TieKey, cellContext);
                     cell.Steps.Should().Be(best.Steps, cellContext);
                 }
             }
         }
 
-        [TestCase(1f, 1.41f, 9, 4, 4 * 1.41f + 5f, TestName = "GetPath_OnOpenGround_CostsOctileDistance")]
-        [TestCase(1f, 2.5f, 6, 3, 9f, TestName = "GetPath_WhenDiagonalCostsMoreThanTwoStraightSteps_CostsManhattanDistance")]
-        [TestCase(1f, 0.6f, 6, 0, 6 * 0.6f, TestName = "GetPath_WhenDiagonalCostsLessThanStraightStep_ZigzagsDiagonally")]
-        public void GetPath_OnOpenGround_CostsCheapestStepMix(float straight, float diagonal, int toX, int toY,
-            float expectedCost)
+        [TestCase(100, 141, 9, 4, 4 * 141 + 5 * 100, TestName = "GetPath_OnOpenGround_CostsOctileDistance")]
+        [TestCase(100, 250, 6, 3, 900, TestName = "GetPath_WhenDiagonalCostsMoreThanTwoStraightSteps_CostsManhattanDistance")]
+        [TestCase(100, 60, 6, 0, 6 * 60, TestName = "GetPath_WhenDiagonalCostsLessThanStraightStep_ZigzagsDiagonally")]
+        public void GetPath_OnOpenGround_CostsCheapestStepMix(int straight, int diagonal, int toX, int toY,
+            int expectedCost)
         {
             var settings = new PathfinderSettings
             {
-                StraightMovementMultiplier = straight,
-                DiagonalMovementMultiplier = diagonal,
+                StraightStepCost = straight,
+                DiagonalStepCost = diagonal,
                 IsCellWeightEnabled = false
             };
             var grid = new ReferenceGrid(settings, 1);
@@ -325,7 +323,7 @@ namespace Migs.MPath.Tests
             using var path = pathfinder.GetPath(from, to);
 
             path.IsSuccess.Should().BeTrue();
-            grid.GetRouteCost(from, path).Should().BeApproximately(expectedCost, 0.0001f);
+            grid.GetRouteCost(from, path).Should().Be(expectedCost);
         }
 
         [Test]
@@ -335,7 +333,7 @@ namespace Migs.MPath.Tests
             var grid = new ReferenceGrid(settings, 1);
             for (var x = 3; x <= 7; x++)
             {
-                grid.Weights[x, 5] = 10f;
+                grid.Weights[x, 5] = 1000;
             }
 
             using var pathfinder = new Pathfinder(grid.ToCells(), GridWidth, GridHeight, settings);
@@ -345,23 +343,18 @@ namespace Migs.MPath.Tests
             using var path = pathfinder.GetPath(from, to);
 
             path.IsSuccess.Should().BeTrue();
-            grid.GetRouteCost(from, path).Should().BeApproximately(10f, 0.0001f, "two side steps beat five weight-10 cells");
-        }
-
-        private static float Tolerance(float cost)
-        {
-            return 0.001f + cost * 0.0001f;
+            grid.GetRouteCost(from, path).Should().Be(1000, "two side steps beat five weight-1000 cells");
         }
 
         /// <summary>
-        /// The best label of a cell under a tie-break: the exact cost key, the tie key (diagonals or turns) and, for
-        /// fewer diagonals, the steps.
+        /// The best label of a cell under a tie-break: the cost, the tie key (diagonals or turns) and, for fewer
+        /// diagonals, the steps.
         /// </summary>
-        private readonly record struct Label(long CostKey, int TieKey, int Steps) : IComparable<Label>
+        private readonly record struct Label(long Cost, int TieKey, int Steps) : IComparable<Label>
         {
             public int CompareTo(Label other)
             {
-                var cost = CostKey.CompareTo(other.CostKey);
+                var cost = Cost.CompareTo(other.Cost);
                 if (cost != 0)
                 {
                     return cost;
@@ -389,7 +382,7 @@ namespace Migs.MPath.Tests
             public PathfinderSettings Settings { get; }
             public bool[,] Walls { get; } = new bool[GridWidth, GridHeight];
             public bool[,] Occupied { get; } = new bool[GridWidth, GridHeight];
-            public float[,] Weights { get; } = new float[GridWidth, GridHeight];
+            public int[,] Weights { get; } = new int[GridWidth, GridHeight];
 
             public ReferenceGrid(PathfinderSettings settings, int agentSize)
             {
@@ -399,15 +392,15 @@ namespace Migs.MPath.Tests
 
             public static ReferenceGrid CreateRandom(Random random, Scenario scenario)
             {
-                var (straight, diagonal) = Multipliers[random.Next(Multipliers.Length)];
+                var (straight, diagonal) = StepCosts[random.Next(StepCosts.Length)];
                 var settings = new PathfinderSettings
                 {
                     IsDiagonalMovementEnabled = scenario.IsDiagonalMovementEnabled,
                     CornerBlocking = scenario.CornerBlocking,
                     IsCalculatingOccupiedCells = true,
                     IsCellWeightEnabled = scenario.IsCellWeightEnabled,
-                    StraightMovementMultiplier = straight,
-                    DiagonalMovementMultiplier = diagonal,
+                    StraightStepCost = straight,
+                    DiagonalStepCost = diagonal,
                     PathSmoothingMethod = PathSmoothingMethod.None,
                     TieBreaking = scenario.TieBreaking
                 };
@@ -422,7 +415,7 @@ namespace Migs.MPath.Tests
                         var roll = random.NextDouble();
                         grid.Walls[x, y] = roll < wallChance;
                         grid.Occupied[x, y] = roll >= wallChance && roll < wallChance + 0.05;
-                        grid.Weights[x, y] = (float)Math.Round(random.NextDouble() * 4, 1);
+                        grid.Weights[x, y] = (int)Math.Round(random.NextDouble() * 40) * 10;
                     }
                 }
 
@@ -482,16 +475,16 @@ namespace Migs.MPath.Tests
             }
 
             /// <summary>Naive Dijkstra (linear scan for the minimum) from <paramref name="from"/>.</summary>
-            public Dictionary<Coordinate, float> GetCheapestCosts(Coordinate from)
+            public Dictionary<Coordinate, long> GetCheapestCosts(Coordinate from)
             {
-                var costs = new Dictionary<Coordinate, double> { [from] = 0 };
-                var settled = new Dictionary<Coordinate, float>();
+                var costs = new Dictionary<Coordinate, long> { [from] = 0 };
+                var settled = new Dictionary<Coordinate, long>();
 
                 while (true)
                 {
                     var hasCurrent = false;
                     var current = default(Coordinate);
-                    var currentCost = double.MaxValue;
+                    var currentCost = long.MaxValue;
 
                     foreach (var (coordinate, cost) in costs)
                     {
@@ -508,7 +501,7 @@ namespace Migs.MPath.Tests
                         return settled;
                     }
 
-                    settled[current] = (float)currentCost;
+                    settled[current] = currentCost;
 
                     for (var i = 0; i < MaxNeighbors; i++)
                     {
@@ -528,7 +521,7 @@ namespace Migs.MPath.Tests
             }
 
             /// <summary>
-            /// Lexicographic Dijkstra (lazy-deletion queue) over exact cost keys: per cell the best
+            /// Lexicographic Dijkstra (lazy-deletion queue): per cell the best
             /// (cost, diagonals, steps).
             /// </summary>
             public Dictionary<Coordinate, Label> GetFewestDiagonalLabels(Coordinate from)
@@ -556,7 +549,7 @@ namespace Migs.MPath.Tests
                         }
 
                         var isDiagonal = Steps[i].X != 0 && Steps[i].Y != 0;
-                        var nextLabel = new Label(currentLabel.CostKey + GetStepCostKey(current, next),
+                        var nextLabel = new Label(currentLabel.Cost + GetStepCost(current, next),
                             currentLabel.TieKey + (isDiagonal ? 1 : 0), currentLabel.Steps + 1);
 
                         if (!labels.TryGetValue(next, out var known) || nextLabel.CompareTo(known) < 0)
@@ -571,7 +564,7 @@ namespace Migs.MPath.Tests
             }
 
             /// <summary>
-            /// Dijkstra over (cell, arrival direction) states by (cost key, turns): per cell the fewest turns of a
+            /// Dijkstra over (cell, arrival direction) states by (cost, turns): per cell the fewest turns of a
             /// cheapest route (steps unused).
             /// </summary>
             public Dictionary<Coordinate, Label> GetFewestTurnLabels(Coordinate from)
@@ -606,7 +599,7 @@ namespace Migs.MPath.Tests
                         }
 
                         var turn = current.Direction != origin && current.Direction != i ? 1 : 0;
-                        var nextLabel = new Label(currentLabel.CostKey + GetStepCostKey(current.Cell, next),
+                        var nextLabel = new Label(currentLabel.Cost + GetStepCost(current.Cell, next),
                             currentLabel.TieKey + turn, 0);
 
                         if (!labels.TryGetValue((next, i), out var knownState) || nextLabel.CompareTo(knownState) < 0)
@@ -618,23 +611,6 @@ namespace Migs.MPath.Tests
                 }
 
                 return best;
-            }
-
-            /// <summary>Validates every step of the route and returns its exact cost key.</summary>
-            public long GetRouteCostKey(Coordinate from, PathResult path)
-            {
-                var costKey = 0L;
-                var previous = from;
-
-                for (var i = 0; i < path.Length; i++)
-                {
-                    var next = path.Get(i);
-                    IsStepAllowed(previous, next).Should().BeTrue($"step {i} {previous} -> {next} must be legal");
-                    costKey += GetStepCostKey(previous, next);
-                    previous = next;
-                }
-
-                return costKey;
             }
 
             /// <summary>The steps, diagonal steps and direction changes of an unsmoothed route.</summary>
@@ -668,9 +644,9 @@ namespace Migs.MPath.Tests
             }
 
             /// <summary>Validates every step of the route and returns its total cost.</summary>
-            public float GetRouteCost(Coordinate from, PathResult path)
+            public long GetRouteCost(Coordinate from, PathResult path)
             {
-                var cost = 0.0;
+                var cost = 0L;
                 var previous = from;
 
                 for (var i = 0; i < path.Length; i++)
@@ -681,12 +657,12 @@ namespace Migs.MPath.Tests
                     previous = next;
                 }
 
-                return (float)cost;
+                return cost;
             }
 
             public override string ToString()
             {
-                return $"straight {Settings.StraightMovementMultiplier}, diagonal {Settings.DiagonalMovementMultiplier}";
+                return $"straight {Settings.StraightStepCost}, diagonal {Settings.DiagonalStepCost}";
             }
 
             private bool IsStepAllowed(Coordinate from, Coordinate to)
@@ -728,21 +704,11 @@ namespace Migs.MPath.Tests
                 return flag != CornerBlocking.None && (Settings.CornerBlocking & flag) == flag;
             }
 
-            private double GetStepCost(Coordinate from, Coordinate to)
+            private long GetStepCost(Coordinate from, Coordinate to)
             {
                 var isDiagonal = from.X != to.X && from.Y != to.Y;
-                double travel = isDiagonal ? Settings.DiagonalMovementMultiplier : Settings.StraightMovementMultiplier;
+                long travel = isDiagonal ? Settings.DiagonalStepCost : Settings.StraightStepCost;
                 return Settings.IsCellWeightEnabled ? travel + Weights[to.X, to.Y] : travel;
-            }
-
-            private long GetStepCostKey(Coordinate from, Coordinate to)
-            {
-                var isDiagonal = from.X != to.X && from.Y != to.Y;
-                var travel = isDiagonal ? Settings.DiagonalMovementMultiplier : Settings.StraightMovementMultiplier;
-                var travelKey = (long)Math.Round(travel * CostKeyScale);
-                return Settings.IsCellWeightEnabled
-                    ? travelKey + (long)Math.Round(Weights[to.X, to.Y] * CostKeyScale)
-                    : travelKey;
             }
 
             private Blocker GetFootprint(int anchorX, int anchorY)

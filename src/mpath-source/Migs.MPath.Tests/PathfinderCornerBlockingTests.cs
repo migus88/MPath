@@ -11,7 +11,7 @@ namespace Migs.MPath.Tests
     [TestFixture]
     public class PathfinderCornerBlockingTests
     {
-        private const float Diagonal = 1.41f;
+        private const int Diagonal = 141;
 
         public enum Flank
         {
@@ -121,7 +121,7 @@ namespace Migs.MPath.Tests
                 new PathfinderSettings { CornerBlocking = cornerBlocking, IsCellWeightEnabled = false });
 
             // Act
-            using var range = pathfinder.GetReachable(new Coordinate(0, 0), 10f);
+            using var range = pathfinder.GetReachable(new Coordinate(0, 0), 1000);
 
             // Assert
             var reached = Enumerable.Range(0, range.Length).Select(i => range.Get(i).Coordinate).ToList();
@@ -221,8 +221,8 @@ namespace Migs.MPath.Tests
             public bool IsCalculatingOccupiedCells => true;
             public CornerBlocking CornerBlocking { get; set; }
             public bool IsCellWeightEnabled => true;
-            public float StraightMovementMultiplier => 1f;
-            public float DiagonalMovementMultiplier => Diagonal;
+            public int StraightStepCost => 100;
+            public int DiagonalStepCost => Diagonal;
             public PathSmoothingMethod PathSmoothingMethod => PathSmoothingMethod.None;
             public GridSnapshotMode GridSnapshotMode => GridSnapshotMode.PerQuery;
             public CellLayout CellLayout => CellLayout.Auto;

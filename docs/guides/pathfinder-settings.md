@@ -24,8 +24,8 @@ var customSettings = new PathfinderSettings
     IsCalculatingOccupiedCells = true,
     CornerBlocking = CornerBlocking.BetweenBlockedCells,
     IsCellWeightEnabled = true,
-    StraightMovementMultiplier = 1.0f,
-    DiagonalMovementMultiplier = 1.41f
+    StraightStepCost = 100,
+    DiagonalStepCost = 141
 };
 
 // Create pathfinder with settings
@@ -156,7 +156,7 @@ settings.TieBreaking = TieBreaking.FewerTurns;     // Fewest direction changes
 
 **Effect on pathfinding**:
 - With **None**, equal-cost routes resolve by search order: open ground can produce interleaved diagonal/straight zig-zags, and an unrelated grid edit can change the route.
-- With **FewerDiagonals** or **FewerTurns**, costs are compared exactly (multipliers, weights and budgets rounded to four decimal places), the tie-break key decides, and a fixed rule settles the rest (keep the direction, else West, East, North, South, then the diagonals). The route depends on the grid alone.
+- With **FewerDiagonals** or **FewerTurns**, equal-cost routes tie exactly (costs are integers), the tie-break key decides, and a fixed rule settles the rest (keep the direction, else West, East, North, South, then the diagonals). The route depends on the grid alone.
 - `PathResult.Steps` / `DiagonalSteps` and `ReachableCell.Steps` / `DiagonalSteps` report integer step counts in every mode, so you never have to recover them from costs.
 
 **When to use**: whenever players see the route (units moving on a board, previews). Keep **None** when only the cost matters and you want the fastest search on open ground. See [TieBreaking](../api/TieBreaking.md).
@@ -206,27 +206,33 @@ settings.IsCellWeightEnabled = true; // Consider cell weights (default)
 - **True**: The `Weight` property of cells affects path calculation
 - **False**: All walkable cells are treated with equal cost
 
-**Effect on pathfinding**: When enabled, each step into a cell costs its movement multiplier **plus** the cell's `Weight`, and paths prefer cells with lower weights. For example, you can make roads have a lower weight than rough terrain to encourage path generation along roads.
+**Effect on pathfinding**: When enabled, each step into a cell costs its step cost **plus** the cell's `Weight` (an `int` in the same unit as the step costs), and paths prefer cells with lower weights. For example, you can make roads have a lower weight than rough terrain to encourage path generation along roads.
 
-#### StraightMovementMultiplier
+#### StraightStepCost
 
-The cost multiplier for horizontal and vertical movements.
+The integer cost of one horizontal or vertical step. Costs have no hidden scale: you pick the resolution (10/14, 100/141, 1000/1414, ...), and cell weights, budgets and every reported cost use the same unit.
 
 ```csharp
-settings.StraightMovementMultiplier = 1.0f; // Default value
+settings.StraightStepCost = 100; // Default value
 ```
 
 **Effect on pathfinding**: Higher values make straight movements more costly, potentially favoring diagonal movements.
 
-#### DiagonalMovementMultiplier
+#### DiagonalStepCost
 
-The cost multiplier for diagonal movements.
+The integer cost of one diagonal step, in the same unit as `StraightStepCost`.
 
 ```csharp
-settings.DiagonalMovementMultiplier = 1.41f; // Default value (approximation of √2)
+settings.DiagonalStepCost = 141; // Default value (1.41 straight steps, approximating √2)
 ```
 
 **Effect on pathfinding**: Higher values make diagonal movements more costly, potentially favoring straight movements.
+
+**Validation and limits**:
+- Each step cost must be at least 1; the pathfinder constructor throws `ArgumentOutOfRangeException` otherwise.
+- `(width + height) * the larger step cost in use` must not exceed 1,073,741,823 (`int.MaxValue / 2`, the overflow headroom), or the constructor throws `ArgumentOutOfRangeException`. The diagonal cost counts only with diagonal movement enabled.
+- A route whose cost would pass that headroom is never taken: cells behind it are unreachable, and nothing wraps around. Weights above it count as that value.
+- `Cell.Weight` must not be negative: `SetWeight` and `SetCell` throw `ArgumentOutOfRangeException`, and a negative weight written straight into your grid counts as 0.
 
 ## Recommended Settings for Common Scenarios
 
@@ -239,8 +245,8 @@ var settings = new PathfinderSettings
     IsCalculatingOccupiedCells = true,
     CornerBlocking = CornerBlocking.BetweenBlockedCells,
     IsCellWeightEnabled = true,
-    StraightMovementMultiplier = 1.0f,
-    DiagonalMovementMultiplier = 1.41f
+    StraightStepCost = 100,
+    DiagonalStepCost = 141
 };
 ```
 
@@ -292,11 +298,11 @@ public class GamePathfinderSettings : MonoBehaviour, IPathfinderSettings
     [field: SerializeField, Tooltip("If true, different terrain types can have different movement costs")]
     public bool UseCellWeights { get; set; } = true;
     
-    [field: SerializeField, Tooltip("Cost multiplier for moving horizontally or vertically")]
-    public float StraightCost { get; set; } = 1.0f;
+    [field: SerializeField, Tooltip("Cost of one horizontal or vertical step")]
+    public int StraightCost { get; set; } = 100;
     
-    [field: SerializeField, Tooltip("Cost multiplier for moving diagonally")]
-    public float DiagonalCost { get; set; } = 1.41f;
+    [field: SerializeField, Tooltip("Cost of one diagonal step")]
+    public int DiagonalCost { get; set; } = 141;
     
     // Game state reference
     [SerializeField] private GameStateManager _gameState;
@@ -306,8 +312,8 @@ public class GamePathfinderSettings : MonoBehaviour, IPathfinderSettings
     public bool IsCalculatingOccupiedCells => RespectOccupiedCells;
     public CornerBlocking CornerBlocking => AllowCornerMovement ? CornerBlocking.None : CornerBlocking.BetweenBlockedCells;
     public bool IsCellWeightEnabled => UseCellWeights;
-    public float StraightMovementMultiplier => StraightCost;
-    public float DiagonalMovementMultiplier => DiagonalCost;
+    public int StraightStepCost => StraightCost;
+    public int DiagonalStepCost => DiagonalCost;
     public PathSmoothingMethod PathSmoothingMethod => PathSmoothingMethod.None;
     public GridSnapshotMode GridSnapshotMode => GridSnapshotMode.PerQuery;
     public CellLayout CellLayout => CellLayout.Auto;
@@ -323,8 +329,8 @@ public class GamePathfinderSettings : MonoBehaviour, IPathfinderSettings
                 RespectOccupiedCells = true;
                 AllowCornerMovement = false;
                 UseCellWeights = true;
-                StraightCost = 1.0f;
-                DiagonalCost = 1.41f;
+                StraightCost = 100;
+                DiagonalCost = 141;
                 break;
                 
             case PathfindingPreset.Puzzle:

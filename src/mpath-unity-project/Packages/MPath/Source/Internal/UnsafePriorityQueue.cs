@@ -55,7 +55,7 @@ namespace Migs.MPath.Core.Internal
         /// <param name="index">The node's index in the node buffer. Must not already be in the queue.</param>
         /// <param name="priority">Priority value (lower values have higher priority).</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Enqueue(int index, float priority)
+        public void Enqueue(int index, int priority)
         {
             Debug.Assert(!Contains(index), "The node is already queued.");
 
@@ -99,7 +99,7 @@ namespace Migs.MPath.Core.Internal
         /// <param name="index">The node's index in the node buffer. Must already be in the queue.</param>
         /// <param name="priority">The new priority value (lower values have higher priority).</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdatePriority(int index, float priority)
+        public void UpdatePriority(int index, int priority)
         {
             Debug.Assert(Contains(index), "The node is not queued.");
 
@@ -224,11 +224,11 @@ namespace Migs.MPath.Core.Internal
         /// </summary>
         private readonly struct HeapEntry
         {
-            public readonly float Priority;
+            public readonly int Priority;
             public readonly int Index;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public HeapEntry(float priority, int index)
+            public HeapEntry(int priority, int index)
             {
                 Priority = priority;
                 Index = index;

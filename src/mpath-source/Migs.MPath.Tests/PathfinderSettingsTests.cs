@@ -19,8 +19,8 @@ namespace Migs.MPath.Tests
             settings.IsCalculatingOccupiedCells.Should().BeTrue();
             settings.CornerBlocking.Should().Be(CornerBlocking.BetweenBlockedCells);
             settings.IsCellWeightEnabled.Should().BeTrue();
-            settings.StraightMovementMultiplier.Should().Be(1.0f);
-            settings.DiagonalMovementMultiplier.Should().Be(1.41f);
+            settings.StraightStepCost.Should().Be(100);
+            settings.DiagonalStepCost.Should().Be(141);
             settings.PathSmoothingMethod.Should().Be(PathSmoothingMethod.None);
             settings.GridSnapshotMode.Should().Be(GridSnapshotMode.PerQuery);
             settings.CellLayout.Should().Be(CellLayout.Auto);
@@ -35,8 +35,8 @@ namespace Migs.MPath.Tests
             const bool isCalculatingOccupied = false;
             const CornerBlocking cornerBlocking = CornerBlocking.None;
             const bool isCellWeightEnabled = false;
-            const float straightMultiplier = 2.0f;
-            const float diagonalMultiplier = 3.0f;
+            const int straightStepCost = 2;
+            const int diagonalStepCost = 3;
             
             // Act
             var settings = new PathfinderSettings
@@ -45,8 +45,8 @@ namespace Migs.MPath.Tests
                 IsCalculatingOccupiedCells = isCalculatingOccupied,
                 CornerBlocking = cornerBlocking,
                 IsCellWeightEnabled = isCellWeightEnabled,
-                StraightMovementMultiplier = straightMultiplier,
-                DiagonalMovementMultiplier = diagonalMultiplier,
+                StraightStepCost = straightStepCost,
+                DiagonalStepCost = diagonalStepCost,
                 PathSmoothingMethod = PathSmoothingMethod.StringPulling
             };
             
@@ -55,8 +55,8 @@ namespace Migs.MPath.Tests
             settings.IsCalculatingOccupiedCells.Should().Be(isCalculatingOccupied);
             settings.CornerBlocking.Should().Be(cornerBlocking);
             settings.IsCellWeightEnabled.Should().Be(isCellWeightEnabled);
-            settings.StraightMovementMultiplier.Should().Be(straightMultiplier);
-            settings.DiagonalMovementMultiplier.Should().Be(diagonalMultiplier);
+            settings.StraightStepCost.Should().Be(straightStepCost);
+            settings.DiagonalStepCost.Should().Be(diagonalStepCost);
             settings.PathSmoothingMethod.Should().Be(PathSmoothingMethod.StringPulling);
         }
         

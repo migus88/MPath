@@ -224,11 +224,11 @@ namespace Migs.MPath.Core
                         _arrivalsHandle = GCHandle.Alloc(pathfinder._arrivals, GCHandleType.Pinned);
                         _arrivals = (byte*)_arrivalsHandle.AddrOfPinnedObject();
                         pathfinder.BeginKeyedSearch(_nodes, _arrivals);
-                        pathfinder.OpenOriginKeyed(_nodes, from, pathfinder.GetHKey(from.X, from.Y, to.X, to.Y));
+                        pathfinder.OpenOriginKeyed(_nodes, from, pathfinder.GetH(from.X, from.Y, to.X, to.Y));
                     }
                     else
                     {
-                        pathfinder.OpenNode(_nodes, startIndex, PathNode.NoParent, 0, 0f,
+                        pathfinder.OpenNode(_nodes, startIndex, PathNode.NoParent, 0, 0,
                             pathfinder.GetH(from.X, from.Y, to.X, to.Y));
                     }
 

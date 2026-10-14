@@ -29,7 +29,7 @@ var settings = new PathfinderSettings { GridSnapshotMode = GridSnapshotMode.Manu
 using var pathfinder = new Pathfinder(cellMatrix, settings);
 
 // Many short queries per turn: none of them copies the 256x256 grid.
-using (var range = pathfinder.GetReachable(unitPosition, 6f)) { /* ... */ }
+using (var range = pathfinder.GetReachable(unitPosition, 600)) { /* ... */ }
 
 // Through the pathfinder: seen at once.
 pathfinder.SetOccupied(new Coordinate(4, 7), true);

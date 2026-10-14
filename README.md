@@ -157,8 +157,8 @@ if (result.IsSuccess)
 Need to know every tile a unit can reach within a movement budget (e.g. for a tactics game)? Use `GetReachable`:
 
 ```csharp
-// Every cell whose cheapest path cost is <= 5
-using var range = pathfinder.GetReachable(new Coordinate(4, 4), 5f);
+// Every cell whose cheapest path cost is <= 500 (5 straight steps at the default step costs 100/141)
+using var range = pathfinder.GetReachable(new Coordinate(4, 4), 500);
 
 foreach (var cell in range)
 {
@@ -169,7 +169,7 @@ foreach (var cell in range)
 Units block movement but not a threat range? Need the mover's own cell or an attack target to be enterable? Pass per-query `QueryOptions` (allocation-free; the grid is left untouched):
 
 ```csharp
-using var threat = pathfinder.GetReachable(new Coordinate(4, 4), 5f, new QueryOptions(OccupancyRule.Ignore));
+using var threat = pathfinder.GetReachable(new Coordinate(4, 4), 500, new QueryOptions(OccupancyRule.Ignore));
 using var attack = pathfinder.GetPath(from, target, new QueryOptions(isDestinationAlwaysEnterable: true));
 ```
 

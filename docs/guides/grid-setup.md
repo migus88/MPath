@@ -45,7 +45,7 @@ for (var y = 0; y < height; y++)
         {
             Coordinate = new Coordinate(x, y),
             IsWalkable = true,
-            Weight = 1.0f
+            Weight = 100
         };
     }
 }
@@ -96,7 +96,7 @@ for (var y = 0; y < height; y++)
         {
             Coordinate = new Coordinate(x, y),
             IsWalkable = true,
-            Weight = 1.0f
+            Weight = 100
         };
     }
 }
@@ -128,7 +128,7 @@ using Migs.MPath.Core.Interfaces;
 public class TerrainTile : MonoBehaviour, ICellHolder
 {
     public bool IsObstacle { get; set; }
-    public float MovementCost = 1.0f;
+    public int MovementCost = 100; // Extra cost to enter, in step-cost units
     
     private Cell _cellData;
     
@@ -159,7 +159,7 @@ public class TerrainTile : MonoBehaviour, ICellHolder
         UpdateVisuals();
     }
     
-    public void SetMovementCost(float cost)
+    public void SetMovementCost(int cost)
     {
         MovementCost = cost;
         // Cell data is automatically updated 
@@ -291,7 +291,7 @@ The pathfinder keeps a reference to your array or matrix and reads it on every q
 // O(1), writes into your own array/matrix, and clears the path cache if needed
 pathfinder.SetWalkable(new Coordinate(4, 2), false);
 pathfinder.SetOccupied(unit.Position, true);
-pathfinder.SetWeight(new Coordinate(7, 3), 2.5f);
+pathfinder.SetWeight(new Coordinate(7, 3), 250); // ints in step-cost units; a negative weight throws
 
 // The next query sees the change
 using var path = pathfinder.GetPath(start, end);
@@ -325,7 +325,7 @@ public void OnRainStart()
     {
         if (tile.TerrainType == TerrainType.Dirt)
         {
-            tile.SetMovementCost(2.5f); // Muddy terrain is slower to traverse
+            tile.SetMovementCost(250); // Muddy terrain is slower to traverse
         }
     }
     

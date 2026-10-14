@@ -20,7 +20,7 @@ namespace Migs.MPath.Tests
     {
         private const int Width = 5;
         private const int Height = 3;
-        private const float Budget = 100f;
+        private const int Budget = 10000;
 
         private static readonly Coordinate Start = new Coordinate(0, 1);
         private static readonly Coordinate End = new Coordinate(4, 1);
@@ -94,7 +94,7 @@ namespace Migs.MPath.Tests
             {
                 () => pathfinder.SetWalkable(target, false),
                 () => pathfinder.SetOccupied(target, true),
-                () => pathfinder.SetWeight(target, 3f),
+                () => pathfinder.SetWeight(target, 300),
                 () => pathfinder.SetCell(target, new Cell())
             };
 
@@ -137,7 +137,7 @@ namespace Migs.MPath.Tests
             }
 
             // Act
-            pathfinder.SetWeight(heavy, 50f);
+            pathfinder.SetWeight(heavy, 5000);
 
             // Assert
             using var after = pathfinder.GetPath(Start, End);
@@ -153,14 +153,14 @@ namespace Migs.MPath.Tests
             var target = new Coordinate(3, 2);
 
             // Act
-            pathfinder.SetCell(target, new Cell { Coordinate = new Coordinate(0, 0), IsOccupied = true, Weight = 4f });
+            pathfinder.SetCell(target, new Cell { Coordinate = new Coordinate(0, 0), IsOccupied = true, Weight = 400 });
 
             // Assert
             var cell = pathfinder.GetCell(target);
             cell.Coordinate.Should().Be(target);
             cell.IsWalkable.Should().BeFalse();
             cell.IsOccupied.Should().BeTrue();
-            cell.Weight.Should().BeApproximately(4f, 0.0001f);
+            cell.Weight.Should().Be(400);
             pathfinder.GetCell(new Coordinate(0, 0)).IsWalkable.Should().BeTrue();
         }
 
@@ -284,7 +284,7 @@ namespace Migs.MPath.Tests
             var target = new Coordinate(3, 2);
             pathfinder.SetWalkable(target, false);
             pathfinder.SetOccupied(target, false);
-            pathfinder.SetWeight(target, 0f);
+            pathfinder.SetWeight(target, 0);
 
             // Act
             var before = GC.GetAllocatedBytesForCurrentThread();
@@ -318,7 +318,7 @@ namespace Migs.MPath.Tests
 
             yield return new TestCaseData((Action<Pathfinder>)(p => p.SetOccupied(new Coordinate(Width, 0), true)))
                 .SetName("SetOccupied_OutsideGrid_ThrowsArgumentException");
-            yield return new TestCaseData((Action<Pathfinder>)(p => p.SetWeight(new Coordinate(Width, 0), 1f)))
+            yield return new TestCaseData((Action<Pathfinder>)(p => p.SetWeight(new Coordinate(Width, 0), 100)))
                 .SetName("SetWeight_OutsideGrid_ThrowsArgumentException");
             yield return new TestCaseData((Action<Pathfinder>)(p => p.SetCell(new Coordinate(Width, 0), new Cell())))
                 .SetName("SetCell_OutsideGrid_ThrowsArgumentException");

@@ -23,9 +23,9 @@ Represents the result of a movement-range (reachability) query produced by `Path
 | `ReadOnlySpan<ReachableCell> AsSpan()` | The reachable cells as a span over the pooled array (no copy), in the order the search settled them, origin first. Valid until the result is disposed. |
 | `Enumerator GetEnumerator()` | A struct enumerator, so `foreach (var c in range)` allocates nothing. |
 | `bool Contains(Coordinate coordinate)` | Determines whether the coordinate is reachable (O(1)). |
-| `bool TryGetCost(Coordinate coordinate, out float cost)` | Gets the cheapest path cost to the coordinate, if reachable (O(1)). |
+| `bool TryGetCost(Coordinate coordinate, out int cost)` | Gets the cheapest path cost to the coordinate, if reachable (O(1)). |
 | `bool TryGetCell(Coordinate coordinate, out ReachableCell cell)` | Gets the reachable cell (cost and step counts) at the coordinate, if reachable (O(1)). |
-| `int CopyCostsTo(Span<float> costByCellIndex, float unreached = -1)` | Fills a dense per-cell cost field: each reachable cell's cost at its layout index (`Pathfinder.GetIndex`; column-major `X * fieldHeight + Y` for an unordered `Cell[]`), `unreached` in every other entry. Returns `Length`. Throws `ArgumentException` when the span is shorter than the grid, and `InvalidOperationException` for a non-empty result built with `Create` (it knows no grid). |
+| `int CopyCostsTo(Span<int> costByCellIndex, int unreached = -1)` | Fills a dense per-cell cost field: each reachable cell's cost at its layout index (`Pathfinder.GetIndex`; column-major `X * fieldHeight + Y` for an unordered `Cell[]`), `unreached` in every other entry. Returns `Length`. Throws `ArgumentException` when the span is shorter than the grid, and `InvalidOperationException` for a non-empty result built with `Create` (it knows no grid). |
 | `void Dispose()` | Releases resources used by the RangeResult. |
 
 ## Remarks
@@ -41,7 +41,7 @@ Represents the result of a movement-range (reachability) query produced by `Path
 
 ```csharp
 // Find every cell an agent can reach within 5 movement points
-using (var range = pathfinder.GetReachable(agent, new Coordinate(4, 4), 5f))
+using (var range = pathfinder.GetReachable(agent, new Coordinate(4, 4), 500))
 {
     Console.WriteLine($"{range.Length} cells reachable");
 

@@ -6,7 +6,7 @@ namespace Migs.MPath.Benchmarks.Suites;
 
 /// <summary>
 /// Short queries on large open grids: a 2-step and a 6-step <see cref="Pathfinder.GetPath(Coordinate, Coordinate, int)"/>
-/// and the matching <see cref="Pathfinder.GetReachable(Coordinate, float, int)"/> range from the grid's center, as a
+/// and the matching <see cref="Pathfinder.GetReachable(Coordinate, int, int)"/> range from the grid's center, as a
 /// tactics game runs them many times per turn. The search touches a handful of cells, so what is left is the
 /// per-query overhead: with <see cref="GridSnapshotMode.PerQuery"/> the copy of the matrix into the snapshot, with
 /// <see cref="GridSnapshotMode.Manual"/> nothing that scales with the grid.
@@ -55,13 +55,13 @@ public class ShortQueryBenchmarkRunner : IDisposable
     [Benchmark]
     public void GetReachable_2Steps()
     {
-        using var result = _pathfinder.GetReachable(_origin, 2f);
+        using var result = _pathfinder.GetReachable(_origin, 200);
     }
 
     [Benchmark]
     public void GetReachable_6Steps()
     {
-        using var result = _pathfinder.GetReachable(_origin, 6f);
+        using var result = _pathfinder.GetReachable(_origin, 600);
     }
 
     [GlobalCleanup]

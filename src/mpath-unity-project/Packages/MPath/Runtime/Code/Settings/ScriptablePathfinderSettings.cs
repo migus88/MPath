@@ -16,9 +16,9 @@ namespace Migs.MPath.Settings
         /// <inheritdoc/>
         [field: SerializeField] public bool IsCellWeightEnabled { get; set; } = true;
         /// <inheritdoc/>
-        [field: SerializeField] public float StraightMovementMultiplier { get; set; } = 1f;
+        [field: SerializeField] public int StraightStepCost { get; set; } = 100;
         /// <inheritdoc/>
-        [field: SerializeField] public float DiagonalMovementMultiplier { get; set; } = 1.41f;
+        [field: SerializeField] public int DiagonalStepCost { get; set; } = 141;
         /// <inheritdoc/>
         [field: SerializeField] public PathSmoothingMethod PathSmoothingMethod { get; set; } = PathSmoothingMethod.None;
         /// <inheritdoc/>
