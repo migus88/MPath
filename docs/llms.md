@@ -7,6 +7,8 @@
 > its link into [`docs/api/`](api/README.md).
 >
 > *(Modifying MPath's own source instead of using it? This page is not for you — see [`CLAUDE.md`](../CLAUDE.md).)*
+>
+> **Upgrading a caller from an older version?** Read [`docs/upgrading.md`](upgrading.md) first: it lists every behaviour and breaking change per release, with migrations.
 
 ---
 

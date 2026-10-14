@@ -26,4 +26,5 @@ MPath provides a robust implementation of the A* pathfinding algorithm with seve
 - [Unity Integration](guides/unity-example.md) - Detailed guide for Unity projects
 - [Performance Considerations](guides/performance.md) - Optimizing for different scenarios
 - [API Reference](api/README.md) - Detailed API documentation
+- [Upgrading](upgrading.md) - What changed between versions and how to migrate; read it first when upgrading
 - [Benchmarks](benchmarks/README.md) - Detailed API documentation
