@@ -1,71 +1,75 @@
 using System;
-using System.Collections.Generic;
+using System.Buffers;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Migs.MPath.Core.Data;
 
 namespace Migs.MPath.Core.Internal
 {
     /// <summary>
-    /// A high-performance, unsafe implementation of a priority queue specifically optimized
-    /// for the A* pathfinding algorithm. This queue manages pointers to Cell structures
-    /// and efficiently orders them by priority (F-score).
+    /// The open set of the A* and reachability searches: a binary min-heap of <see cref="HeapEntry"/> values
+    /// (priority + cell index) in a fixed array sized to the grid. Comparisons read the priority from the entry, so a
+    /// sift never touches the cells it passes; each cell keeps its slot in <see cref="Cell.QueueIndex"/> for O(1)
+    /// membership tests and O(log n) decrease-key.
     /// </summary>
-    internal unsafe class UnsafePriorityQueue
+    /// <remarks>
+    /// A cell is in the heap at most once at a time, so the heap never holds more entries than the grid has cells
+    /// and never grows: after construction no operation allocates. The array is rented from
+    /// <see cref="ArrayPool{T}.Shared"/> and returned by <see cref="Dispose"/>. Every search starts with
+    /// <see cref="Reset"/>, which binds the heap to the pinned cell buffer the entries index into.
+    /// </remarks>
+    internal sealed unsafe class UnsafePriorityQueue : IDisposable
     {
-        private const int DefaultCollectionSize = 11;
-        
         /// <summary>
         /// Gets the current number of items in the queue.
         /// </summary>
         public int Count;
-        
-        private readonly List<IntPtr> _collection;
+
+        // 1-based: slot 0 is unused, so a cell whose QueueIndex is 0 is never mistaken for a member.
+        private HeapEntry[] _heap;
+        private Cell* _cells;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="UnsafePriorityQueue"/> class.
         /// </summary>
-        /// <param name="bufferSize">Optional initial buffer size. If null, a default size will be used.</param>
-        public UnsafePriorityQueue(int? bufferSize = null)
+        /// <param name="capacity">The number of cells in the grid: the most entries the heap can ever hold.</param>
+        public UnsafePriorityQueue(int capacity)
         {
+            _heap = ArrayPool<HeapEntry>.Shared.Rent(capacity + 1);
+        }
+
+        /// <summary>
+        /// Empties the queue and binds it to the cell buffer of the next search. Every enqueued cell must lie in
+        /// <paramref name="cells"/>, and the buffer must stay pinned until the search ends.
+        /// </summary>
+        /// <param name="cells">The first cell of the pinned cell buffer.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Reset(Cell* cells)
+        {
+            _cells = cells;
             Count = 0;
-            _collection = new List<IntPtr>(bufferSize ?? DefaultCollectionSize) 
-            {
-                // Ensure the first index is unused 
-                IntPtr.Zero 
-            };
         }
 
         /// <summary>
         /// Adds a cell to the queue with the specified priority.
         /// </summary>
-        /// <param name="item">Pointer to the cell to add.</param>
+        /// <param name="item">Pointer to the cell to add. Must not already be in the queue.</param>
         /// <param name="priority">Priority value (lower values have higher priority).</param>
-        /// <exception cref="ArgumentNullException">Thrown when item is null.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Enqueue(Cell* item, float priority)
         {
-            if (item == null)
-                throw new ArgumentNullException(nameof(item));
-                
+            Debug.Assert(item != null && !Contains(item), "The cell is null or already queued.");
+
             item->ScoreF = priority;
-            Count++;
 
-            // Ensure the list can hold the item
-            if (Count >= _collection.Count)
+            fixed (HeapEntry* heap = _heap)
             {
-                _collection.Add((IntPtr)item);
+                CascadeUp(heap, ++Count, new HeapEntry(priority, (int)(item - _cells)));
             }
-            else
-            {
-                _collection[Count] = (IntPtr)item;
-            }
-
-            item->QueueIndex = Count;
-            CascadeUp(item);
         }
 
         /// <summary>
-        /// Removes and returns the cell with the highest priority from the queue.
+        /// Removes and returns the cell with the highest priority (lowest value) from the queue.
         /// </summary>
         /// <returns>A pointer to the highest priority cell.</returns>
         /// <exception cref="InvalidOperationException">Thrown when the queue is empty.</exception>
@@ -77,24 +81,18 @@ namespace Migs.MPath.Core.Internal
                 throw new InvalidOperationException("Queue is empty.");
             }
 
-            var result = (Cell*)_collection[1];
-
-            if (Count == 1)
+            fixed (HeapEntry* heap = _heap)
             {
-                _collection[1] = IntPtr.Zero;
-                Count = 0;
+                var result = _cells + heap[1].Index;
+                var last = heap[Count--];
+
+                if (Count > 0)
+                {
+                    CascadeDown(heap, 1, last);
+                }
+
                 return result;
             }
-
-            var formerLastNode = (Cell*)_collection[Count];
-            _collection[1] = (IntPtr)formerLastNode;
-            formerLastNode->QueueIndex = 1;
-
-            _collection[Count] = IntPtr.Zero;
-            Count--;
-
-            CascadeDown(formerLastNode);
-            return result;
         }
 
         /// <summary>
@@ -103,33 +101,27 @@ namespace Migs.MPath.Core.Internal
         /// </summary>
         /// <param name="item">Pointer to the cell whose priority should change. Must already be in the queue.</param>
         /// <param name="priority">The new priority value (lower values have higher priority).</param>
-        /// <exception cref="ArgumentNullException">Thrown when item is null.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UpdatePriority(Cell* item, float priority)
         {
-            if (item == null)
-                throw new ArgumentNullException(nameof(item));
+            Debug.Assert(item != null && Contains(item), "The cell is null or not queued.");
 
             item->ScoreF = priority;
-            OnPriorityUpdated(item);
-        }
 
-        /// <summary>
-        /// Restores the heap property after a cell's priority has changed, cascading up or down as needed.
-        /// </summary>
-        /// <param name="item">Pointer to the cell whose priority changed.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void OnPriorityUpdated(Cell* item)
-        {
-            var parentIndex = item->QueueIndex >> 1;
-
-            if (parentIndex > 0 && HasHigherPriority(item, (Cell*)_collection[parentIndex]))
+            fixed (HeapEntry* heap = _heap)
             {
-                CascadeUp(item);
-                return;
-            }
+                var index = item->QueueIndex;
+                var entry = new HeapEntry(priority, heap[index].Index);
 
-            CascadeDown(item);
+                if (index > 1 && priority < heap[index >> 1].Priority)
+                {
+                    CascadeUp(heap, index, entry);
+                }
+                else
+                {
+                    CascadeDown(heap, index, entry);
+                }
+            }
         }
 
         /// <summary>
@@ -137,140 +129,115 @@ namespace Migs.MPath.Core.Internal
         /// </summary>
         /// <param name="item">Pointer to the cell to locate.</param>
         /// <returns>true if the queue contains the cell; otherwise, false.</returns>
+        /// <remarks>
+        /// <see cref="Cell.QueueIndex"/> is never cleared, so it may be stale; the cell is a member only when the
+        /// slot it names is live and holds that very cell.
+        /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Contains(Cell* item)
         {
-            if (item == null)
-                return false;
-                
-            return item->QueueIndex <= Count && _collection[item->QueueIndex] == (IntPtr)item;
+            var index = item->QueueIndex;
+
+            return (uint)(index - 1) < (uint)Count && _heap[index].Index == (int)(item - _cells);
         }
 
         /// <summary>
-        /// Removes all items from the queue.
+        /// Returns the heap array to the pool. The queue must not be used afterwards.
         /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Clear()
+        public void Dispose()
         {
-            for (var i = 1; i <= Count; i++)
+            if (_heap == null)
             {
-                _collection[i] = IntPtr.Zero;
+                return;
             }
+
+            ArrayPool<HeapEntry>.Shared.Return(_heap);
+            _heap = null;
             Count = 0;
         }
 
         /// <summary>
-        /// Moves a cell up the binary heap to restore heap property after insertion.
+        /// Moves <paramref name="entry"/> up from the hole at <paramref name="index"/> until its parent has an equal or
+        /// higher priority, then stores it there.
         /// </summary>
-        /// <param name="item">Pointer to the cell to move.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void CascadeUp(Cell* item)
+        private void CascadeUp(HeapEntry* heap, int index, HeapEntry entry)
         {
-            if (item == null)
-                return;
-                
-            while (item->QueueIndex > 1)
+            var cells = _cells;
+
+            while (index > 1)
             {
-                var parentIndex = item->QueueIndex >> 1;
-                var parentNode = (Cell*)_collection[parentIndex];
+                var parentIndex = index >> 1;
+                var parent = heap[parentIndex];
 
-                if (HasHigherOrEqualPriority(parentNode, item))
+                if (parent.Priority <= entry.Priority)
+                {
                     break;
+                }
 
-                _collection[item->QueueIndex] = (IntPtr)parentNode;
-                parentNode->QueueIndex = item->QueueIndex;
-
-                item->QueueIndex = parentIndex;
+                heap[index] = parent;
+                cells[parent.Index].QueueIndex = index;
+                index = parentIndex;
             }
 
-            _collection[item->QueueIndex] = (IntPtr)item;
+            heap[index] = entry;
+            cells[entry.Index].QueueIndex = index;
         }
 
         /// <summary>
-        /// Moves a cell down the binary heap to restore heap property after removal.
+        /// Moves <paramref name="entry"/> down from the hole at <paramref name="index"/> until no child has a higher
+        /// priority, then stores it there.
         /// </summary>
-        /// <param name="item">Pointer to the cell to move.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void CascadeDown(Cell* item)
+        private void CascadeDown(HeapEntry* heap, int index, HeapEntry entry)
         {
-            if (item == null)
-                return;
-                
-            var finalQueueIndex = item->QueueIndex;
+            var cells = _cells;
+            var count = Count;
 
             while (true)
             {
-                var childLeftIndex = 2 * finalQueueIndex;
+                var childIndex = index << 1;
 
-                if (childLeftIndex > Count)
+                if (childIndex > count)
                 {
                     break;
                 }
 
-                var childRightIndex = childLeftIndex + 1;
-                var childLeft = (Cell*)_collection[childLeftIndex];
-
-                // Determine the higher-priority child
-                var higherPriorityChild = childLeft;
-                var higherPriorityChildIndex = childLeftIndex;
-
-                if (childRightIndex <= Count)
+                if (childIndex < count && heap[childIndex + 1].Priority < heap[childIndex].Priority)
                 {
-                    var childRight = (Cell*)_collection[childRightIndex];
-                    if (HasHigherPriority(childRight, childLeft))
-                    {
-                        higherPriorityChild = childRight;
-                        higherPriorityChildIndex = childRightIndex;
-                    }
+                    childIndex++;
                 }
 
-                if (HasHigherOrEqualPriority(item, higherPriorityChild))
+                var child = heap[childIndex];
+
+                if (entry.Priority <= child.Priority)
                 {
                     break;
                 }
 
-                _collection[finalQueueIndex] = (IntPtr)higherPriorityChild;
-                higherPriorityChild->QueueIndex = finalQueueIndex;
-
-                finalQueueIndex = higherPriorityChildIndex;
+                heap[index] = child;
+                cells[child.Index].QueueIndex = index;
+                index = childIndex;
             }
 
-            item->QueueIndex = finalQueueIndex;
-            _collection[finalQueueIndex] = (IntPtr)item;
+            heap[index] = entry;
+            cells[entry.Index].QueueIndex = index;
         }
 
         /// <summary>
-        /// Determines whether the first cell has higher priority than the second cell.
+        /// One slot of the heap: the priority it is ordered by and the index of its cell in the cell buffer.
         /// </summary>
-        /// <param name="higher">Pointer to the first cell.</param>
-        /// <param name="lower">Pointer to the second cell.</param>
-        /// <returns>true if the first cell has higher priority; otherwise, false.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool HasHigherPriority(Cell* higher, Cell* lower)
+        private readonly struct HeapEntry
         {
-            if (higher == null)
-                return false;
-            if (lower == null)
-                return true;
-                
-            return higher->ScoreF < lower->ScoreF;
-        }
+            public readonly float Priority;
+            public readonly int Index;
 
-        /// <summary>
-        /// Determines whether the first cell has higher or equal priority to the second cell.
-        /// </summary>
-        /// <param name="higher">Pointer to the first cell.</param>
-        /// <param name="lower">Pointer to the second cell.</param>
-        /// <returns>true if the first cell has higher or equal priority; otherwise, false.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool HasHigherOrEqualPriority(Cell* higher, Cell* lower)
-        {
-            if (higher == null)
-                return false;
-            if (lower == null)
-                return true;
-                
-            return higher->ScoreF <= lower->ScoreF;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public HeapEntry(float priority, int index)
+            {
+                Priority = priority;
+                Index = index;
+            }
         }
     }
 }

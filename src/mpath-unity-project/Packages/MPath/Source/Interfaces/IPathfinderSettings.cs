@@ -1,3 +1,4 @@
+using System;
 using Migs.MPath.Core.Data;
 
 namespace Migs.MPath.Core.Interfaces
@@ -61,10 +62,10 @@ namespace Migs.MPath.Core.Interfaces
         PathSmoothingMethod PathSmoothingMethod { get; }
 
         /// <summary>
-        /// The initial size of the Open Set buffer. <br/>
-        /// After multiple benchmarks, it looks like even in big mazes, the buffer size is not exceeding 100-200 elements. <br/>
-        /// Adjust this value if you're experiencing allocations during the pathfinding process.
+        /// Formerly the initial size of the open set buffer. Ignored: the open set is sized to the grid once, when the
+        /// pathfinder is created, so it never grows and searches never allocate for it.
         /// </summary>
+        [Obsolete("Ignored: the open set is sized to the grid when the pathfinder is created and never grows. This member will be removed in the next major version.")]
         int? InitialBufferSize { get; }
     }
 }

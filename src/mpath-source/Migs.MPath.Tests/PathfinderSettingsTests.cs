@@ -23,7 +23,6 @@ namespace Migs.MPath.Tests
             settings.StraightMovementMultiplier.Should().Be(1.0f);
             settings.DiagonalMovementMultiplier.Should().Be(1.41f);
             settings.PathSmoothingMethod.Should().Be(PathSmoothingMethod.None);
-            settings.InitialBufferSize.Should().BeNull();
         }
         
         [Test]
@@ -36,7 +35,6 @@ namespace Migs.MPath.Tests
             const bool isCellWeightEnabled = false;
             const float straightMultiplier = 2.0f;
             const float diagonalMultiplier = 3.0f;
-            const int bufferSize = 100;
             
             // Act
             var settings = new PathfinderSettings
@@ -47,8 +45,7 @@ namespace Migs.MPath.Tests
                 IsCellWeightEnabled = isCellWeightEnabled,
                 StraightMovementMultiplier = straightMultiplier,
                 DiagonalMovementMultiplier = diagonalMultiplier,
-                PathSmoothingMethod = PathSmoothingMethod.StringPulling,
-                InitialBufferSize = bufferSize
+                PathSmoothingMethod = PathSmoothingMethod.StringPulling
             };
             
             // Assert
@@ -59,7 +56,6 @@ namespace Migs.MPath.Tests
             settings.StraightMovementMultiplier.Should().Be(straightMultiplier);
             settings.DiagonalMovementMultiplier.Should().Be(diagonalMultiplier);
             settings.PathSmoothingMethod.Should().Be(PathSmoothingMethod.StringPulling);
-            settings.InitialBufferSize.Should().Be(bufferSize);
         }
         
         [TestCase(true, CornerBlocking.None)]

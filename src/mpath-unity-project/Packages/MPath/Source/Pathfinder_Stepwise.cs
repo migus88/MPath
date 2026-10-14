@@ -207,7 +207,7 @@ namespace Migs.MPath.Core
                     _cells = (Cell*)_handle.AddrOfPinnedObject();
 
                     pathfinder.ResetCells(_cells);
-                    pathfinder._openSet.Clear();
+                    pathfinder._openSet.Reset(_cells);
 
                     _seen = new bool[pathfinder.Size];
 

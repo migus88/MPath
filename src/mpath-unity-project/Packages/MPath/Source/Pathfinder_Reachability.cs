@@ -88,7 +88,7 @@ namespace Migs.MPath.Core
             fixed (Cell* ptr = &MemoryMarshal.GetReference(cells))
             {
                 ResetCells(ptr);
-                _openSet.Clear();
+                _openSet.Reset(ptr);
 
                 return CalculateReachable(agentSize, from, budget, ptr);
             }

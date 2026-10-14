@@ -1,3 +1,4 @@
+using System;
 using Migs.MPath.Core.Data;
 using Migs.MPath.Core.Interfaces;
 using UnityEngine;
@@ -31,6 +32,7 @@ namespace Migs.MPath.Settings
         /// <inheritdoc/>
         [field: SerializeField] public PathSmoothingMethod PathSmoothingMethod { get; set; } = PathSmoothingMethod.None;
         /// <inheritdoc cref="InitialBufferSize"/>
+        [Obsolete("Ignored: the open set is sized to the grid when the pathfinder is created and never grows. This member will be removed in the next major version.")]
         [field: SerializeField] public int InitialBufferSizeSerialized { get; set; } = -1;
 
         /// <inheritdoc/>
@@ -57,6 +59,7 @@ namespace Migs.MPath.Settings
         }
 
         /// <inheritdoc/>
+        [Obsolete("Ignored: the open set is sized to the grid when the pathfinder is created and never grows. This member will be removed in the next major version.")]
         public int? InitialBufferSize
         {
             get => InitialBufferSizeSerialized == -1 ? null : InitialBufferSizeSerialized;

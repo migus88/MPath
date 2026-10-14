@@ -26,12 +26,15 @@ public sealed class BenchmarkCommand : Command<BenchmarkCommand.Settings>
 
         /// <summary>The GetReachable movement-range flood fill at varying budgets.</summary>
         Reachability,
+
+        /// <summary>Corner-to-corner searches over grids with 20% random walls (wide open sets).</summary>
+        Grid,
     }
 
     public sealed class Settings : CommandSettings
     {
         [CommandArgument(0, "[suite]")]
-        [Description("Which suite to run: maze (default), smoothing, internal or reachability.")]
+        [Description("Which suite to run: maze (default), smoothing, internal, reachability or grid.")]
         [DefaultValue(BenchmarkSuite.Maze)]
         public BenchmarkSuite Suite { get; init; }
     }
@@ -54,6 +57,9 @@ public sealed class BenchmarkCommand : Command<BenchmarkCommand.Settings>
                 break;
             case BenchmarkSuite.Reachability:
                 BenchmarkRunner.Run<ReachabilityBenchmarkRunner>(config);
+                break;
+            case BenchmarkSuite.Grid:
+                BenchmarkRunner.Run<RandomGridBenchmarkRunner>(config);
                 break;
         }
 

@@ -14,10 +14,10 @@ The following benchmark was run on a complex maze to test pathfinding performanc
 
 | Method    | Mean      | Allocated   |
 |---------- |----------:|------------:|
-| MPath     |  5.813 ms |    24.06 KB |
-| [AStarLite](https://github.com/valantonini/AStar) |  7.679 ms |  8.75 MB |
-| [RoyTAStar](https://github.com/roy-t/AStar) | 61.403 ms | 12.30 MB |
-| [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,807.4 ms | 108.13 MB |
+| MPath     |  5.108 ms |    24.06 KB |
+| [AStarLite](https://github.com/valantonini/AStar) |  7.623 ms |  8.75 MB |
+| [RoyTAStar](https://github.com/roy-t/AStar) | 62.006 ms | 12.30 MB |
+| [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,809.5 ms | 108.13 MB |
 
 MPath returns a cheapest route (its A* heuristic never overestimates the remaining cost). On this maze the narrow corridors leave little room for a better route; on open or randomly obstructed grids the exact cost model also cuts the number of expanded cells sharply.
 
@@ -79,6 +79,7 @@ dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchm
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark smoothing
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark internal
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark reachability
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark grid
 
 # Render result images / print path stats
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- render
@@ -91,6 +92,16 @@ The `reachability` suite measures `Pathfinder.GetReachable` — the bounded Dijk
 every cell within a movement budget. Because the work scales with the size of the reachable set, the suite
 sweeps a small, medium and large budget over the same maze. Allocation stays at a few dozen bytes per query
 thanks to the pooled result buffer.
+
+### Random Walls
+
+The `grid` suite runs corner-to-corner `GetPath` queries over seeded grids with 20% random walls. These grids are
+mostly open, so the search keeps a wide frontier and the open set does more of the work than on the maze.
+
+| Method              | Mean      | Allocated |
+|-------------------- |----------:|----------:|
+| RandomWalls_200x200 | 0.878 ms  |      33 B |
+| RandomWalls_500x500 | 5.505 ms  |      42 B |
 
 ### Unity Benchmarks
 

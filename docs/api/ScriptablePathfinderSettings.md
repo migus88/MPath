@@ -17,8 +17,8 @@ A Unity ScriptableObject implementation of the `IPathfinderSettings` interface. 
 | `IsCellWeightEnabled` | `bool` | `true` | Whether cell weight calculation is enabled. |
 | `StraightMovementMultiplier` | `float` | `1.0f` | The cost multiplier for horizontal/vertical movement. |
 | `DiagonalMovementMultiplier` | `float` | `1.41f` | The cost multiplier for diagonal movement. |
-| `InitialBufferSizeSerialized` | `int` | `-1` | The serialized value for the initial buffer size. |
-| `InitialBufferSize` | `int?` | `null` | The nullable initial buffer size (computed property). |
+| `InitialBufferSizeSerialized` | `int` | `-1` | **Obsolete, ignored.** The serialized backing value of `InitialBufferSize`. |
+| `InitialBufferSize` | `int?` | `null` | **Obsolete, ignored.** The open set is sized to the grid when the pathfinder is created. |
 
 ## Creation
 
@@ -47,6 +47,5 @@ public class PathfindingController : MonoBehaviour
 - ScriptablePathfinderSettings inherits from Unity's ScriptableObject, making it easy to create and manage pathfinding configurations.
 - The `CreateAssetMenu` attribute allows creating assets directly in the Unity Editor.
 - The settings are serialized, allowing them to be edited in the Inspector and saved with the project.
-- The nullable `InitialBufferSize` property is handled through a serialized integer field with -1 representing `null`.
 - You can create multiple settings assets for different scenarios (e.g., terrain types, game modes, etc.).
 - These settings can be referenced from multiple components without duplication. 
