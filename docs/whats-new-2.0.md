@@ -59,7 +59,14 @@ A flat `PathCell[]` is searched in place, without a copy, in the order `CellLayo
 ## Results
 
 - `RangeResult.Contains`, `TryGetCost` and `TryGetCell` are O(1) through an index the result builds on its first lookup: `TryGetCost` on each of 2,040 reached cells went from 1,614 µs to 17.9 µs (90x).
-- `PathResult.Path` and `RangeResult.Cells` are struct sequences that share the result's struct enumerator. 1.2.1's `yield` iterators allocated and were slower: 5.84 µs → 0.75 µs over a 1,078-cell path, 9.22 µs → 1.57 µs over a 2,040-cell range. `AsSpan()`, the indexer and `foreach` over the result allocate nothing.
+- `PathResult.Path` and `RangeResult.Cells` are struct sequences that share the result's struct enumerator. 1.2.1's `yield` iterators allocated on every `foreach` and were slower. Iterating a result now allocates 0 B, down from 48–56 B (1,078-cell path, 2,040-cell range):
+
+| Iteration | 1.2.1 | 2.0 |
+|------|------:|----:|
+| `foreach` over `PathResult.Path` | 5.84 µs, 48 B | 0.75 µs, 0 B |
+| `foreach` over `RangeResult.Cells` | 9.22 µs, 56 B | 1.57 µs, 0 B |
+| `foreach` over the result, or over `AsSpan()` | | 0 B |
+
 - String-pulling smoothing writes into an array rented from `ArrayPool`, so a smoothed query allocates no more than an unsmoothed one.
 
 ## Trade-off: Construction Cost
@@ -71,5 +78,14 @@ Moving search state into the pathfinder makes building one more expensive. Over 
 | `new Pathfinder(PathCell[,])`, disposed | 54 ns, 320 B | 46 µs, 312 B |
 | `new Pathfinder(PathCell[,])`, not disposed | 41.6 µs, 14.0 MB | 424 µs, 10.0 MB |
 | `new Pathfinder(PathCell[], w, h)`, not disposed | 38 ns, 320 B | 413 µs, 8.0 MB |
+
+On a small 100x100 grid (10,000 open cells), from the matrix constructor (`Cell[,]` in 1.2.1, `PathCell[,]` in 2.0). "Cold pool" builds a pathfinder that is never disposed, so every construction rents fresh arrays; "warm pool" constructs and disposes repeatedly, so the arrays come back from `ArrayPool`:
+
+| Construction, 100x100 | 1.2.1 | 2.0 |
+|------|------:|----:|
+| Warm pool (construct + dispose) | 53 ns, 320 B | 2.5 µs, 315 B |
+| Cold pool (first construction, not disposed) | 9.5 µs, 896 KB | 23.8 µs, 640 KB |
+
+Measured with BenchmarkDotNet on the same machine, alternating 1.2.1 and 2.0 (1.2.1, 2.0, 1.2.1, 2.0); the 2.0 case is in the `internal` suite. Construction scales with the cell count: about 2.4 ns per cell cold and 0.25 ns per cell warm (clearing the search nodes). From a matrix, 2.0 rents 40 B per cell (a 24-byte search node, an 8-byte heap slot and an 8-byte snapshot cell; 32 B from an array, which has no snapshot) against 1.2.1's 56-byte `Cell`, rounded up by `ArrayPool` to a power of two (16,384 slots for 10,000 cells).
 
 1.2.1's array constructor was nearly free because it searched the caller's array in place, keeping search state in the cells and sorting the array. Build a pathfinder once per grid and dispose it, rather than once per query.

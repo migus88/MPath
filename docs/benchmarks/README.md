@@ -25,13 +25,15 @@ These results highlight MPath's optimization for both speed and memory efficienc
 
 ### Pathfinder Construction
 
-A pathfinder rents its search state (one node per cell, plus the heap) from `ArrayPool` and returns it on `Dispose`. Over the maze (196,608 cells):
+A pathfinder rents its search state (one node per cell, plus the heap) from `ArrayPool` and returns it on `Dispose`: 40 B per cell from a `PathCell[,]` matrix (node, heap slot and grid snapshot) or 32 B from a `PathCell[]` array, rounded up to a power of two. Over the maze (196,608 cells) and a 100x100 grid:
 
 | Construction | Time, allocated |
 |------|----:|
 | `new Pathfinder(PathCell[,])`, disposed | 46 µs, 312 B |
 | `new Pathfinder(PathCell[,])`, not disposed | 424 µs, 10.0 MB |
 | `new Pathfinder(PathCell[], w, h)`, not disposed | 413 µs, 8.0 MB |
+| `new Pathfinder(PathCell[,])` on a 100x100 open grid, disposed | 2.5 µs, 315 B |
+| `new Pathfinder(PathCell[,])` on a 100x100 open grid, not disposed | 23.8 µs, 640 KB |
 
 Build a pathfinder once per grid and dispose it, rather than once per query. The caller's array is never modified.
 
