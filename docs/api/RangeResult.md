@@ -21,6 +21,7 @@ Represents the result of a movement-range (reachability) query produced by `Path
 | `ReachableCell Get(int index)` | Gets the reachable cell at the specified index. |
 | `bool Contains(Coordinate coordinate)` | Determines whether the coordinate is reachable (linear scan). |
 | `bool TryGetCost(Coordinate coordinate, out float cost)` | Gets the cheapest path cost to the coordinate, if reachable (linear scan). |
+| `bool TryGetCell(Coordinate coordinate, out ReachableCell cell)` | Gets the reachable cell (cost and step counts) at the coordinate, if reachable (linear scan). |
 | `void Dispose()` | Releases resources used by the RangeResult. |
 
 ## Remarks
@@ -28,7 +29,7 @@ Represents the result of a movement-range (reachability) query produced by `Path
 - **IMPORTANT:** Always dispose of `RangeResult` objects after use to return the pooled backing array.
 - Use the `using` statement for automatic disposal.
 - The origin cell is always included with a cost of `0` when the budget is non-negative.
-- `Contains` and `TryGetCost` perform a linear scan over the result. For repeated lookups, build your own `HashSet`/`Dictionary` from `Cells` once.
+- `Contains`, `TryGetCost` and `TryGetCell` perform a linear scan over the result. For repeated lookups, build your own `HashSet`/`Dictionary` from `Cells` once.
 - If you need to store reachable cells for later use, copy them before disposing.
 
 ## Example

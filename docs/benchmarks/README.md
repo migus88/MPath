@@ -40,6 +40,19 @@ The results show that:
 - Path smoothing significantly reduces the number of steps in the path (SimpleSmoothing: 71% reduction, StringPullingSmoothing: 81% reduction)
 - `StringPullingSmoothingLargeAgent` runs the same query with a 2x2 agent: every shortcut checks the agent's footprint at each cell, so both the search and the smoothing cost more
 
+### Tie-Breaking Cost
+
+`TieBreaking.None` (the default) runs the float search unchanged. A tie-break runs an integer-keyed search that also settles every route's cells before the cells after them, so it explores more on open ground with many equal-cost routes. Same maze and machine, `Cell[,]` grid:
+
+| Query | None | FewerDiagonals | FewerTurns |
+|-------|-----:|---------------:|-----------:|
+| Maze path (10,10) to (502,374) | 4.83 ms | 5.63 ms | 5.87 ms |
+| Reachability, budget 25 | 0.48 ms | 0.48 ms | 0.48 ms |
+| Reachability, budget 1000 | 4.33 ms | 4.66 ms | 4.67 ms |
+| 200x200 open grid, unit costs, (5,5) to (190,120) | 0.31 ms | 0.96 ms | 1.16 ms |
+
+No mode allocates during the search.
+
 ## Benchmark Environment Specs
 
 ```

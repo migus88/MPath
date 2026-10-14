@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace Migs.MPath.Core.Internal
 {
     /// <summary>
@@ -8,8 +10,13 @@ namespace Migs.MPath.Core.Internal
     /// A node is part of the running search only when its <see cref="Generation"/> equals the pathfinder's current
     /// one; any other node is untouched and its other fields are stale. A search therefore never resets the array:
     /// it bumps the generation and initialises each node on first touch, so its cost is O(cells searched), not
-    /// O(grid).
+    /// O(grid).<br/>
+    /// The layout is explicit so the two cost modes share the same 24 bytes: the float search
+    /// (<see cref="Data.TieBreaking.None"/>) uses <see cref="ScoreG"/>, <see cref="ScoreH"/> and
+    /// <see cref="ParentIndex"/>; the keyed search (any tie-break) uses <see cref="CostKey"/> and
+    /// <see cref="TieKey"/> over the same bytes. A pathfinder only ever runs one of them.
     /// </remarks>
+    [StructLayout(LayoutKind.Explicit)]
     internal struct PathNode
     {
         /// <summary>
@@ -25,33 +32,52 @@ namespace Migs.MPath.Core.Internal
         /// <summary>
         /// The cheapest known cost from the origin.
         /// </summary>
-        public float ScoreG;
+        [FieldOffset(0)] public float ScoreG;
 
         /// <summary>
         /// The heuristic estimate to the destination (0 in the reachability search).
         /// </summary>
-        public float ScoreH;
+        [FieldOffset(4)] public float ScoreH;
 
         /// <summary>
         /// The cell index of the node this one is reached from, or <see cref="NoParent"/>.
         /// </summary>
-        public int ParentIndex;
+        [FieldOffset(8)] public int ParentIndex;
 
         /// <summary>
         /// The number of steps from the origin.
         /// </summary>
-        public int Depth;
+        [FieldOffset(12)] public int Depth;
 
         /// <summary>
         /// The node's slot in the open set heap while it is queued, <see cref="ClosedQueueIndex"/> once it is closed.
         /// May be stale for a node that has left the heap; see <see cref="UnsafePriorityQueue.Contains"/>.
         /// </summary>
-        public int QueueIndex;
+        [FieldOffset(16)] public int QueueIndex;
 
         /// <summary>
         /// The search this node was last touched by. 0 means never.
         /// </summary>
-        public uint Generation;
+        [FieldOffset(20)] public uint Generation;
+
+        /// <summary>
+        /// The number of diagonal steps of the route the float reachability search keeps for the node. Overlays
+        /// <see cref="ScoreH"/>, which that search never uses.
+        /// </summary>
+        [FieldOffset(4)] public int DiagonalSteps;
+
+        /// <summary>
+        /// Keyed search: the exact cost from the origin in fixed-point units
+        /// (see <see cref="FastPathfinderSettings.CostKeyScale"/>). Overlays <see cref="ScoreG"/> and
+        /// <see cref="ScoreH"/>.
+        /// </summary>
+        [FieldOffset(0)] public long CostKey;
+
+        /// <summary>
+        /// Keyed search: the tie-break key of the node's label (diagonal steps or turns). Overlays
+        /// <see cref="ParentIndex"/>: the keyed search reads routes from arrival directions, not parents.
+        /// </summary>
+        [FieldOffset(8)] public int TieKey;
 
         /// <summary>
         /// Whether the node has been expanded (A*) or settled (reachability) in its search.

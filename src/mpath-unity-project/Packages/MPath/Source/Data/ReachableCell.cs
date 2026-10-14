@@ -10,7 +10,7 @@ namespace Migs.MPath.Core.Data
         /// <summary>
         /// Gets the coordinate of the reachable cell.
         /// </summary>
-        public Coordinate Coordinate { get; }
+        public Coordinate Coordinate => new Coordinate(_x, _y);
 
         /// <summary>
         /// Gets the cost of the cheapest path from the query origin to this cell.
@@ -19,19 +19,50 @@ namespace Migs.MPath.Core.Data
         public float Cost { get; }
 
         /// <summary>
+        /// Gets the number of steps of the cheapest route to this cell (0 for the origin). With a
+        /// <see cref="TieBreaking"/> it is the route with the fewest diagonal steps, then the fewest steps, among
+        /// the cheapest ones; without one, whichever cheapest route the search kept.
+        /// </summary>
+        public int Steps { get; }
+
+        /// <summary>
+        /// Gets how many of <see cref="Steps"/> are diagonal, on the same route.
+        /// </summary>
+        public int DiagonalSteps { get; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ReachableCell"/> struct without step counts.
+        /// </summary>
+        /// <param name="coordinate">The coordinate of the reachable cell.</param>
+        /// <param name="cost">The cost of the cheapest path to the cell.</param>
+        public ReachableCell(Coordinate coordinate, float cost) : this(coordinate, cost, 0, 0)
+        {
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ReachableCell"/> struct.
         /// </summary>
         /// <param name="coordinate">The coordinate of the reachable cell.</param>
         /// <param name="cost">The cost of the cheapest path to the cell.</param>
-        public ReachableCell(Coordinate coordinate, float cost)
+        /// <param name="steps">The number of steps of that path.</param>
+        /// <param name="diagonalSteps">How many of <paramref name="steps"/> are diagonal.</param>
+        public ReachableCell(Coordinate coordinate, float cost, int steps, int diagonalSteps)
         {
-            Coordinate = coordinate;
+            _x = coordinate.X;
+            _y = coordinate.Y;
             Cost = cost;
+            Steps = steps;
+            DiagonalSteps = diagonalSteps;
         }
+
+        // The coordinate is stored as its two components: a result's coordinate is always initialized, and the
+        // 20-byte layout keeps large reachability results compact.
+        private readonly int _x;
+        private readonly int _y;
 
         public override string ToString()
         {
-            return $"{Coordinate} ({Cost})";
+            return $"{Coordinate} ({Cost}, {Steps} steps, {DiagonalSteps} diagonal)";
         }
     }
 }

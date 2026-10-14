@@ -136,6 +136,12 @@ namespace Migs.MPath.Core
             // Pooled arrays may hold another owner's data; generation 0 marks every node as untouched.
             _nodes = ArrayPool<PathNode>.Shared.Rent(Size);
             Array.Clear(_nodes, 0, Size);
+
+            if (_settings.IsTieBreaking)
+            {
+                _keyedOpenSet = new KeyedPriorityQueue(Size);
+                _arrivals = ArrayPool<byte>.Shared.Rent(Size);
+            }
         }
 
         /// <summary>
@@ -297,6 +303,7 @@ namespace Migs.MPath.Core
 
             fixed (Cell* ptr = &MemoryMarshal.GetReference(cells))
             fixed (PathNode* nodes = _nodes)
+            fixed (byte* arrivals = _arrivals)
             {
                 if (!IsDestinationEnterable(ptr, from, to, agentSize))
                 {
@@ -305,7 +312,17 @@ namespace Migs.MPath.Core
 
                 BeginSearch(nodes);
 
-                var result = CalculatePath(agentSize, from, to, ptr, nodes);
+                PathResult result;
+
+                if (_settings.IsTieBreaking)
+                {
+                    BeginKeyedSearch(nodes, arrivals);
+                    result = CalculatePathKeyed(agentSize, from, to, ptr, nodes);
+                }
+                else
+                {
+                    result = CalculatePath(agentSize, from, to, ptr, nodes);
+                }
                 
                 CachePath(agent, agentSize, from, to, result);
                 
@@ -446,11 +463,11 @@ namespace Migs.MPath.Core
 
             var neighbors = stackalloc Cell*[MaxNeighbors];
 
-            // A* algorithm main loop. Each iteration expands one cell; ExpandNext is the single
-            // source of truth for that step, shared with the stepwise (tick-by-tick) search.
+            // A* algorithm main loop. Each iteration expands one cell; ExpandNextFloat (behind ExpandNext) is the
+            // single source of truth for that step, shared with the stepwise (tick-by-tick) search.
             while (_openSet.Count > 0)
             {
-                if (ExpandNext(cells, nodes, to, agentSize, neighbors, out var current))
+                if (ExpandNextFloat(cells, nodes, to, agentSize, neighbors, out var current))
                 {
                     // Destination dequeued — search is done.
                     return ReconstructPath(current, cells, nodes, agentSize);
@@ -514,6 +531,19 @@ namespace Migs.MPath.Core
         /// otherwise <c>false</c>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool ExpandNext(Cell* cells, PathNode* nodes, Coordinate to, int agentSize, Cell** neighbors,
+            out int current)
+        {
+            return _settings.IsTieBreaking
+                ? ExpandNextKeyed(cells, nodes, to, agentSize, neighbors, out current)
+                : ExpandNextFloat(cells, nodes, to, agentSize, neighbors, out current);
+        }
+
+        /// <summary>
+        /// One expansion of the float search (<see cref="TieBreaking.None"/>); <see cref="CalculatePath"/> calls it
+        /// directly so its loop has no mode check.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool ExpandNextFloat(Cell* cells, PathNode* nodes, Coordinate to, int agentSize, Cell** neighbors,
             out int current)
         {
             current = _openSet.Dequeue();
@@ -591,20 +621,38 @@ namespace Migs.MPath.Core
             var path = ArrayPool<Coordinate>.Shared.Rent(depth);
             Array.Clear(path, 0, path.Length);
 
+            var diagonalSteps = 0;
+
             var index = lastIndex;
             for (var i = depth - 1; i >= 0; i--)
             {
-                path[i] = cells[index].Coordinate;
+                var coordinate = cells[index].Coordinate;
+                path[i] = coordinate;
                 index = nodes[index].ParentIndex;
+
+                var parent = cells[index].Coordinate;
+                if (IsDiagonalMovement(parent.X, parent.Y, coordinate.X, coordinate.Y))
+                {
+                    diagonalSteps++;
+                }
             }
 
+            return CreatePathResult(path, depth, diagonalSteps, cells, agentSize);
+        }
+
+        /// <summary>
+        /// Wraps a reconstructed route (origin excluded) into the result, smoothing it when enabled. The step counts
+        /// always describe the route the search found, before smoothing.
+        /// </summary>
+        private PathResult CreatePathResult(Coordinate[] path, int steps, int diagonalSteps, Cell* cells,
+            int agentSize)
+        {
             // Apply path smoothing if enabled
-            if (_settings.PathSmoothingMethod != PathSmoothingMethod.None && depth > 2)
-            {
-                return SmoothPath(path, depth, cells, agentSize);
-            }
+            var result = _settings.PathSmoothingMethod != PathSmoothingMethod.None && steps > 2
+                ? SmoothPath(path, steps, cells, agentSize)
+                : PathResult.Success(path, steps);
 
-            return PathResult.Success(path, depth);
+            return result.WithStepCounts(steps, diagonalSteps);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -970,6 +1018,13 @@ namespace Migs.MPath.Core
             _nodes = null;
 
             _openSet.Dispose();
+            _keyedOpenSet?.Dispose();
+
+            if (_arrivals != null)
+            {
+                ArrayPool<byte>.Shared.Return(_arrivals);
+                _arrivals = null;
+            }
 
             // Dispose the path caching if it exists
             if (_isPathCachingEnabled)

@@ -134,6 +134,22 @@ namespace Migs.MPath.Core.Data
         /// <exception cref="ObjectDisposedException">Thrown when the result has been disposed.</exception>
         public bool TryGetCost(Coordinate coordinate, out float cost)
         {
+            var isReachable = TryGetCell(coordinate, out var cell);
+            cost = cell.Cost;
+            return isReachable;
+        }
+
+        /// <summary>
+        /// Gets the reachable cell (cost and step counts) at the specified coordinate, if it is reachable.
+        /// Performs a linear scan; for repeated lookups consider building a dictionary from <see cref="Cells"/>.
+        /// </summary>
+        /// <param name="coordinate">The coordinate to look for.</param>
+        /// <param name="cell">When this method returns, contains the reachable cell if reachable; otherwise, the
+        /// default value.</param>
+        /// <returns><c>true</c> if the coordinate is reachable; otherwise, <c>false</c>.</returns>
+        /// <exception cref="ObjectDisposedException">Thrown when the result has been disposed.</exception>
+        public bool TryGetCell(Coordinate coordinate, out ReachableCell cell)
+        {
             if (_isDisposed)
             {
                 throw new ObjectDisposedException(nameof(RangeResult));
@@ -148,12 +164,12 @@ namespace Migs.MPath.Core.Data
                         continue;
                     }
 
-                    cost = _cells[i].Cost;
+                    cell = _cells[i];
                     return true;
                 }
             }
 
-            cost = 0f;
+            cell = default;
             return false;
         }
 

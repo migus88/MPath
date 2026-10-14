@@ -162,6 +162,7 @@ namespace Migs.MPath.Core
         public sealed unsafe class StepwiseSearch : IDisposable
         {
             private readonly Pathfinder _pathfinder;
+            private readonly Coordinate _from;
             private readonly Coordinate _to;
             private readonly int _agentSize;
 
@@ -174,8 +175,10 @@ namespace Migs.MPath.Core
             // them (the open set into the nodes) that must stay valid across ticks.
             private GCHandle _handle;
             private GCHandle _nodesHandle;
+            private GCHandle _arrivalsHandle;
             private Cell* _cells;
             private PathNode* _nodes;
+            private byte* _arrivals;
 
             // Every cell ever discovered (in grid order of discovery). _seen[index] guards against duplicates.
             private readonly List<Coordinate> _discovered = new List<Coordinate>();
@@ -191,6 +194,7 @@ namespace Migs.MPath.Core
                 OccupancyRule occupancy, Coordinate[] enterableCells, bool isDestinationEnterable)
             {
                 _pathfinder = pathfinder;
+                _from = from;
                 _to = to;
                 _agentSize = agentSize;
                 _occupancy = occupancy;
@@ -212,10 +216,22 @@ namespace Migs.MPath.Core
 
                     _seen = new bool[pathfinder.Size];
 
-                    // Seed the open set with the origin, exactly as CalculatePath does.
+                    // Seed the open set with the origin, exactly as CalculatePath (or its keyed counterpart) does.
                     var startIndex = pathfinder.GetLayoutIndex(from.X, from.Y);
-                    pathfinder.OpenNode(_nodes, startIndex, PathNode.NoParent, 0, 0f,
-                        pathfinder.GetH(from.X, from.Y, to.X, to.Y));
+
+                    if (pathfinder._settings.IsTieBreaking)
+                    {
+                        _arrivalsHandle = GCHandle.Alloc(pathfinder._arrivals, GCHandleType.Pinned);
+                        _arrivals = (byte*)_arrivalsHandle.AddrOfPinnedObject();
+                        pathfinder.BeginKeyedSearch(_nodes, _arrivals);
+                        pathfinder.OpenOriginKeyed(_nodes, from, pathfinder.GetHKey(from.X, from.Y, to.X, to.Y));
+                    }
+                    else
+                    {
+                        pathfinder.OpenNode(_nodes, startIndex, PathNode.NoParent, 0, 0f,
+                            pathfinder.GetH(from.X, from.Y, to.X, to.Y));
+                    }
+
                     MarkDiscovered(_cells + startIndex);
 
                     // Like GetPath, a destination the agent cannot enter fails before the first expansion.
@@ -266,7 +282,11 @@ namespace Migs.MPath.Core
                     return _lastStep;
                 }
 
-                if (_pathfinder._openSet.Count == 0)
+                var openCount = _pathfinder._settings.IsTieBreaking
+                    ? _pathfinder._keyedOpenSet.Count
+                    : _pathfinder._openSet.Count;
+
+                if (openCount == 0)
                 {
                     // Frontier exhausted without reaching the destination: no path exists.
                     _state = SearchState.Failure;
@@ -353,6 +373,7 @@ namespace Migs.MPath.Core
             {
                 _pathfinder._query = QueryRules.FromOptions(_pathfinder._settings, _occupancy, enterable,
                     _enterableCells.Length, _isDestinationEnterable, _to);
+                _pathfinder._arrivalsPointer = _arrivals;
             }
 
             private void RestoreRules()
@@ -373,12 +394,21 @@ namespace Migs.MPath.Core
             }
 
             /// <summary>
-            /// Reconstructs the raw A* path (parent-pointer chain) into a plain array. Mirrors
+            /// Reconstructs the raw A* path (parent-index chain, or the tie-break walk) into a plain array. Mirrors
             /// <see cref="Pathfinder.ReconstructPath"/> but without pooling or smoothing, and — like it — excludes
             /// the origin cell.
             /// </summary>
             private Coordinate[] TracePath(int lastIndex)
             {
+                if (_pathfinder._settings.IsTieBreaking)
+                {
+                    _pathfinder._arrivalsPointer = _arrivals;
+                    var steps = _pathfinder.WalkRoute(lastIndex, _cells, _from, null, 0, out _);
+                    var route = new Coordinate[steps];
+                    _pathfinder.WalkRoute(lastIndex, _cells, _from, route, steps, out _);
+                    return route;
+                }
+
                 var depth = _nodes[lastIndex].Depth;
                 var path = new Coordinate[depth];
 
@@ -409,9 +439,8 @@ namespace Migs.MPath.Core
                         openCount++;
                     }
 
-                    // f is the node's open-set priority, g + h, recomputed with the same float arithmetic.
-                    searched[i] = new SearchNode(coordinate, nodeState,
-                        node->ScoreG, node->ScoreH, node->ScoreG + node->ScoreH);
+                    _pathfinder.GetScores(node, coordinate, _to, out var scoreG, out var scoreH, out var scoreF);
+                    searched[i] = new SearchNode(coordinate, nodeState, scoreG, scoreH, scoreF);
                 }
 
                 return new SearchStep(_state, _iteration, _current, searched, openCount, count - openCount, path);
@@ -429,8 +458,14 @@ namespace Migs.MPath.Core
                     _nodesHandle.Free();
                 }
 
+                if (_arrivalsHandle.IsAllocated)
+                {
+                    _arrivalsHandle.Free();
+                }
+
                 _cells = null;
                 _nodes = null;
+                _arrivals = null;
             }
 
             /// <summary>

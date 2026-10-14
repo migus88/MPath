@@ -161,9 +161,9 @@ One row per type; click through for full members. The load-bearing facts are rep
 
 | Type | Kind | Gist | Details |
 |------|------|------|---------|
-| `PathResult` | result, `IDisposable` | `IsSuccess`, `Length`, `Path` (steps, **origin excluded**), `Get(i)` | [api](api/PathResult.md) |
-| `RangeResult` | result, `IDisposable` | `IsSuccess`, `Length`, `Cells`, `Contains(c)`, `TryGetCost(c, out cost)`, `Get(i)` | [api](api/RangeResult.md) |
-| `ReachableCell` | `readonly struct` | `Coordinate` + `Cost` | [api](api/ReachableCell.md) |
+| `PathResult` | result, `IDisposable` | `IsSuccess`, `Length`, `Path` (steps, **origin excluded**), `Get(i)`, `Steps` / `DiagonalSteps` (ints, of the route before smoothing) | [api](api/PathResult.md) |
+| `RangeResult` | result, `IDisposable` | `IsSuccess`, `Length`, `Cells`, `Contains(c)`, `TryGetCost(c, out cost)`, `TryGetCell(c, out cell)`, `Get(i)` | [api](api/RangeResult.md) |
+| `ReachableCell` | `readonly struct` | `Coordinate` + `Cost` + `Steps` + `DiagonalSteps` (ints) | [api](api/ReachableCell.md) |
 | `StepwiseSearch` | session, `IDisposable` | `Tick()`, `RunToCompletion()`, `State`, `IsComplete` | [api](api/StepwiseSearch.md) |
 | `SearchStep` | immutable class | Per-tick snapshot: `Searched`, `Open/ClosedCount`, `Current`, `Iteration`, `Path` | [api](api/SearchStep.md) |
 | `SearchNode` | `readonly struct` | `Coordinate` + `State` + `ScoreG/ScoreH/ScoreF` | [api](api/SearchNode.md) |
@@ -184,6 +184,7 @@ One row per type; click through for full members. The load-bearing facts are rep
 | `LineOfSightMode` | `BlockedByUnwalkableCells` (0, default) · `IgnoreUnwalkableCells` (1) |
 | `OccupancyRule` | `UseSettings` (0, default) · `Block` (1) · `Ignore` (2) — [api](api/OccupancyRule.md) |
 | `PathSmoothingMethod` | `None` (0) · `Simple` (1) · `StringPulling` (2) |
+| `TieBreaking` | `None` (0, default) · `FewerDiagonals` (1) · `FewerTurns` (2) — [api](api/TieBreaking.md) |
 | `SearchState` | `InProgress` · `Success` · `Failure` |
 | `SearchNodeState` | `Open` · `Closed` |
 
@@ -207,14 +208,16 @@ construction has **no effect** — build a new `Pathfinder` to change settings.
 | `PathSmoothingMethod` | `PathSmoothingMethod` | `None` | Post-process the path (`Simple`: first step + turn points + destination; `StringPulling`: straight shortcuts that keep the agent's footprint and the corner rule). |
 | `GridSnapshotMode` | `GridSnapshotMode` | `PerQuery` | `Cell[,]`/`ICellHolder` grids only: copy the grid before every query (`PerQuery`, O(grid) per query) or once and after `Refresh()` (`Manual`, O(cells searched)). `Set*` updates are seen at once in both. |
 | `InitialBufferSize` | `int?` | `null` | **Obsolete, ignored.** The open set is sized to the grid at construction and never grows. Don't set it. |
+| `TieBreaking` | `TieBreaking` | `None` | Which route wins among equal-cost routes: `FewerDiagonals` (then fewer steps) or `FewerTurns`, with exact integer costs (4 decimal places) and a fixed final rule. `None` = earlier versions' behaviour. Default interface member on `IPathfinderSettings`. |
 
 > **Weight is additive, not multiplicative.** With `IsCellWeightEnabled`, step cost = movement multiplier
 > **+** destination cell `Weight`. Because `Weight` defaults to `0`, a flat default grid behaves like
 > uniform cost. Set higher `Weight` for slow terrain (mud, hills).
 >
 > **`GetPath` returns a cheapest route.** Its cost (sum of step costs above) equals the `GetReachable` cost of
-> the destination. Holds for any non-negative multipliers and weights; ties between equal-cost routes may
-> resolve either way.
+> the destination. Holds for any non-negative multipliers and weights. With `TieBreaking.None`, ties between
+> equal-cost routes resolve by search order (can zig-zag, can change with unrelated grid edits); set
+> `TieBreaking` to pick a deterministic winner.
 
 ---
 
@@ -239,6 +242,26 @@ if (range.TryGetCost(target, out var cost)) { /* reachable for `cost` */ }
 ```
 
 Per-step cost mirrors the main A*: straight/diagonal multiplier **+** cell `Weight` (when weighting is on).
+Each `ReachableCell` also carries integer `Steps` / `DiagonalSteps` of its cheapest route.
+
+### Straight lines and step counts (deterministic ties)
+
+```csharp
+var settings = new PathfinderSettings
+{
+    StraightMovementMultiplier = 1f, DiagonalMovementMultiplier = 1f,  // king moves: a diagonal costs 1
+    IsCellWeightEnabled = false,
+    TieBreaking = TieBreaking.FewerDiagonals                           // straight lines win ties
+};
+using var pathfinder = new Pathfinder(cells, settings);
+using var path = pathfinder.GetPath(from, to);   // path.Steps, path.DiagonalSteps: exact ints
+using var range = pathfinder.GetReachable(from, budget: 3f);
+if (range.TryGetCell(target, out var cell)) { /* cell.Steps, cell.DiagonalSteps */ }
+```
+
+`TieBreaking.FewerTurns` instead returns the cheapest route with the fewest direction changes. With any
+tie-break, costs are exact (multipliers, weights and budgets rounded to 4 decimal places), so a budget of
+`3 * 1.41f` admits three 1.41 steps; the route is a function of the grid, not of search order.
 
 ### Distance & line of sight (range checks, visibility — no path computed)
 
@@ -383,7 +406,10 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
 11. **Write `default(QueryOptions)`, not bare `default`, in the third argument.** `GetPath(from, to, default)`
     binds to the `int agentSize` overload (size 0) and throws `ArgumentOutOfRangeException`. Better still,
     omit the options.
-12. **`Cell` may clash with your own `Cell` type.** Alias MPath's: `using GridCell = Migs.MPath.Core.Data.Cell;`
+12. **Don't encode tie-breaks in the costs.** Scaling multipliers (e.g. 1024 / 1025) to prefer straight lines and
+    dividing costs back into steps is fragile (float precision). Use `TieBreaking` and read `Steps` /
+    `DiagonalSteps` instead.
+13. **`Cell` may clash with your own `Cell` type.** Alias MPath's: `using GridCell = Migs.MPath.Core.Data.Cell;`
     (or alias yours). A distinct name is planned for the next major version.
 
 ## Decision guide

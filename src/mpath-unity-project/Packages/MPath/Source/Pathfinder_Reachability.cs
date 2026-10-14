@@ -90,6 +90,12 @@ namespace Migs.MPath.Core
             {
                 BeginSearch(nodes);
 
+                if (_settings.IsTieBreaking)
+                {
+                    _keyedOpenSet.Reset(nodes);
+                    return CalculateReachableKeyed(agentSize, from, budget, ptr, nodes);
+                }
+
                 return CalculateReachable(agentSize, from, budget, ptr, nodes);
             }
         }
@@ -194,7 +200,8 @@ namespace Migs.MPath.Core
 
                 // In Dijkstra's algorithm the cost of a cell is final once it is dequeued.
                 currentNode->QueueIndex = PathNode.ClosedQueueIndex;
-                reachable[count++] = new ReachableCell(currentCell->Coordinate, currentNode->ScoreG);
+                reachable[count++] = new ReachableCell(currentCell->Coordinate, currentNode->ScoreG,
+                    currentNode->Depth, currentNode->DiagonalSteps);
 
                 PopulateNeighbors(cells, currentCell, agentSize, neighbors);
 
@@ -227,18 +234,30 @@ namespace Migs.MPath.Core
                     if (!isTouched)
                     {
                         node->Generation = generation;
-                        node->ScoreG = tentativeG;
+                        SetRoute(currentNode, node, n, tentativeG);
                         _openSet.Enqueue(index, tentativeG);
                     }
                     else if (tentativeG < node->ScoreG)
                     {
-                        node->ScoreG = tentativeG;
+                        SetRoute(currentNode, node, n, tentativeG);
                         _openSet.UpdatePriority(index, tentativeG);
                     }
                 }
             }
 
             return RangeResult.Create(reachable, count);
+        }
+
+        /// <summary>
+        /// Records that the cheapest known route to <paramref name="node"/> is the one to
+        /// <paramref name="current"/> plus a step in <paramref name="direction"/>.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SetRoute(PathNode* current, PathNode* node, int direction, float scoreG)
+        {
+            node->ScoreG = scoreG;
+            node->Depth = current->Depth + 1;
+            node->DiagonalSteps = current->DiagonalSteps + (direction >= DirectionIndexes.DiagonalStart ? 1 : 0);
         }
     }
 }

@@ -11,6 +11,9 @@ namespace Migs.MPath.Tests
     /// the cheapest one, and <see cref="Pathfinder.GetReachable"/> reports the cheapest cost of every cell. Both are
     /// checked against <see cref="ReferenceGrid"/>, an independent, deliberately naive Dijkstra over the documented
     /// movement rules (walls, occupied cells, agent footprint, corner blocking, step cost = travel + weight).
+    /// With a <see cref="TieBreaking"/> the reference compares exact fixed-point costs (every multiplier and weight
+    /// rounded to 4 decimal places, as documented) and also finds the best tie-break key: a lexicographic Dijkstra for
+    /// (cost, diagonals, steps), and one over (cell, arrival direction) states for (cost, turns).
     /// </summary>
     [TestFixture]
     public class PathfinderOptimalityTests
@@ -40,22 +43,42 @@ namespace Migs.MPath.Tests
             CornerBlocking.All
         };
 
+        private const double CostKeyScale = 10000.0;
+
         public sealed class Scenario
         {
             public bool IsDiagonalMovementEnabled { get; init; }
             public CornerBlocking CornerBlocking { get; init; }
             public bool IsCellWeightEnabled { get; init; }
             public int AgentSize { get; init; }
+            public TieBreaking TieBreaking { get; init; }
 
             public override string ToString()
             {
                 var diagonal = IsDiagonalMovementEnabled ? $"Diagonal{CornerBlocking}" : "NoDiagonal";
                 var weights = IsCellWeightEnabled ? "Weighted" : "Unweighted";
-                return $"{diagonal}_{weights}_Size{AgentSize}";
+                var tieBreaking = TieBreaking == TieBreaking.None ? "" : $"_{TieBreaking}";
+                return $"{diagonal}_{weights}_Size{AgentSize}{tieBreaking}";
             }
         }
 
         private static IEnumerable<TestCaseData> Scenarios(string testName)
+        {
+            return Scenarios(testName, TieBreaking.None);
+        }
+
+        private static IEnumerable<TestCaseData> TieBreakingScenarios(string testName)
+        {
+            foreach (var tieBreaking in new[] { TieBreaking.FewerDiagonals, TieBreaking.FewerTurns })
+            {
+                foreach (var testCase in Scenarios(testName, tieBreaking))
+                {
+                    yield return testCase;
+                }
+            }
+        }
+
+        private static IEnumerable<TestCaseData> Scenarios(string testName, TieBreaking tieBreaking)
         {
             foreach (var agentSize in new[] { 1, 2 })
             {
@@ -66,7 +89,8 @@ namespace Migs.MPath.Tests
                         IsDiagonalMovementEnabled = false,
                         CornerBlocking = CornerBlocking.BetweenBlockedCells,
                         IsCellWeightEnabled = isCellWeightEnabled,
-                        AgentSize = agentSize
+                        AgentSize = agentSize,
+                        TieBreaking = tieBreaking
                     });
 
                     foreach (var cornerBlocking in CornerBlockingPresets)
@@ -76,7 +100,8 @@ namespace Migs.MPath.Tests
                             IsDiagonalMovementEnabled = true,
                             CornerBlocking = cornerBlocking,
                             IsCellWeightEnabled = isCellWeightEnabled,
-                            AgentSize = agentSize
+                            AgentSize = agentSize,
+                            TieBreaking = tieBreaking
                         });
                     }
                 }
@@ -93,6 +118,12 @@ namespace Migs.MPath.Tests
 
         private static IEnumerable<TestCaseData> GetReachableScenarios() =>
             Scenarios("GetReachable_OnRandomGrids_ReturnsCheapestCostOfEveryCell");
+
+        private static IEnumerable<TestCaseData> GetPathTieBreakingScenarios() =>
+            TieBreakingScenarios("GetPath_WithTieBreaking_OnRandomGrids_ReturnsBestRouteByCostThenTieKey");
+
+        private static IEnumerable<TestCaseData> GetReachableTieBreakingScenarios() =>
+            TieBreakingScenarios("GetReachable_WithTieBreaking_OnRandomGrids_ReturnsExactCostsAndStepCounts");
 
         [TestCaseSource(nameof(GetPathScenarios))]
         public void GetPath_OnRandomGrids_ReturnsLegalCheapestRoute(Scenario scenario)
@@ -132,6 +163,8 @@ namespace Migs.MPath.Tests
                     path.IsSuccess.Should().BeTrue($"the destination is reachable ({context})");
                     path.Get(path.Length - 1).Should().Be(to, context);
                     grid.GetRouteCost(from, path).Should().BeApproximately(cheapest, Tolerance(cheapest), context);
+                    path.Steps.Should().Be(path.Length, context);
+                    path.DiagonalSteps.Should().Be(ReferenceGrid.GetRouteShape(from, path).Diagonals, context);
                     foundPaths++;
                 }
             }
@@ -163,6 +196,111 @@ namespace Migs.MPath.Tests
                     expected.Should().ContainKey(cell.Coordinate, context);
                     var cheapest = expected[cell.Coordinate];
                     cell.Cost.Should().BeApproximately(cheapest, Tolerance(cheapest), $"{cell.Coordinate}, {context}");
+
+                    if (!scenario.IsCellWeightEnabled)
+                    {
+                        var settings = grid.Settings;
+                        var routeCost = (cell.Steps - cell.DiagonalSteps) * settings.StraightMovementMultiplier +
+                                        cell.DiagonalSteps * settings.DiagonalMovementMultiplier;
+                        routeCost.Should().BeApproximately(cheapest, Tolerance(cheapest),
+                            $"the step counts describe a cheapest route to {cell.Coordinate}, {context}");
+                    }
+                }
+            }
+        }
+
+        [TestCaseSource(nameof(GetPathTieBreakingScenarios))]
+        public void GetPath_WithTieBreaking_OnRandomGrids_ReturnsBestRouteByCostThenTieKey(Scenario scenario)
+        {
+            var agentSize = scenario.AgentSize;
+            var foundPaths = 0;
+
+            for (var seed = 0; seed < GridsPerCase; seed++)
+            {
+                var random = new Random(seed);
+                var grid = ReferenceGrid.CreateRandom(random, scenario);
+                using var pathfinder = new Pathfinder(grid.ToCells(), GridWidth, GridHeight, grid.Settings);
+                using var shuffledPathfinder = new Pathfinder(grid.ToShuffledCells(random), GridWidth, GridHeight,
+                    grid.Settings);
+
+                for (var query = 0; query < QueriesPerGrid; query++)
+                {
+                    var from = grid.RandomOrigin(random);
+                    var to = grid.RandomCoordinate(random);
+
+                    if (from == to)
+                    {
+                        continue;
+                    }
+
+                    var context = $"seed {seed}, {from} -> {to}, {grid}";
+                    var expected = scenario.TieBreaking == TieBreaking.FewerTurns
+                        ? grid.GetFewestTurnLabels(from)
+                        : grid.GetFewestDiagonalLabels(from);
+
+                    using var path = pathfinder.GetPath(from, to, agentSize);
+                    using var shuffledPath = shuffledPathfinder.GetPath(from, to, agentSize);
+
+                    shuffledPath.Path.Should().Equal(path.Path, $"the route depends on the grid only ({context})");
+
+                    if (!expected.TryGetValue(to, out var best))
+                    {
+                        path.IsSuccess.Should().BeFalse($"the destination is unreachable ({context})");
+                        continue;
+                    }
+
+                    path.IsSuccess.Should().BeTrue($"the destination is reachable ({context})");
+                    path.Get(path.Length - 1).Should().Be(to, context);
+
+                    var routeKey = grid.GetRouteCostKey(from, path);
+                    var shape = ReferenceGrid.GetRouteShape(from, path);
+                    routeKey.Should().Be(best.CostKey, $"the route is a cheapest one ({context})");
+                    path.Steps.Should().Be(shape.Steps, context);
+                    path.DiagonalSteps.Should().Be(shape.Diagonals, context);
+
+                    if (scenario.TieBreaking == TieBreaking.FewerTurns)
+                    {
+                        shape.Turns.Should().Be(best.TieKey, $"no cheapest route turns less ({context})");
+                    }
+                    else
+                    {
+                        shape.Diagonals.Should().Be(best.TieKey, $"no cheapest route has fewer diagonals ({context})");
+                        shape.Steps.Should().Be(best.Steps, $"no such route has fewer steps ({context})");
+                    }
+
+                    foundPaths++;
+                }
+            }
+
+            foundPaths.Should().BeGreaterThan(GridsPerCase, "the scenario must exercise successful searches");
+        }
+
+        [TestCaseSource(nameof(GetReachableTieBreakingScenarios))]
+        public void GetReachable_WithTieBreaking_OnRandomGrids_ReturnsExactCostsAndStepCounts(Scenario scenario)
+        {
+            var agentSize = scenario.AgentSize;
+
+            for (var seed = 0; seed < GridsPerCase; seed++)
+            {
+                var random = new Random(seed);
+                var grid = ReferenceGrid.CreateRandom(random, scenario);
+                using var pathfinder = new Pathfinder(grid.ToCells(), GridWidth, GridHeight, grid.Settings);
+                var from = grid.RandomOrigin(random);
+                var context = $"seed {seed}, from {from}, {grid}";
+
+                var expected = grid.GetFewestDiagonalLabels(from);
+                using var reachable = pathfinder.GetReachable(from, Unbounded, agentSize);
+
+                reachable.Length.Should().Be(expected.Count, context);
+
+                foreach (var cell in reachable.Cells)
+                {
+                    expected.Should().ContainKey(cell.Coordinate, context);
+                    var best = expected[cell.Coordinate];
+                    var cellContext = $"{cell.Coordinate}, {context}";
+                    cell.Cost.Should().Be((float)(best.CostKey / CostKeyScale), cellContext);
+                    cell.DiagonalSteps.Should().Be(best.TieKey, cellContext);
+                    cell.Steps.Should().Be(best.Steps, cellContext);
                 }
             }
         }
@@ -216,6 +354,25 @@ namespace Migs.MPath.Tests
         }
 
         /// <summary>
+        /// The best label of a cell under a tie-break: the exact cost key, the tie key (diagonals or turns) and, for
+        /// fewer diagonals, the steps.
+        /// </summary>
+        private readonly record struct Label(long CostKey, int TieKey, int Steps) : IComparable<Label>
+        {
+            public int CompareTo(Label other)
+            {
+                var cost = CostKey.CompareTo(other.CostKey);
+                if (cost != 0)
+                {
+                    return cost;
+                }
+
+                var tie = TieKey.CompareTo(other.TieKey);
+                return tie != 0 ? tie : Steps.CompareTo(other.Steps);
+            }
+        }
+
+        /// <summary>
         /// The grid of a property test plus an independent reference implementation of the movement rules.
         /// </summary>
         private sealed class ReferenceGrid
@@ -251,7 +408,8 @@ namespace Migs.MPath.Tests
                     IsCellWeightEnabled = scenario.IsCellWeightEnabled,
                     StraightMovementMultiplier = straight,
                     DiagonalMovementMultiplier = diagonal,
-                    PathSmoothingMethod = PathSmoothingMethod.None
+                    PathSmoothingMethod = PathSmoothingMethod.None,
+                    TieBreaking = scenario.TieBreaking
                 };
 
                 var grid = new ReferenceGrid(settings, scenario.AgentSize);
@@ -286,6 +444,19 @@ namespace Migs.MPath.Tests
                             Weight = Weights[x, y]
                         };
                     }
+                }
+
+                return cells;
+            }
+
+            /// <summary>The cells of <see cref="ToCells"/> in a random order.</summary>
+            public Cell[] ToShuffledCells(Random random)
+            {
+                var cells = ToCells();
+                for (var i = cells.Length - 1; i > 0; i--)
+                {
+                    var j = random.Next(i + 1);
+                    (cells[i], cells[j]) = (cells[j], cells[i]);
                 }
 
                 return cells;
@@ -356,6 +527,146 @@ namespace Migs.MPath.Tests
                 }
             }
 
+            /// <summary>
+            /// Lexicographic Dijkstra (lazy-deletion queue) over exact cost keys: per cell the best
+            /// (cost, diagonals, steps).
+            /// </summary>
+            public Dictionary<Coordinate, Label> GetFewestDiagonalLabels(Coordinate from)
+            {
+                var labels = new Dictionary<Coordinate, Label> { [from] = new Label(0, 0, 0) };
+                var settled = new Dictionary<Coordinate, Label>();
+                var queue = new PriorityQueue<Coordinate, Label>();
+                queue.Enqueue(from, labels[from]);
+
+                while (queue.TryDequeue(out var current, out var currentLabel))
+                {
+                    if (settled.ContainsKey(current) || currentLabel.CompareTo(labels[current]) != 0)
+                    {
+                        continue;
+                    }
+
+                    settled[current] = currentLabel;
+
+                    for (var i = 0; i < MaxNeighbors; i++)
+                    {
+                        var next = new Coordinate(current.X + Steps[i].X, current.Y + Steps[i].Y);
+                        if (settled.ContainsKey(next) || !IsStepAllowed(current, next))
+                        {
+                            continue;
+                        }
+
+                        var isDiagonal = Steps[i].X != 0 && Steps[i].Y != 0;
+                        var nextLabel = new Label(currentLabel.CostKey + GetStepCostKey(current, next),
+                            currentLabel.TieKey + (isDiagonal ? 1 : 0), currentLabel.Steps + 1);
+
+                        if (!labels.TryGetValue(next, out var known) || nextLabel.CompareTo(known) < 0)
+                        {
+                            labels[next] = nextLabel;
+                            queue.Enqueue(next, nextLabel);
+                        }
+                    }
+                }
+
+                return settled;
+            }
+
+            /// <summary>
+            /// Dijkstra over (cell, arrival direction) states by (cost key, turns): per cell the fewest turns of a
+            /// cheapest route (steps unused).
+            /// </summary>
+            public Dictionary<Coordinate, Label> GetFewestTurnLabels(Coordinate from)
+            {
+                const int origin = -1;
+                var labels = new Dictionary<(Coordinate Cell, int Direction), Label> { [(from, origin)] = default };
+                var settled = new HashSet<(Coordinate, int)>();
+                var best = new Dictionary<Coordinate, Label>();
+                var queue = new PriorityQueue<(Coordinate Cell, int Direction), Label>();
+                queue.Enqueue((from, origin), default);
+
+                while (queue.TryDequeue(out var current, out var currentLabel))
+                {
+                    if (settled.Contains(current) || currentLabel.CompareTo(labels[current]) != 0)
+                    {
+                        continue;
+                    }
+
+                    settled.Add(current);
+
+                    if (!best.TryGetValue(current.Cell, out var known) || currentLabel.CompareTo(known) < 0)
+                    {
+                        best[current.Cell] = currentLabel;
+                    }
+
+                    for (var i = 0; i < MaxNeighbors; i++)
+                    {
+                        var next = new Coordinate(current.Cell.X + Steps[i].X, current.Cell.Y + Steps[i].Y);
+                        if (!IsStepAllowed(current.Cell, next) || settled.Contains((next, i)))
+                        {
+                            continue;
+                        }
+
+                        var turn = current.Direction != origin && current.Direction != i ? 1 : 0;
+                        var nextLabel = new Label(currentLabel.CostKey + GetStepCostKey(current.Cell, next),
+                            currentLabel.TieKey + turn, 0);
+
+                        if (!labels.TryGetValue((next, i), out var knownState) || nextLabel.CompareTo(knownState) < 0)
+                        {
+                            labels[(next, i)] = nextLabel;
+                            queue.Enqueue((next, i), nextLabel);
+                        }
+                    }
+                }
+
+                return best;
+            }
+
+            /// <summary>Validates every step of the route and returns its exact cost key.</summary>
+            public long GetRouteCostKey(Coordinate from, PathResult path)
+            {
+                var costKey = 0L;
+                var previous = from;
+
+                for (var i = 0; i < path.Length; i++)
+                {
+                    var next = path.Get(i);
+                    IsStepAllowed(previous, next).Should().BeTrue($"step {i} {previous} -> {next} must be legal");
+                    costKey += GetStepCostKey(previous, next);
+                    previous = next;
+                }
+
+                return costKey;
+            }
+
+            /// <summary>The steps, diagonal steps and direction changes of an unsmoothed route.</summary>
+            public static (int Steps, int Diagonals, int Turns) GetRouteShape(Coordinate from, PathResult path)
+            {
+                var diagonals = 0;
+                var turns = 0;
+                var previous = from;
+                (int X, int Y) previousStep = (0, 0);
+
+                for (var i = 0; i < path.Length; i++)
+                {
+                    var next = path.Get(i);
+                    var step = (next.X - previous.X, next.Y - previous.Y);
+
+                    if (step.Item1 != 0 && step.Item2 != 0)
+                    {
+                        diagonals++;
+                    }
+
+                    if (i > 0 && step != previousStep)
+                    {
+                        turns++;
+                    }
+
+                    previousStep = step;
+                    previous = next;
+                }
+
+                return (path.Length, diagonals, turns);
+            }
+
             /// <summary>Validates every step of the route and returns its total cost.</summary>
             public float GetRouteCost(Coordinate from, PathResult path)
             {
@@ -422,6 +733,16 @@ namespace Migs.MPath.Tests
                 var isDiagonal = from.X != to.X && from.Y != to.Y;
                 double travel = isDiagonal ? Settings.DiagonalMovementMultiplier : Settings.StraightMovementMultiplier;
                 return Settings.IsCellWeightEnabled ? travel + Weights[to.X, to.Y] : travel;
+            }
+
+            private long GetStepCostKey(Coordinate from, Coordinate to)
+            {
+                var isDiagonal = from.X != to.X && from.Y != to.Y;
+                var travel = isDiagonal ? Settings.DiagonalMovementMultiplier : Settings.StraightMovementMultiplier;
+                var travelKey = (long)Math.Round(travel * CostKeyScale);
+                return Settings.IsCellWeightEnabled
+                    ? travelKey + (long)Math.Round(Weights[to.X, to.Y] * CostKeyScale)
+                    : travelKey;
             }
 
             private Blocker GetFootprint(int anchorX, int anchorY)

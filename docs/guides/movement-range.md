@@ -40,7 +40,7 @@ foreach (var cell in range.Cells)
 
 ## Querying the result
 
-[`RangeResult`](../api/RangeResult.md) exposes the reachable cells as [`ReachableCell`](../api/ReachableCell.md) values (a `Coordinate` plus its `Cost`):
+[`RangeResult`](../api/RangeResult.md) exposes the reachable cells as [`ReachableCell`](../api/ReachableCell.md) values (a `Coordinate`, its `Cost`, and the integer `Steps` / `DiagonalSteps` of its cheapest route):
 
 ```csharp
 // Index access
@@ -55,6 +55,29 @@ if (range.Contains(new Coordinate(6, 4)))
 ```
 
 For repeated lookups, build a `Dictionary<Coordinate, float>` from `range.Cells` once rather than calling `TryGetCost` in a loop.
+
+## Counting moves instead of costs
+
+Board games often count moves: every step costs one movement point, diagonals included, and straight lines should win ties. Use equal multipliers, a [`TieBreaking`](../api/TieBreaking.md), and read the step counts directly:
+
+```csharp
+var settings = new PathfinderSettings
+{
+    StraightMovementMultiplier = 1f,
+    DiagonalMovementMultiplier = 1f,
+    IsCellWeightEnabled = false,
+    TieBreaking = TieBreaking.FewerDiagonals
+};
+using var pathfinder = new Pathfinder(cells, settings);
+using var range = pathfinder.GetReachable(origin, budget: 4f);
+
+if (range.TryGetCell(target, out var cell))
+{
+    Console.WriteLine($"{cell.Steps} moves, {cell.DiagonalSteps} of them diagonal");
+}
+```
+
+With a tie-break the costs are exact (multipliers, weights and budgets rounded to four decimal places), so the counts and the budget never drift with float rounding. Without one, `Steps` / `DiagonalSteps` still describe the cheapest route the search kept.
 
 ## Per-query occupancy
 
