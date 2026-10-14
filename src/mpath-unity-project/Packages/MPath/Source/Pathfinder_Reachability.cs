@@ -245,7 +245,17 @@ namespace Migs.MPath.Core
                 }
             }
 
-            return RangeResult.Create(reachable, count);
+            return CreateRangeResult(reachable, count);
+        }
+
+        /// <summary>
+        /// Wraps the reached cells in a result that knows the grid's layout, for <see cref="RangeResult.CopyCostsTo"/>.
+        /// </summary>
+        private RangeResult CreateRangeResult(ReachableCell[] reachable, int count)
+        {
+            var origin = GetLayoutIndex(0, 0);
+            return RangeResult.Create(reachable, count, Size, GetLayoutIndex(1, 0) - origin,
+                GetLayoutIndex(0, 1) - origin);
         }
 
         /// <summary>

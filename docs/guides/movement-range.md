@@ -32,7 +32,7 @@ using var range = pathfinder.GetReachable(agent, new Coordinate(4, 4), 5f);
 
 Console.WriteLine($"{range.Length} cells reachable");
 
-foreach (var cell in range.Cells)
+foreach (var cell in range)
 {
     Highlight(cell.Coordinate, cell.Cost);
 }
@@ -43,18 +43,22 @@ foreach (var cell in range.Cells)
 [`RangeResult`](../api/RangeResult.md) exposes the reachable cells as [`ReachableCell`](../api/ReachableCell.md) values (a `Coordinate`, its `Cost`, and the integer `Steps` / `DiagonalSteps` of its cheapest route):
 
 ```csharp
-// Index access
-var first = range.Get(0);
+// Index and span access (no allocation; foreach (var cell in range) neither)
+var first = range[0];
+ReadOnlySpan<ReachableCell> all = range.AsSpan();
 
-// Convenience lookups (linear scans)
-if (range.Contains(new Coordinate(6, 4)))
+// Lookups by coordinate, O(1)
+if (range.TryGetCost(new Coordinate(6, 4), out var cost))
 {
-    range.TryGetCost(new Coordinate(6, 4), out var cost);
     Console.WriteLine($"Reachable for {cost}");
 }
+
+// A dense per-cell cost field in the pathfinder's layout (costs[pathfinder.GetIndex(c)]), -1 where unreached
+var costs = new float[width * height];
+range.CopyCostsTo(costs);
 ```
 
-For repeated lookups, build a `Dictionary<Coordinate, float>` from `range.Cells` once rather than calling `TryGetCost` in a loop.
+`Contains`, `TryGetCost` and `TryGetCell` are O(1): the first lookup builds an index over the reached cells (one pass, rented from the array pool and sized to their bounding box), so "is this cell in range?" over a whole board costs no more than walking the range once. The index belongs to the result: it stays valid after later queries and returns to the pool when the result is disposed. Spans and enumerators read the result's pooled array, so don't keep them past `Dispose`. `Cells` still works but allocates an iterator per enumeration.
 
 ## Counting moves instead of costs
 

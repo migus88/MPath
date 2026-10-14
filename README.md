@@ -159,7 +159,7 @@ Need to know every tile a unit can reach within a movement budget (e.g. for a ta
 // Every cell whose cheapest path cost is <= 5
 using var range = pathfinder.GetReachable(new Coordinate(4, 4), 5f);
 
-foreach (var cell in range.Cells)
+foreach (var cell in range)
 {
     Debug.Log($"{cell.Coordinate} reachable for {cell.Cost}");
 }

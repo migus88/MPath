@@ -32,12 +32,15 @@ public sealed class BenchmarkCommand : Command<BenchmarkCommand.Settings>
 
         /// <summary>2- and 6-step paths and ranges on large open grids, per grid snapshot mode (per-query overhead).</summary>
         Short,
+
+        /// <summary>Reading results: enumerating paths and ranges, and looking up costs in a range.</summary>
+        Results,
     }
 
     public sealed class Settings : CommandSettings
     {
         [CommandArgument(0, "[suite]")]
-        [Description("Which suite to run: maze (default), smoothing, internal, reachability, grid or short.")]
+        [Description("Which suite to run: maze (default), smoothing, internal, reachability, grid, short or results.")]
         [DefaultValue(BenchmarkSuite.Maze)]
         public BenchmarkSuite Suite { get; init; }
     }
@@ -66,6 +69,10 @@ public sealed class BenchmarkCommand : Command<BenchmarkCommand.Settings>
                 break;
             case BenchmarkSuite.Short:
                 BenchmarkRunner.Run<ShortQueryBenchmarkRunner>(config);
+                break;
+            case BenchmarkSuite.Results:
+                BenchmarkRunner.Run<ResultAccessBenchmarkRunner>(
+                    config.WithSummaryStyle(SummaryStyle.Default.WithTimeUnit(TimeUnit.Microsecond)));
                 break;
         }
 
