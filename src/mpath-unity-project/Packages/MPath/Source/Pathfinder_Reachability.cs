@@ -29,8 +29,11 @@ namespace Migs.MPath.Core
         /// </returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="agent"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when the origin is outside the valid field range.</exception>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         public RangeResult GetReachable(IAgent agent, Coordinate from, float budget)
         {
+            ThrowIfDisposed();
+
             if (agent == null)
             {
                 throw new ArgumentNullException(nameof(agent));

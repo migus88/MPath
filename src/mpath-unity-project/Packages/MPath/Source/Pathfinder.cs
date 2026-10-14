@@ -28,11 +28,12 @@ namespace Migs.MPath.Core
         private readonly InitializationMode _initializationMode;
         private readonly ICellHolder[] _cellHolders;
         private readonly ICellHolder[,] _cellHoldersMatrix;
-        private readonly Cell[] _cells;
+        private Cell[] _cells;
         private readonly Cell[,] _cellsMatrix;
         
         private bool _isPathCachingEnabled;
         private IPathCaching _pathCaching;
+        private bool _isDisposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Pathfinder"/> class with a pre-existing cell array.
@@ -126,8 +127,11 @@ namespace Migs.MPath.Core
         /// </summary>
         /// <param name="pathCachingHandler">Optional custom implementation of IPathCaching. If null, the default implementation will be used.</param>
         /// <returns>The current pathfinder instance.</returns>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         public Pathfinder EnablePathCaching(IPathCaching pathCachingHandler = null)
         {
+            ThrowIfDisposed();
+
             if (_isPathCachingEnabled)
             {
                 // Dispose any existing path caching handler
@@ -144,8 +148,11 @@ namespace Migs.MPath.Core
         /// Disables path caching for the pathfinder.
         /// </summary>
         /// <returns>The current pathfinder instance.</returns>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         public Pathfinder DisablePathCaching()
         {
+            ThrowIfDisposed();
+
             if (!_isPathCachingEnabled)
             {
                 return this;
@@ -162,8 +169,11 @@ namespace Migs.MPath.Core
         /// Invalidates the current path cache.
         /// </summary>
         /// <returns>The current pathfinder instance.</returns>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         public Pathfinder InvalidateCache()
         {
+            ThrowIfDisposed();
+
             if (_isPathCachingEnabled && _pathCaching != null)
             {
                 _pathCaching.ClearCache();
@@ -181,6 +191,7 @@ namespace Migs.MPath.Core
         /// <returns>A <see cref="PathResult"/> containing the calculated path or a failure result.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="agent"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when the origin or the destination is outside the valid field.</exception>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         /// <remarks>
         /// A destination the agent cannot enter (not walkable, occupied while
         /// <see cref="IPathfinderSettings.IsCalculatingOccupiedCells"/> is enabled, or without clearance for the
@@ -188,6 +199,8 @@ namespace Migs.MPath.Core
         /// </remarks>
         public PathResult GetPath(IAgent agent, Coordinate from, Coordinate to)
         {
+            ThrowIfDisposed();
+
             if (agent == null)
             {
                 throw new ArgumentNullException(nameof(agent));
@@ -642,16 +655,50 @@ namespace Migs.MPath.Core
             return startX != destX && startY != destY;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ThrowIfDisposed()
+        {
+            if (_isDisposed)
+            {
+                ThrowObjectDisposed();
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowObjectDisposed()
+        {
+            throw new ObjectDisposedException(nameof(Pathfinder));
+        }
+
         /// <summary>
-        /// Releases all resources used by this Pathfinder instance.
+        /// Releases all resources used by this Pathfinder instance: returns the pooled cell buffer (every
+        /// constructor except the <see cref="Cell"/>[] one rents it), disposes the path cache and ends an active
+        /// <see cref="StepwiseSearch"/>.
         /// </summary>
+        /// <remarks>
+        /// Idempotent: calling it again does nothing, so the pooled buffer is returned exactly once. An active
+        /// <see cref="StepwiseSearch"/> is disposed first (its later ticks throw
+        /// <see cref="ObjectDisposedException"/>), so the buffer is never returned while still pinned. Every
+        /// instance method throws <see cref="ObjectDisposedException"/> afterwards.
+        /// </remarks>
         public void Dispose()
         {
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            _isDisposed = true;
+
+            _activeSearch?.Dispose();
+
             if (_initializationMode != InitializationMode.CellsArray && _cells != null)
             {
                 ArrayPool<Cell>.Shared.Return(_cells);
             }
-            
+
+            _cells = null;
+
             // Dispose the path caching if it exists
             if (_isPathCachingEnabled)
             {

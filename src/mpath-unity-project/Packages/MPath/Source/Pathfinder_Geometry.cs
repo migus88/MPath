@@ -61,9 +61,12 @@ namespace Migs.MPath.Core
         /// <exception cref="ArgumentException">
         /// Thrown when <paramref name="from"/> or <paramref name="to"/> is outside the valid field range.
         /// </exception>
+        /// <exception cref="ObjectDisposedException">Thrown when the pathfinder has been disposed.</exception>
         public bool HasLineOfSight(Coordinate from, Coordinate to,
             LineOfSightMode mode = LineOfSightMode.BlockedByUnwalkableCells)
         {
+            ThrowIfDisposed();
+
             if (!IsPositionValid(from.X, from.Y))
             {
                 throw new ArgumentException("Origin is outside the valid field range", nameof(from));

@@ -28,6 +28,7 @@ Implements `IDisposable`.
 - **One at a time.** While a session is active, the owning `Pathfinder` must not be used for any other query — including `GetPath`, `GetReachable`, or a second `BeginStepwiseSearch`. Starting a second session before disposing the first throws `InvalidOperationException`.
 - **Not a hot path.** Unlike `GetPath`, the stepwise API favours clarity over the allocation-free design — each `SearchStep` owns plain arrays. It is meant for visualization and teaching, not real-time movement.
 - `Tick()` after the search completes returns the same final `SearchStep` instance; `Tick()` after `Dispose()` throws `ObjectDisposedException`.
+- Disposing the owning `Pathfinder` disposes an active session first, so its buffer is never returned to the pool while pinned; the session's later `Tick()` throws `ObjectDisposedException`.
 
 ## Example
 
