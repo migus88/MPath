@@ -201,7 +201,7 @@ construction has **no effect** — build a new `Pathfinder` to change settings.
 | `StraightMovementMultiplier` | `float` | `1f` | Cost of a cardinal step. |
 | `DiagonalMovementMultiplier` | `float` | `1.41f` | Cost of a diagonal step (≈√2). |
 | `PathSmoothingMethod` | `PathSmoothingMethod` | `None` | Post-process the path (`Simple`: first step + turn points + destination; `StringPulling`: straight shortcuts that keep the agent's footprint and the corner rule). |
-| `InitialBufferSize` | `int?` | `null` | Pre-size the result buffer to avoid growth on large paths. |
+| `InitialBufferSize` | `int?` | `null` | **Obsolete, ignored.** The open set is sized to the grid at construction and never grows. Don't set it. |
 
 > **Weight is additive, not multiplicative.** With `IsCellWeightEnabled`, step cost = movement multiplier
 > **+** destination cell `Weight`. Because `Weight` defaults to `0`, a flat default grid behaves like
@@ -343,9 +343,10 @@ Use a `ScriptablePathfinderSettings` asset (Create ▸ MPath ▸ Pathfinder Sett
    keeps the grid pinned and the pathfinder unusable.
 2. **Reuse the `Pathfinder`; don't recreate it per query.** It is designed as a long-lived instance.
    Dispose it once when you're done with it (or its grid). A second `Dispose()` is a no-op; any query after
-   it throws `ObjectDisposedException`. The `Cell[,]` / `ICellHolder[]` / `ICellHolder[,]` constructors rent
-   pooled memory (skipped, it never goes back to the pool); the `Cell[]` constructor doesn't, so skipping
-   `Dispose` is harmless there unless path caching is enabled.
+   it throws `ObjectDisposedException`. Every constructor rents the open-set heap (8 bytes per cell) from the
+   pool, and the `Cell[,]` / `ICellHolder[]` / `ICellHolder[,]` constructors also rent a cell buffer; skip
+   `Dispose` and that memory is collected instead of going back to the pool. Queries allocate nothing but
+   their result, however large the search.
 3. **Not thread-safe.** No concurrent queries on one instance, no sharing across threads. One per thread.
 4. **`Path` excludes the origin.** It is the sequence of steps *after* `from`. Don't expect `from` first.
 5. **No path → failure result, not an exception.** Check `IsSuccess`. Only bad arguments throw

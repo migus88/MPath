@@ -36,6 +36,10 @@
   </ItemGroup>
   
   <ItemGroup>
+    <InternalsVisibleTo Include="Migs.MPath.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\..\..\docs\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 

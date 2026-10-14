@@ -15,7 +15,7 @@ Default implementation of the `IPathfinderSettings` interface.
 | `IsCellWeightEnabled` | `bool` | `true` | Whether cell weight calculation is enabled. |
 | `StraightMovementMultiplier` | `float` | `1.0f` | The cost multiplier for horizontal/vertical movement. |
 | `DiagonalMovementMultiplier` | `float` | `1.41f` | The cost multiplier for diagonal movement. |
-| `InitialBufferSize` | `int?` | `null` | The initial size of the Open Set buffer. |
+| `InitialBufferSize` | `int?` | `null` | **Obsolete, ignored.** The open set is sized to the grid when the pathfinder is created. Will be removed in the next major version. |
 | `PathSmoothingMethod` | `PathSmoothingMethod` | `None` | The method used to smooth the calculated path. |
 
 ## Example
@@ -31,7 +31,6 @@ var customSettings = new PathfinderSettings
     IsCalculatingOccupiedCells = false,
     IsCellWeightEnabled = true,
     DiagonalMovementMultiplier = 1.4f,
-    InitialBufferSize = 128,
     PathSmoothingMethod = PathSmoothingMethod.StringPulling
 };
 

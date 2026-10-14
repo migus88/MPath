@@ -35,25 +35,11 @@ var path2 = pathfinder.GetPath(agent, start2, end2);
 pathfinder.Dispose();
 ```
 
-### Buffer Sizing
+### Open Set Sizing
 
-The `InitialBufferSize` setting controls the initial size of the internal priority queue used during pathfinding:
-
-```csharp
-var settings = new PathfinderSettings
-{
-    InitialBufferSize = null // Use default size, which is usually sufficient
-};
-```
-
-In most cases, the default buffer size is sufficient, even for large grids. The implementation has been tested with maze-like environments of approximately 300x500 cells without issues using the default buffer size.
-
-You should only adjust this value if:
-1. You notice excessive garbage collection during profiling
-2. You're working with extremely large grids or very complex path calculations
-3. You've measured and confirmed that changing this value actually improves performance
-
-Let the library handle the sizing automatically unless you have a specific reason to override it.
+The open set (the priority queue of cells waiting to be expanded) is a fixed array of 8 bytes per cell, rented from
+the pool once when the pathfinder is created and returned by `Dispose`. It never grows, so a search allocates
+nothing for it however wide its frontier gets. The old `InitialBufferSize` setting is obsolete and ignored.
 
 ## Computational Optimization
 

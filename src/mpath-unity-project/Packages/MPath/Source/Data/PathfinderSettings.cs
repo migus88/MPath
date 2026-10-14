@@ -1,4 +1,5 @@
-﻿using Migs.MPath.Core.Interfaces;
+﻿using System;
+using Migs.MPath.Core.Interfaces;
 
 namespace Migs.MPath.Core.Data
 {
@@ -46,6 +47,7 @@ namespace Migs.MPath.Core.Data
         public PathSmoothingMethod PathSmoothingMethod { get; set; } = PathSmoothingMethod.None;
 
         /// <inheritdoc/>
+        [Obsolete("Ignored: the open set is sized to the grid when the pathfinder is created and never grows. This member will be removed in the next major version.")]
         public int? InitialBufferSize { get; set; } = null;
     }
 }

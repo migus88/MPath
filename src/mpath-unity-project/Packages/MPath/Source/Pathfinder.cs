@@ -123,7 +123,7 @@ namespace Migs.MPath.Core
 
             _settings = FastPathfinderSettings.FromSettings(settings ?? new PathfinderSettings());
             _query = QueryRules.FromSettings(_settings);
-            _openSet = new UnsafePriorityQueue(settings?.InitialBufferSize);
+            _openSet = new UnsafePriorityQueue(Size);
         }
         
         /// <summary>
@@ -269,7 +269,7 @@ namespace Migs.MPath.Core
                 }
 
                 ResetCells(ptr);
-                _openSet.Clear();
+                _openSet.Reset(ptr);
 
                 var result = CalculatePath(agentSize, from, to, ptr);
                 
@@ -903,6 +903,8 @@ namespace Migs.MPath.Core
             }
 
             _cells = null;
+
+            _openSet.Dispose();
 
             // Dispose the path caching if it exists
             if (_isPathCachingEnabled)

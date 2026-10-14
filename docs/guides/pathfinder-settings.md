@@ -25,8 +25,7 @@ var customSettings = new PathfinderSettings
     IsMovementBetweenCornersEnabled = false,
     IsCellWeightEnabled = true,
     StraightMovementMultiplier = 1.0f,
-    DiagonalMovementMultiplier = 1.41f,
-    InitialBufferSize = 128
+    DiagonalMovementMultiplier = 1.41f
 };
 
 // Create pathfinder with settings
@@ -194,19 +193,11 @@ settings.DiagonalMovementMultiplier = 1.41f; // Default value (approximation of 
 
 ### Performance Settings
 
-#### InitialBufferSize
+#### InitialBufferSize (obsolete)
 
-The initial size of the internal priority queue buffer used during pathfinding.
-
-```csharp
-settings.InitialBufferSize = 128; // Set initial buffer size to 128 elements
-```
-
-- Default is `null`, which uses a system default (typically 64)
-- Set to a higher value for large grids or complex paths
-- Set to a lower value for simple grids to save memory
-
-**Effect on performance**: A properly sized buffer reduces memory allocations during pathfinding. For most cases, the default size is sufficient, but for large maps or complex scenarios, increasing this value can improve performance. Change this value if you're know what you're doing.
+Ignored, and marked `[Obsolete]`; it will be removed in the next major version. The open set (the priority queue of
+cells waiting to be expanded) is sized to the grid once, when the pathfinder is created, so it never grows and no
+search allocates for it, whatever its size. There is nothing to tune.
 
 ## Recommended Settings for Common Scenarios
 
@@ -243,8 +234,7 @@ var settings = new PathfinderSettings
     IsDiagonalMovementEnabled = true,
     IsCalculatingOccupiedCells = false, // Allow units to stack
     IsMovementBetweenCornersEnabled = false,
-    IsCellWeightEnabled = true, // Consider terrain costs
-    InitialBufferSize = 256 // Larger buffer for complex maps
+    IsCellWeightEnabled = true // Consider terrain costs
 };
 ```
 
@@ -279,10 +269,6 @@ public class GamePathfinderSettings : MonoBehaviour, IPathfinderSettings
     [field: SerializeField, Tooltip("Cost multiplier for moving diagonally")]
     public float DiagonalCost { get; set; } = 1.41f;
     
-    [Header("Performance")]
-    [field: SerializeField, Tooltip("Size of the internal buffer. Leave at 0 for default value")]
-    public int BufferSize { get; set; } = 0;
-    
     // Game state reference
     [SerializeField] private GameStateManager _gameState;
     
@@ -293,7 +279,7 @@ public class GamePathfinderSettings : MonoBehaviour, IPathfinderSettings
     public bool IsCellWeightEnabled => UseCellWeights;
     public float StraightMovementMultiplier => StraightCost;
     public float DiagonalMovementMultiplier => DiagonalCost;
-    public int? InitialBufferSize => BufferSize > 0 ? BufferSize : null;
+    public int? InitialBufferSize => null; // Obsolete and ignored
     
     // This allows you to easily swap between different pathfinding presets
     public void ApplyPreset(PathfindingPreset preset)

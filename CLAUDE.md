@@ -54,6 +54,7 @@ dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchm
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark smoothing      # path-smoothing benchmark
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark internal       # internal micro-benchmarks
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark reachability    # GetReachable movement-range flood fill
+dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- benchmark grid            # corner-to-corner GetPath over 200x200 / 500x500 grids with 20% random walls
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- render                    # render result images (SkiaSharp)
 dotnet run -c Release --project src/mpath-source/Migs.MPath.Benchmarks -- info smoothing            # print smoothed path lengths
 ```
@@ -92,7 +93,7 @@ An **educational/visualization** API that runs the same A* one expansion at a ti
 
 ### Open set — `Source/Internal/UnsafePriorityQueue.cs`
 
-A custom binary-heap min-priority-queue over `Cell*`. Each `Cell` stores its own `QueueIndex` (internal field) so membership tests (`Contains`) and decrease-key updates are O(1)/O(log n) without a separate map. `UpdatePriority` performs a real decrease-key (re-heapifies via cascade up/down) and is used by both the A* decrease-key and the reachability search.
+A binary min-heap of `HeapEntry` (`float Priority` + `int Index`, the cell's offset in the pinned cell buffer) in a fixed array of `Size + 1` entries (1-based), rented from `ArrayPool` in the constructor and returned by `Pathfinder.Dispose`. A cell is queued at most once, so the heap never grows and no search allocates for it. Sifts compare the entries' priorities and never read the cells they pass; they only write each moved cell's `QueueIndex` (internal field), which gives O(1) `Contains` (the slot must be live and hold that cell, so a stale `QueueIndex` needs no reset) and O(log n) `UpdatePriority`, the real decrease-key used by A* and the reachability search. Every search calls `Reset(ptr)` with the pinned cell pointer before the first `Enqueue`. Hot-path null checks are `Debug.Assert`s. Measured and rejected: a separate positions array instead of `Cell.QueueIndex` (~4% slower) and a 4-ary heap (no gain, slower on the maze); `UnsafePriorityQueueTests` checks the heap against a `SortedSet` reference and `PathfinderAllocationTests` pins zero search allocations.
 
 ### Data types — `Source/Data/`
 

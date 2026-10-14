@@ -15,7 +15,7 @@ Defines the configuration settings for the MPath pathfinding system. This interf
 | `IsCellWeightEnabled` | `bool` | Whether cell weight calculation is enabled. |
 | `StraightMovementMultiplier` | `float` | The cost multiplier for horizontal/vertical movement. |
 | `DiagonalMovementMultiplier` | `float` | The cost multiplier for diagonal movement. |
-| `InitialBufferSize` | `int?` | The initial size of the Open Set buffer. |
+| `InitialBufferSize` | `int?` | **Obsolete, ignored.** The open set is sized to the grid when the pathfinder is created. Will be removed in the next major version. |
 | `PathSmoothingMethod` | `PathSmoothingMethod` | The method used to smooth the calculated path. |
 
 ## Implementations
@@ -37,7 +37,6 @@ var settings = new PathfinderSettings
     IsCellWeightEnabled = true,
     StraightMovementMultiplier = 1.0f,
     DiagonalMovementMultiplier = 1.4f,
-    InitialBufferSize = 128,
     PathSmoothingMethod = PathSmoothingMethod.StringPulling
 };
 
