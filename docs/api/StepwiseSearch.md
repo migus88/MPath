@@ -11,7 +11,7 @@ Implements `IDisposable`.
 | Property | Type | Description |
 |----------|------|-------------|
 | `State` | [`SearchState`](SearchState.md) | The overall state of the search (`InProgress`, `Success` or `Failure`). |
-| `IsComplete` | `bool` | `true` once the search has finished (succeeded or failed). |
+| `IsComplete` | `bool` | `true` once the search has finished (succeeded or failed). Already `true` before the first tick when the destination cannot be entered. |
 | `Iteration` | `int` | The number of expansions performed so far. |
 
 ## Methods

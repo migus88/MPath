@@ -9,7 +9,7 @@ namespace Migs.MPath.Benchmarks.Suites;
 
 /// <summary>
 /// Micro-benchmarks for MPath internals: the cost of constructing a <see cref="Pathfinder"/> via the
-/// different initialization modes, and short/long path searches with and without disposing the result.
+/// different initialization modes, and short/long path searches with and without disposing the result, and a failing search towards a wall.
 /// </summary>
 [MemoryDiagnoser]
 public class InternalBenchmarkRunner : IDisposable
@@ -20,11 +20,13 @@ public class InternalBenchmarkRunner : IDisposable
     private readonly IAgent _agent = new BenchmarkAgent();
     private readonly Pathfinder _pathfinder;
     private readonly Cell[] _cellsArray;
+    private readonly Coordinate _wallDestination;
 
     public InternalBenchmarkRunner()
     {
         _pathfinder = new Pathfinder(_maze.Cells);
         _cellsArray = _maze.Cells.Cast<Cell>().ToArray();
+        _wallDestination = _cellsArray.First(cell => !cell.IsWalkable).Coordinate;
     }
 
     [Benchmark]
@@ -67,6 +69,17 @@ public class InternalBenchmarkRunner : IDisposable
     public void FindShortPath_NoUsing()
     {
         var result = FindPath(BenchmarkScenario.Start, ShortPathDestination);
+    }
+
+    [Benchmark]
+    public void FindPath_ToUnwalkableDestination()
+    {
+        using var result = _pathfinder.GetPath(_agent, BenchmarkScenario.Start, _wallDestination);
+
+        if (result.IsSuccess)
+        {
+            throw new Exception("Path to a wall must fail");
+        }
     }
 
     public PathResult FindPath((int x, int y) start, (int x, int y) destination)

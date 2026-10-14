@@ -180,12 +180,22 @@ namespace Migs.MPath.Core
         /// <param name="to">The destination coordinate.</param>
         /// <returns>A <see cref="PathResult"/> containing the calculated path or a failure result.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="agent"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when the destination is outside the valid field.</exception>
+        /// <exception cref="ArgumentException">Thrown when the origin or the destination is outside the valid field.</exception>
+        /// <remarks>
+        /// A destination the agent cannot enter (not walkable, occupied while
+        /// <see cref="IPathfinderSettings.IsCalculatingOccupiedCells"/> is enabled, or without clearance for the
+        /// agent's size) fails immediately without searching, unless it is the origin itself.
+        /// </remarks>
         public PathResult GetPath(IAgent agent, Coordinate from, Coordinate to)
         {
             if (agent == null)
             {
                 throw new ArgumentNullException(nameof(agent));
+            }
+
+            if (!IsPositionValid(from.X, from.Y))
+            {
+                throw new ArgumentException("Origin is outside the valid field range", nameof(from));
             }
                 
             if (!IsPositionValid(to.X, to.Y))
@@ -205,6 +215,11 @@ namespace Migs.MPath.Core
 
             fixed (Cell* ptr = &MemoryMarshal.GetReference(cells))
             {
+                if (!IsDestinationEnterable(ptr, from, to, agent.Size))
+                {
+                    return PathResult.Failure();
+                }
+
                 ResetCells(ptr);
                 _openSet.Clear();
 
@@ -576,6 +591,17 @@ namespace Migs.MPath.Core
             }
 
             return location;
+        }
+
+        /// <summary>
+        /// Checks whether the search can ever end at <paramref name="to"/>: the destination must pass the same
+        /// walkability, occupancy and clearance test the neighbor expansion applies, unless the agent already
+        /// stands on it (the origin is never tested, so a search from a cell to itself always succeeds).
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsDestinationEnterable(Cell* cells, Coordinate from, Coordinate to, int agentSize)
+        {
+            return from == to || GetWalkableLocation(cells, to.X, to.Y, agentSize) != null;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
