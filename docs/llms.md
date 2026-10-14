@@ -67,9 +67,10 @@ openupm add com.migsweb.mpath          # Unity (run in the project folder)
 4. **A result type per query** — `PathResult`, `RangeResult`, or `StepwiseSearch`. All are `IDisposable`
    and **must** be disposed (they rent pooled arrays / pin memory). Always `using`.
 
-`Coordinate` is a value type: `new Coordinate(x, y)`, with `==`/`!=`/`+`/`-` operators and implicit
+`Coordinate` is an immutable 8-byte `readonly struct`: `new Coordinate(x, y)`, with `==`/`!=`/`+`/`-` operators and implicit
 conversion to `(int x, int y)` (Unity callers can use `vector2Int.ToCoordinate()` /
-`coordinate.ToVector2Int()`).
+`coordinate.ToVector2Int()`). `default(Coordinate)` is `(0,0)` and equals `Coordinate.Zero`; there is no
+"uninitialized" flag, so use `Coordinate?` to mean "no coordinate".
 
 ---
 
@@ -173,7 +174,7 @@ One row per type; click through for full members. The load-bearing facts are rep
 | `SearchNode` | `readonly struct` | `Coordinate` + `State` + `ScoreG/ScoreH/ScoreF` | [api](api/SearchNode.md) |
 | `QueryOptions` | `readonly ref struct` | Per-query rules: `Occupancy` (`OccupancyRule`), `AlwaysEnterable` (`ReadOnlySpan<Coordinate>`), `IsDestinationAlwaysEnterable`; `default` = no override | [api](api/QueryOptions.md) |
 | `Cell` | `struct` | Grid square: `Coordinate`, `IsWalkable`, `IsOccupied`, `Weight` — **all default to zero** | [api](api/Cell.md) |
-| `Coordinate` | `struct` | `X`, `Y`, `IsInitialized`, `static Zero`; ctor `(x,y)`; `== != + -`; `↔ (int,int)` | [api](api/Coordinate.md) |
+| `Coordinate` | `readonly struct` (8 B) | `X`, `Y`, `static Zero` (`== default`); ctor `(x,y)`; `== != + -`; `↔ (int,int)` | [api](api/Coordinate.md) |
 | `IAgent` | interface | `int Size` (cells; `> 1` ⇒ clearance scan). Optional: every query also takes `int agentSize` | [api](api/IAgent.md) |
 | `ICellHolder` | interface | `Cell CellData` — back cells with your own objects | [api](api/ICellHolder.md) |
 | `IPathfinderSettings` · `PathfinderSettings` | settings | See [Settings reference](#settings-reference) below | [api](api/PathfinderSettings.md) |

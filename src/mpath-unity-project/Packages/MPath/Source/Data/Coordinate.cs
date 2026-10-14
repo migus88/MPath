@@ -3,29 +3,19 @@ using System.Runtime.CompilerServices;
 
 namespace Migs.MPath.Core.Data
 {
-    public struct Coordinate : IEquatable<Coordinate>
+    public readonly struct Coordinate : IEquatable<Coordinate>
     {
         private const int HashMultiplier = 397;
         
         public static readonly Coordinate Zero = new Coordinate(0, 0);
         
-        public int X { get; private set; }
-        public int Y { get; private set; }
-        public bool IsInitialized { get; private set; }
+        public int X { get; }
+        public int Y { get; }
 
         public Coordinate(int x, int y)
         {
             X = x;
             Y = y;
-            IsInitialized = true;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Reset()
-        {
-            X = 0;
-            Y = 0;
-            IsInitialized = false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
