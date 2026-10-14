@@ -1,0 +1,182 @@
+# Upgrading MPath
+
+What a caller has to know, and change, when moving from one released version to the next. Sections are newest first; each one is written for a caller coming from the previous **released** version, not from an intermediate `master` state.
+
+New features that change nothing for existing code are not listed here; see the [GitHub releases](https://github.com/migus88/MPath/releases) for the full notes.
+
+## 1.2.1 → 2.0
+
+2.0 is the first release after 1.2.1. It changes what some existing calls return (listed under [Behaviour changes](#behaviour-changes)) and breaks parts of the API (listed under [Breaking changes](#breaking-changes)). Work through the [Checklist](#checklist) at the end.
+
+### Behaviour changes
+
+Each entry says what changed, who notices it, and what to do, if anything. Entries are listed even when they are not breaking, as long as a caller could notice them.
+
+#### Path smoothing output changed
+
+- **What changed:**
+  - `PathSmoothingMethod.Simple` no longer repeats the first waypoint.
+  - `Simple` keeps a turn right before the last step, where 1.2.1 cut that corner diagonally.
+  - `PathSmoothingMethod.StringPulling` only takes shortcuts that the agent's size, occupied cells and the corner rule allow. 1.2.1 could shortcut through cells a large agent does not fit, through occupied cells, or across a blocked corner.
+- **Who notices:** callers with smoothing enabled. Smoothed paths can have different waypoints, and a different `Length`, than in 1.2.1.
+- **What to do:** nothing, unless you stored or asserted exact smoothed paths; regenerate those.
+
+#### `GetPath` validates the origin and fails fast on a destination the agent cannot enter
+
+- **What changed:**
+  - `GetPath` throws `ArgumentException` (parameter `from`) for an origin outside the grid. 1.2.1 did not check it and read and wrote memory outside the grid.
+  - A destination the agent cannot enter (not walkable, no room for the agent's size, or occupied while occupied cells block) returns a failed `PathResult` at once, without searching. The result is the same as in 1.2.1, only faster.
+  - `from == to` still succeeds, even on such a cell.
+  - A stepwise search (`BeginStepwiseSearch`) towards such a destination starts in the `SearchState.Failure` state.
+- **Who notices:** callers that passed an origin outside the grid (now an exception instead of undefined behaviour), and stepwise visualizations of an unreachable destination (no expansion steps any more).
+- **What to do:** validate origins before calling `GetPath`, or catch `ArgumentException`.
+
+#### Corner cutting is configured by `CornerBlocking`
+
+- **What changed:** the new `CornerBlocking` setting (flags) decides when a diagonal step between two blocked or occupied flanking cells is allowed. Its default, `CornerBlocking.BetweenBlockedCells`, reproduces 1.2.1's rule: a diagonal is blocked only when both flanking cells are blocked. 1.2.1's `IsMovementBetweenCornersEnabled = true` is `CornerBlocking.None`.
+- **Who notices:** nobody, with the default settings.
+- **What to do:** nothing now. The bool is removed in 2.0; see [Remove compatibility shims](#57-remove-compatibility-shims).
+
+#### `Pathfinder.Dispose` is idempotent and final
+
+- **What changed:**
+  - Calling `Dispose` more than once is safe.
+  - Every instance method throws `ObjectDisposedException` after `Dispose`.
+  - Disposing the pathfinder ends its active stepwise search; that search's later `Tick()` calls throw `ObjectDisposedException`.
+- **Who notices:** code that used a pathfinder, or its stepwise search, after disposing it.
+- **What to do:** stop using a pathfinder once it is disposed; create a new one.
+
+#### The path cache never hands out its own results
+
+- **What changed:**
+  - The caller owns, and must dispose, every `PathResult` that `GetPath` returns, cache hits included.
+  - A cache hit returns a copy, which rents a pooled array.
+  - A custom `IPathCaching` implementation receives a copy of each result to store, and owns it (it disposes it on eviction and on `Dispose`).
+- **Who notices:** callers with `EnablePathCaching()` that did not dispose cache hits, or that kept using a result after the cache evicted it, and custom `IPathCaching` implementations.
+- **What to do:** dispose every result (`using var path = pathfinder.GetPath(...)`). A custom cache disposes the results it stores when it drops them.
+
+#### Queries with `QueryOptions` bypass the path cache
+
+- **What changed:** the new `QueryOptions` overloads let a single query change the occupancy rule or make cells always enterable. A query whose options change the rules neither reads nor fills the path cache.
+- **Who notices:** only callers of the new overloads.
+- **What to do:** nothing.
+
+#### Cell-update API
+
+- **What changed:** the new `SetWalkable`, `SetOccupied`, `SetWeight`, `SetCell`, `GetCell` and `GetIndex` methods edit or read the grid through the pathfinder and clear the path cache when a change affects cached paths. The setters throw `NotSupportedException` for pathfinders built over `ICellHolder`s (holders are re-read on every query).
+- **Who notices:** only callers of the new methods.
+- **What to do:** nothing. Direct writes to your own grid still do not clear the path cache; call `InvalidateCache()` after them, as in 1.2.1.
+
+#### `GetPath` returns a cheapest route
+
+- **What changed:**
+  - `GetPath` is now optimal: it returns a cheapest route. Routes, and their costs, can differ from 1.2.1.
+  - A step costs the straight or diagonal multiplier **plus** the entered cell's `Weight` (when `IsCellWeightEnabled`), so `GetPath` and `GetReachable` agree on what a route costs.
+  - The `ScoreH` and `ScoreF` values reported by the stepwise search differ.
+- **Who notices:** callers that compare routes with stored ones, and stepwise visualizations that show the scores.
+- **What to do:** nothing, unless you stored or asserted exact routes or scores; regenerate those.
+
+#### `agentSize` overloads
+
+- **What changed:** `GetPath`, `GetReachable` and `BeginStepwiseSearch` gained overloads that take an `int agentSize` (default 1) instead of an `IAgent`.
+- **Who notices:** nobody; the `IAgent` overloads behave as before.
+- **What to do:** nothing by itself. 2.0 reshapes these overloads; see [Remove IAgent](#59-remove-iagent).
+
+#### Open set sized to the grid
+
+- **What changed:** the open set is a heap rented once per pathfinder and sized to the grid (8 bytes per cell). The memory is taken when the pathfinder is created instead of growing during a search. `InitialBufferSize` is ignored.
+- **Who notices:** callers that tuned `InitialBufferSize`, or measure memory at construction.
+- **What to do:** nothing now. `InitialBufferSize` is removed in 2.0; see [Remove compatibility shims](#57-remove-compatibility-shims).
+
+#### Search state moved out of `Cell`
+
+- **What changed:**
+  - Searches never write into the caller's cells.
+  - `Cell` shrank from 56 to 20 bytes and lost its internal search fields.
+  - The pathfinder rents 24 bytes per cell of search state when it is created.
+  - The new `GridSnapshotMode` setting decides when a matrix, holder or unordered-array pathfinder copies the grid. The default, `PerQuery`, copies it before every query, as in 1.2.1; `Manual` copies it once and again only after the new `Refresh()`.
+  - `Cell.Reset()` does nothing.
+- **Who notices:** code that reflects over `Cell`'s internal fields or assumes its layout (unsafe code, binary serializers), and code that called `Cell.Reset()`.
+- **What to do:** stop relying on `Cell`'s internal fields or size. `Cell.Reset()` is removed in 2.0; see [Remove compatibility shims](#57-remove-compatibility-shims).
+
+#### Deterministic tie-breaking
+
+- **What changed:** the new `TieBreaking` setting picks among equal-cost routes (`FewerDiagonals`, `FewerTurns`). The default, `None`, gives the same routes as the search without tie-breaking. `PathResult` and `ReachableCell` gained `Steps` and `DiagonalSteps`.
+- **Who notices:** nobody, with the default settings.
+- **What to do:** nothing.
+
+#### A `Cell[]` grid is never sorted or reordered
+
+- **What changed:**
+  - 1.2.1 sorted the caller's `Cell[]` in place into column-major order. Now the pathfinder never writes the order of your array: the new `CellLayout` setting (default `Auto`) detects a column-major, row-major or unordered array, or checks a declared layout. A row- or column-major array is searched in place; an unordered one is copied.
+  - `Refresh()` re-reads the array's layout, and also clears the path cache.
+  - A `Cell[]` shorter than `width * height` throws `ArgumentException` when the pathfinder is created.
+- **Who notices:** code that relied on 1.2.1 re-sorting the array and then indexed it as `x * height + y`, and code that passed an array shorter than the grid.
+- **What to do:** build the array in a known order and declare it with `CellLayout`, or find a cell's index with `pathfinder.GetIndex(coordinate)`. Call `Refresh()` after moving cells inside the array. 2.0 narrows `CellLayout`; see [Drop Coordinate from the cell](#61-drop-coordinate-from-the-cell).
+
+#### Faster results API
+
+- **What changed:**
+  - `PathResult` and `RangeResult` gained `AsSpan()`, an indexer and a struct `Enumerator`, so `foreach (var c in result)` allocates nothing.
+  - `RangeResult.Contains`, `TryGetCost` and `TryGetCell` are O(1) through an index the result rents on its first lookup, so that first call takes memory (returned on `Dispose`).
+  - New `RangeResult.CopyCostsTo`.
+- **Who notices:** callers that measure allocations around the first lookup on a `RangeResult`.
+- **What to do:** nothing. Prefer `foreach` over the result itself, or `AsSpan()`, to the allocating `Path` and `Cells` iterators.
+
+#### Not behaviour changes
+
+`c022205` (docs: the AI agent reference, `docs/llms.md`) and `7c7026c` (the sample project moved to Unity 6.4; the package's minimum Unity version stays 2022.3) change nothing for callers.
+
+### Breaking changes
+
+Each entry has a description and a before → after migration snippet.
+
+#### #56 Int costs everywhere
+
+Int costs everywhere: step costs, Cell.Weight, budgets, result costs and the search math.
+
+Pending: filled by #56.
+
+#### #57 Remove compatibility shims
+
+Remove compatibility shims: corner bool, InitialBufferSize, default interface members, Cell.Reset, 2-arg PathResult.Success.
+
+Pending: filled by #57.
+
+#### #58 Coordinate cleanup
+
+Coordinate: readonly 8-byte struct without IsInitialized and Reset.
+
+Pending: filled by #58.
+
+#### #59 Remove IAgent
+
+Remove IAgent: agentSize-only overloads, int-keyed IPathCaching, no `default` trap.
+
+Pending: filled by #59.
+
+#### #60 Rename IsCalculatingOccupiedCells
+
+Rename IsCalculatingOccupiedCells to AreOccupiedCellsBlocking.
+
+Pending: filled by #60.
+
+#### #61 Drop Coordinate from the cell
+
+Drop Coordinate from the cell: a cell's position is its slot.
+
+Pending: filled by #61.
+
+#### #62 Rename Cell to PathCell
+
+Rename Cell to PathCell.
+
+Pending: filled by #62.
+
+### Checklist
+
+1. Dispose every `PathResult`, `RangeResult` and `StepwiseSearch`, including path-cache hits.
+2. If you index a `Cell[]` grid yourself, declare its order with `CellLayout` or use `pathfinder.GetIndex`.
+3. Regenerate any stored or asserted routes, smoothed paths or stepwise scores.
+
+Steps for the breaking changes are added as their entries are filled.
