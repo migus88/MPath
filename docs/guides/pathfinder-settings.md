@@ -170,7 +170,7 @@ settings.IsCellWeightEnabled = true; // Consider cell weights (default)
 - **True**: The `Weight` property of cells affects path calculation
 - **False**: All walkable cells are treated with equal cost
 
-**Effect on pathfinding**: When enabled, paths prefer cells with lower weights. For example, you can make roads have a lower weight than rough terrain to encourage path generation along roads.
+**Effect on pathfinding**: When enabled, each step into a cell costs its movement multiplier **plus** the cell's `Weight`, and paths prefer cells with lower weights. For example, you can make roads have a lower weight than rough terrain to encourage path generation along roads.
 
 #### StraightMovementMultiplier
 

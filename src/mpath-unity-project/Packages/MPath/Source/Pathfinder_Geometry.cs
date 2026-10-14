@@ -9,8 +9,8 @@ namespace Migs.MPath.Core
     {
         /// <summary>
         /// Calculates the Manhattan (taxicab) distance between two coordinates: the number of cardinal
-        /// (horizontal/vertical) steps separating them, <c>|dx| + |dy|</c>. This is the metric used by the
-        /// A* heuristic and matches the cost model when diagonal movement is disabled. It is a pure grid
+        /// (horizontal/vertical) steps separating them, <c>|dx| + |dy|</c>. It matches the step count when
+        /// diagonal movement is disabled. It is a pure grid
         /// measurement and ignores walls, weights and movement settings.
         /// </summary>
         /// <param name="from">The first coordinate.</param>

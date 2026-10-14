@@ -14,10 +14,12 @@ The following benchmark was run on a complex maze to test pathfinding performanc
 
 | Method    | Mean      | Allocated   |
 |---------- |----------:|------------:|
-| MPath     |  5.092 ms |    24.06 KB |
-| [AStarLite](https://github.com/valantonini/AStar) |  8.118 ms |  8.74 MB |
-| [RoyTAStar](https://github.com/roy-t/AStar) | 59.028 ms | 12.29 MB |
-| [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,532.7 ms | 108.13 MB |
+| MPath     |  5.813 ms |    24.06 KB |
+| [AStarLite](https://github.com/valantonini/AStar) |  7.679 ms |  8.75 MB |
+| [RoyTAStar](https://github.com/roy-t/AStar) | 61.403 ms | 12.30 MB |
+| [LinqToAStar](https://arc.net/l/quote/iqcsmlgc) | 5,807.4 ms | 108.13 MB |
+
+MPath returns a cheapest route (its A* heuristic never overestimates the remaining cost). On this maze the narrow corridors leave little room for a better route; on open or randomly obstructed grids the exact cost model also cuts the number of expanded cells sharply.
 
 These results highlight MPath's optimization for both speed and memory efficiency. Memory allocation in MPath is required only for the initial pathfinder creation and for the final path result creation, with no GC pressure during the pathfinding algorithm execution.
 
@@ -41,11 +43,11 @@ The results show that:
 ## Benchmark Environment Specs
 
 ```
-BenchmarkDotNet v0.14.0, macOS Sequoia 15.3.2 (24D81) [Darwin 24.3.0]
+BenchmarkDotNet v0.14.0, macOS 26.6.2 (25G83) [Darwin 25.6.0]
 Apple M1 Max, 1 CPU, 10 logical and 10 physical cores
-.NET SDK 7.0.100
-  [Host]     : .NET 7.0.0 (7.0.22.61201), Arm64 RyuJIT AdvSIMD
-  DefaultJob : .NET 7.0.0 (7.0.22.61201), Arm64 RyuJIT AdvSIMD
+.NET SDK 10.0.102
+  [Host]     : .NET 7.0.20 (7.0.2024.26716), Arm64 RyuJIT AdvSIMD
+  DefaultJob : .NET 7.0.20 (7.0.2024.26716), Arm64 RyuJIT AdvSIMD
 ```
 
 ## Measurement Legend

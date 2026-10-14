@@ -10,7 +10,7 @@ MPath is designed specifically for grid-based environments where:
 - Each cell has properties like walkability and movement cost
 - Agents navigate from one cell to another following optimal paths
 
-The A* algorithm used in MPath calculates the shortest path while considering both the distance traveled so far and an estimated distance to the destination.
+The A* algorithm used in MPath calculates the cheapest path while considering both the cost traveled so far and an estimated cost to the destination. The estimate never exceeds the real cost, so the returned path is always a cheapest one; its cost is the sum of each step's movement multiplier plus the entered cell's weight, the same cost `GetReachable` reports.
 
 ## Key Components
 
@@ -21,7 +21,7 @@ The grid represents your navigable space. In MPath, a grid consists of `Cell` ob
 - **Coordinates**: Position within the grid
 - **Walkability**: Whether agents can traverse this cell
 - **Occupation**: Whether the cell is currently occupied by an agent
-- **Weight**: Movement cost multiplier for traversing this cell
+- **Weight**: Extra cost added to every step that enters this cell
 
 MPath is flexible in how you represent your grid:
 - As a flat array of `Cell` objects

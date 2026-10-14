@@ -126,7 +126,7 @@ cells with your own objects (e.g. Unity `MonoBehaviour`s) via `Cell CellData { g
 
 | Signature | Returns | Notes |
 |-----------|---------|-------|
-| `GetPath(IAgent agent, Coordinate from, Coordinate to)` | `PathResult` | Core A* query. Throws `ArgumentNullException` if `agent` is null, `ArgumentException` if `from` or `to` is outside the grid. Returns a **failure** result (not an exception) when no path exists; a destination the agent can't enter (unwalkable, occupied while `IsCalculatingOccupiedCells`, or no clearance for its size) fails immediately without searching, unless `from == to`. |
+| `GetPath(IAgent agent, Coordinate from, Coordinate to)` | `PathResult` | Core A* query; returns a cheapest route. Throws `ArgumentNullException` if `agent` is null, `ArgumentException` if `from` or `to` is outside the grid. Returns a **failure** result (not an exception) when no path exists; a destination the agent can't enter (unwalkable, occupied while `IsCalculatingOccupiedCells`, or no clearance for its size) fails immediately without searching, unless `from == to`. |
 | `GetPath(IAgent agent, Coordinate from, Coordinate to, QueryOptions options)` | `PathResult` | Same, with per-query rules (see [Per-query options](#per-query-options-units-block-or-not-enter-specific-occupied-cells)). Options that change the rules bypass the path cache. |
 | `GetReachable(IAgent agent, Coordinate from, float budget)` | `RangeResult` | Every cell reachable for total cost `<= budget` ("where can this unit move?"). Uniform-cost flood fill. |
 | `GetReachable(IAgent agent, Coordinate from, float budget, QueryOptions options)` | `RangeResult` | Same, with per-query rules (`IsDestinationAlwaysEnterable` is ignored: no destination). |
@@ -199,6 +199,10 @@ construction has **no effect** — build a new `Pathfinder` to change settings.
 > **Weight is additive, not multiplicative.** With `IsCellWeightEnabled`, step cost = movement multiplier
 > **+** destination cell `Weight`. Because `Weight` defaults to `0`, a flat default grid behaves like
 > uniform cost. Set higher `Weight` for slow terrain (mud, hills).
+>
+> **`GetPath` returns a cheapest route.** Its cost (sum of step costs above) equals the `GetReachable` cost of
+> the destination. Holds for any non-negative multipliers and weights; ties between equal-cost routes may
+> resolve either way.
 
 ---
 

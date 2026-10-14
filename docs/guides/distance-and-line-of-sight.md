@@ -16,7 +16,7 @@ The distance helpers operate purely on coordinates — they ignore walls, cell w
 
 | Metric | Formula | Use it when |
 |--------|------------------------|-------------|
-| Manhattan | `\|dx\| + \|dy\|` | Movement is cardinal-only (no diagonals). Also the A* heuristic MPath uses internally. |
+| Manhattan | `\|dx\| + \|dy\|` | Movement is cardinal-only (no diagonals). |
 | Chebyshev | `max(\|dx\|, \|dy\|)` | Diagonal moves cost the same as cardinal ones (8-directional grids). |
 
 ```csharp

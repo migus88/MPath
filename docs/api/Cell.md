@@ -11,7 +11,7 @@ Represents a single cell in the pathfinding grid. This structure contains both p
 | `Coordinate` | `Coordinate` | The position of this cell in the grid. |
 | `IsWalkable` | `bool` | Indicates whether an agent can traverse this cell. |
 | `IsOccupied` | `bool` | Indicates whether this cell is currently occupied by an agent. |
-| `Weight` | `float` | The movement cost multiplier for this cell. |
+| `Weight` | `float` | Extra cost of entering this cell, added to the straight/diagonal movement multiplier of each step into it (when `IsCellWeightEnabled`). Keep it non-negative. |
 
 ## Methods
 

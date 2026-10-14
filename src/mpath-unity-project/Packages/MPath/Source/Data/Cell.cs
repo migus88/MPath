@@ -25,8 +25,9 @@ namespace Migs.MPath.Core.Data
         public bool IsOccupied { get; set; }
         
         /// <summary>
-        /// Gets or sets the movement cost multiplier for this cell.
-        /// Higher values make the cell more costly to traverse.
+        /// Gets or sets the extra cost of entering this cell: it is added to the straight or diagonal movement
+        /// multiplier of every step into the cell. Higher values make the cell more costly to traverse; keep it
+        /// non-negative (a negative weight voids the cheapest-path guarantee).
         /// This is used when <see cref="IPathfinderSettings.IsCellWeightEnabled"/> is enabled.
         /// </summary>
         public float Weight { get; set; }
